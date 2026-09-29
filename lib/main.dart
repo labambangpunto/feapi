@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:flutter/foundation.dart';
 
 import 'screens/main_screen.dart';
 import 'controllers/theme_provider.dart';
@@ -11,7 +12,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Inisialisasi FFI untuk platform desktop (Windows/Linux)
-  if (Platform.isWindows || Platform.isLinux) {
+  if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
   }
@@ -28,9 +29,11 @@ class MyApp extends ConsumerWidget {
 
     return MaterialApp(
       title: 'Pencatat Keuangan',
+      debugShowCheckedModeBanner:
+          false, // Menghilangkan pita "DEBUG" di pojok kanan atas
       theme: ThemeData.light(),
       darkTheme: ThemeData.dark(),
-      themeMode: themeMode, // Menggunakan state dari Riverpod
+      themeMode: themeMode,
       home: const MainScreen(),
     );
   }

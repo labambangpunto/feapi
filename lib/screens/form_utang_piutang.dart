@@ -5,6 +5,7 @@ import '../controllers/akun_controller.dart';
 import '../controllers/utang_piutang_controller.dart';
 import '../models/utang_piutang_model.dart';
 import '../utils/currency_formatter.dart';
+import '../controllers/summary_provider.dart';
 
 class FormUtangPiutangScreen extends ConsumerStatefulWidget {
   final TipeUtangPiutang tipe;
@@ -133,11 +134,29 @@ class _FormUtangPiutangScreenState
     }
 
     final nominal = double.parse(_nominalController.text.replaceAll('.', ''));
+
+    // Validasi pencegahan saldo minus saat memberikan Piutang
+    if (widget.tipe == TipeUtangPiutang.piutang) {
+      final summary = ref.read(summaryProvider);
+      double saldoTersedia = summary.saldoPerAkun[_selectedAkunId] ?? 0;
+
+      if (widget.dataEdit != null &&
+          widget.dataEdit!.akunId == _selectedAkunId) {
+        saldoTersedia += widget.dataEdit!.nominal;
+      }
+
+      if (nominal > saldoTersedia) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Peringatan: Saldo tidak cukup!')),
+        );
+        return; // Hentikan penyimpanan
+      }
+    }
+
     final data = UtangPiutangModel(
       id:
           widget.dataEdit?.id ??
-          DateTime.now().millisecondsSinceEpoch
-              .toString(), // Gunakan ID lama jika edit
+          DateTime.now().millisecondsSinceEpoch.toString(),
       tipe: widget.tipe,
       nominal: nominal,
       pihakTerkait: _pihakController.text,

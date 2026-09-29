@@ -6,6 +6,7 @@ import '../controllers/label_controller.dart';
 import '../controllers/transaksi_controller.dart';
 import '../models/transaksi_model.dart';
 import '../utils/currency_formatter.dart';
+import '../controllers/summary_provider.dart';
 
 class FormTransaksiScreen extends ConsumerStatefulWidget {
   final TipeTransaksi tipeTransaksi;
@@ -187,39 +188,50 @@ class _FormTransaksiScreenState extends ConsumerState<FormTransaksiScreen> {
   }
 
   void _simpanTransaksi() {
-    final nominalText = _nominalController.text.replaceAll('.', '');
-    if (nominalText.isEmpty ||
-        _selectedLabelId == null ||
-        _catatanController.text.isEmpty) {
+    if (_nominalController.text.isEmpty ||
+        (_selectedAkunSumberId == null &&
+            widget.tipeTransaksi != TipeTransaksi.pemasukan) ||
+        (_selectedAkunTujuanId == null &&
+            widget.tipeTransaksi == TipeTransaksi.transfer)) {
       ScaffoldMessenger.of(context)
           .showSnackBar(const SnackBar(content: Text('Isi field wajib!')));
       return;
     }
 
-    if (widget.tipeTransaksi == TipeTransaksi.pengeluaran &&
-        _selectedAkunSumberId == null) {
-      return;
-    }
-    if (widget.tipeTransaksi == TipeTransaksi.pemasukan &&
-        _selectedAkunTujuanId == null) {
-      return;
-    }
-    if (widget.tipeTransaksi == TipeTransaksi.transfer &&
-        (_selectedAkunSumberId == null || _selectedAkunTujuanId == null)) {
-      return;
-    }
-
-    final nominal = double.parse(nominalText);
+    final nominal = double.parse(_nominalController.text.replaceAll('.', ''));
     final biayaTambahan = _biayaTambahanController.text.isNotEmpty
         ? double.parse(_biayaTambahanController.text.replaceAll('.', ''))
         : null;
-    final qty = int.tryParse(_kuantitasController.text) ?? 1;
+    final qty = int.parse(_kuantitasController.text);
+
+    // Validasi pencegahan saldo minus
+    if (widget.tipeTransaksi == TipeTransaksi.pengeluaran ||
+        widget.tipeTransaksi == TipeTransaksi.transfer) {
+      final summary = ref.read(summaryProvider);
+      double saldoTersedia = summary.saldoPerAkun[_selectedAkunSumberId] ?? 0;
+
+      // Jika dalam mode edit, kembalikan sementara nominal lama ke saldo tersedia agar kalkulasi akurat
+      if (widget.dataEdit != null &&
+          widget.dataEdit!.akunSumberId == _selectedAkunSumberId) {
+        saldoTersedia +=
+            (widget.dataEdit!.nominal * widget.dataEdit!.kuantitas) +
+            (widget.dataEdit!.biayaTambahan ?? 0);
+      }
+
+      final totalBeban = (nominal * qty) + (biayaTambahan ?? 0);
+
+      if (totalBeban > saldoTersedia) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Peringatan: Saldo tidak cukup!')),
+        );
+        return; // Hentikan penyimpanan
+      }
+    }
 
     final transaksi = TransaksiModel(
       id:
           widget.dataEdit?.id ??
-          DateTime.now().millisecondsSinceEpoch
-              .toString(), // Pertahankan ID lama jika edit
+          DateTime.now().millisecondsSinceEpoch.toString(),
       tipe: widget.tipeTransaksi,
       nominal: nominal,
       biayaTambahan: biayaTambahan,

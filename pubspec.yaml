@@ -23,6 +23,7 @@ dependencies:
   encrypt: ^5.0.3
   # file_picker: ^8.0.0
   file_picker: ^13.1.0
+  fl_chart: ^0.69.0
 
 dev_dependencies:
   flutter_test:

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:fl_chart/fl_chart.dart';
 
 import '../controllers/summary_provider.dart';
 import '../controllers/akun_controller.dart';
@@ -107,14 +108,45 @@ class HomeScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 24),
           const Text(
-            'Grafik & Analisis',
+            'Grafik Pemasukan vs Pengeluaran',
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
-          Container(
-            height: 150,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(border: Border.all(color: Colors.grey)),
-            child: const Text('Area untuk render grafik (Library eksternal)'),
+          const SizedBox(height: 16),
+          SizedBox(
+            height: 200,
+            child:
+                (summary.totalPemasukan == 0 && summary.totalPengeluaran == 0)
+                ? const Center(child: Text('Belum ada data transaksi'))
+                : PieChart(
+                    PieChartData(
+                      sectionsSpace: 2,
+                      centerSpaceRadius: 40,
+                      sections: [
+                        PieChartSectionData(
+                          color: Colors.green,
+                          value: summary.totalPemasukan,
+                          title: 'Masuk\nRp ${summary.totalPemasukan}',
+                          radius: 60,
+                          titleStyle: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        PieChartSectionData(
+                          color: Colors.red,
+                          value: summary.totalPengeluaran,
+                          title: 'Keluar\nRp ${summary.totalPengeluaran}',
+                          radius: 60,
+                          titleStyle: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
           ),
         ],
       ),

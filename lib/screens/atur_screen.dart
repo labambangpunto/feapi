@@ -51,37 +51,55 @@ class AturScreen extends ConsumerWidget {
             leading: const Icon(Icons.cloud_upload),
             title: const Text('Backup Data (Enkripsi JSON)'),
             onTap: () async {
-              final backupService = BackupService(
-                ref.read(databaseRepositoryProvider),
+              final password = await _tampilDialogPassword(
+                context,
+                'Buat Password Backup',
               );
-              await backupService.backupJsonLokal('PasswordRahasia123');
+              if (password != null) {
+                final backupService = BackupService(
+                  ref.read(databaseRepositoryProvider),
+                );
+                await backupService.backupJsonLokal(password);
+              }
             },
           ),
           ListTile(
             leading: const Icon(Icons.cloud_download),
             title: const Text('Restore Data (.enc)'),
             onTap: () async {
-              try {
-                final backupService = BackupService(
-                  ref.read(databaseRepositoryProvider),
-                );
-                await backupService.restoreJsonLokal('PasswordRahasia123');
-
-                ref.invalidate(akunControllerProvider);
-                ref.invalidate(labelControllerProvider);
-                ref.invalidate(transaksiControllerProvider);
-                ref.invalidate(utangPiutangControllerProvider);
-
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Data berhasil dipulihkan.')),
+              final password = await _tampilDialogPassword(
+                context,
+                'Masukkan Password Backup',
+              );
+              if (password != null) {
+                try {
+                  final backupService = BackupService(
+                    ref.read(databaseRepositoryProvider),
                   );
-                }
-              } catch (e) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Gagal memulihkan: $e')),
-                  );
+                  await backupService.restoreJsonLokal(password);
+
+                  ref.invalidate(akunControllerProvider);
+                  ref.invalidate(labelControllerProvider);
+                  ref.invalidate(transaksiControllerProvider);
+                  ref.invalidate(utangPiutangControllerProvider);
+
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Data berhasil dipulihkan.'),
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'Gagal memulihkan: Password salah atau file korup',
+                        ),
+                      ),
+                    );
+                  }
                 }
               }
             },
@@ -272,6 +290,42 @@ class AturScreen extends ConsumerWidget {
               Navigator.pop(context);
             },
             child: const Text('Simpan'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<String?> _tampilDialogPassword(BuildContext context, String judul) {
+    final passController = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(judul),
+        content: TextField(
+          controller: passController,
+          obscureText: true,
+          decoration: const InputDecoration(
+            labelText: 'Password Enkripsi',
+            helperText: 'Minimal 6 karakter untuk keamanan AES',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (passController.text.length >= 6) {
+                Navigator.pop(context, passController.text);
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Password terlalu pendek')),
+                );
+              }
+            },
+            child: const Text('Lanjut'),
           ),
         ],
       ),

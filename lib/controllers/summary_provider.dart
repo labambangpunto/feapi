@@ -2,7 +2,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'akun_controller.dart';
 import 'transaksi_controller.dart';
+import 'utang_piutang_controller.dart';
 import '../models/transaksi_model.dart';
+import '../models/utang_piutang_model.dart';
 
 class SummaryData {
   final double totalSaldo;
@@ -21,6 +23,7 @@ class SummaryData {
 final summaryProvider = Provider<SummaryData>((ref) {
   final akunState = ref.watch(akunControllerProvider);
   final transaksiState = ref.watch(transaksiControllerProvider);
+  final utangState = ref.watch(utangPiutangControllerProvider);
 
   double totalPemasukan = 0;
   double totalPengeluaran = 0;
@@ -33,7 +36,26 @@ final summaryProvider = Provider<SummaryData>((ref) {
     }
   }
 
-  // 2. Kalkulasi berdasarkan log transaksi
+  // 2. Kalkulasi pencairan awal Utang dan Piutang
+  if (utangState is AsyncData && utangState.value != null) {
+    for (var u in utangState.value!) {
+      if (u.tipe == TipeUtangPiutang.utang) {
+        // Pembuatan utang dihitung sebagai uang masuk
+        totalPemasukan += u.nominal;
+        if (u.akunId != null && saldoPerAkun.containsKey(u.akunId)) {
+          saldoPerAkun[u.akunId!] = saldoPerAkun[u.akunId!]! + u.nominal;
+        }
+      } else if (u.tipe == TipeUtangPiutang.piutang) {
+        // Pembuatan piutang dihitung sebagai uang keluar
+        totalPengeluaran += u.nominal;
+        if (u.akunId != null && saldoPerAkun.containsKey(u.akunId)) {
+          saldoPerAkun[u.akunId!] = saldoPerAkun[u.akunId!]! - u.nominal;
+        }
+      }
+    }
+  }
+
+  // 3. Kalkulasi berdasarkan log transaksi (termasuk log pelunasan)
   if (transaksiState is AsyncData && transaksiState.value != null) {
     for (var t in transaksiState.value!) {
       final nominal = t.nominal * t.kuantitas;
@@ -54,8 +76,7 @@ final summaryProvider = Provider<SummaryData>((ref) {
               saldoPerAkun[t.akunSumberId!]! - (nominal + biaya);
         }
       } else if (t.tipe == TipeTransaksi.transfer) {
-        totalPengeluaran +=
-            biaya; // Biaya tambahan otomatis dianggap pengeluaran
+        totalPengeluaran += biaya;
         if (t.akunSumberId != null &&
             saldoPerAkun.containsKey(t.akunSumberId)) {
           saldoPerAkun[t.akunSumberId!] =
@@ -70,7 +91,7 @@ final summaryProvider = Provider<SummaryData>((ref) {
     }
   }
 
-  // 3. Kalkulasi total saldo dari seluruh akun
+  // 4. Kalkulasi total saldo dari seluruh akun
   double totalSaldo = saldoPerAkun.values.fold(0, (sum, item) => sum + item);
 
   return SummaryData(

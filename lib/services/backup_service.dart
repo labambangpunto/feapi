@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:encrypt/encrypt.dart' as enc;
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 
 import '../repositories/database_repository.dart';
 import '../models/akun_model.dart';
@@ -193,12 +194,25 @@ class BackupService {
   }
 
   Future<void> _bagikanFile(String content, String fileName) async {
-    final dir = await getTemporaryDirectory();
-    final path = '${dir.path}/$fileName';
-    final file = File(path);
-    await file.writeAsString(content);
-    await SharePlus.instance.share(
-      ShareParams(files: [XFile(path)], text: 'File Keuangan: $fileName'),
-    );
+    final bytes = Uint8List.fromList(utf8.encode(content));
+
+    if (!kIsWeb &&
+        (Platform.isLinux || Platform.isWindows || Platform.isMacOS)) {
+      // Desktop: dialog Save As (file langsung ditulis oleh saveFile)
+      await FilePicker.saveFile(
+        dialogTitle: 'Simpan file $fileName',
+        fileName: fileName,
+        bytes: bytes,
+      );
+    } else {
+      // Mobile: Share UI
+      final dir = await getTemporaryDirectory();
+      final path = '${dir.path}/$fileName';
+      await File(path).writeAsBytes(bytes);
+
+      await SharePlus.instance.share(
+        ShareParams(files: [XFile(path)], text: 'File Keuangan: $fileName'),
+      );
+    }
   }
 }
