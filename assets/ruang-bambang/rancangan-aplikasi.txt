@@ -1,0 +1,126 @@
+saya sedang ingin mengembangkan aplikasi pencatat keuangan. aplikasi ini hanya untuk diri saya sendiri. fitur-fiturnya adalah:
+terdiri dari 4 tab utama:
+# Home
+di tab home, akan menampilkan hal-hal berikut
+1. greeting
+2. tombol sync, untuk sinkronisasi dengan google drive (google drive API)
+2. total saldo
+3. total keseluruhan pengeluaran dan total keseluruhan pemasukan dalam satu bulan Calendar month
+4. saldo masing-masing akun (ditampilkan dalam bentuk card)
+5. total pengeluaran dan pemasukan individual per akun
+6. grafik dan analisis tambahan
+
+# Transaksi
+di tab transaksi, akan menampilkan hal-hal berikut
+1. log transaksi. bisa ditampilkan dalam dua cara, yaitu tampilkan semua transaksi dalam satu hari saja (pagination), atau infinity scroll. log transaksi ditampilkan satu per satu. ketika form pengeluaran mengisi kuantitas lebih dari satu, maka log transaksinya ditampilkan sebanyak kuantitasnya, tampilannya log-nya dikelompokkan dengan aksen atau indentasi khusus. namun itu hanya tampilan, secara logic itu tetap satu transaksi, sehingga tidak akan masalah saat diedit atau dihapus.
+2. ada tombol plus (+), untuk menampilkan 3 opsi pengisian form, yaitu form transaksi pengeluaran, pemasukan dan transfer antarakun
+3. fitur jump to page, yaitu pindah untuk melihat transaksi di hari lain (pagination lain)
+4. fitur filter: berdasarkan "label", "akun", "jenis transaksi", dan "rentang waktu". ketika hanya menggunakan filter "label", "akun" dan "jenis transaksi", maka itu hanya akan memfilter log transaksi hari itu saja. namun jika menggunakan filter "rentang waktu", maka log transaksi ditampilkan secara infinity scroll sesuai rentang waktu yang dipilih.
+5. fitur edit transaksi dan hapus transaksi dengan cara long press. mengedit transaksi berarti mengambil data dari database, diparsing lalu dibuka pada form yang sesuai dengan jenis transaksinya (pegeluaran, penasukan, transfer antarakun), lalu tekan "simpan" untuk meng-update database. fitur hapus, bisa menghapus seluruh transaksi dalam satu hari atau memilih transaksi mana saya yang ingin dihapus dalam satu hari. fitur hapus juga berlaku saat sedang jump top page
+
+# Utang
+di tab utang, akan menampilkan hal-hal berikut
+1. ada dua tab, yaitu tab "Utang" dan tab "Piutang", untuk beralih menggunakan dropdown
+2. tab "Utang" menampilkan list Utang. tab "Piutang" menampilkan list Piutang. bisa ditampilkan dalam dua cara, yaitu tampilkan semua list utang atau piutang dalam satu bulan saja (pagination), atau infinity scroll.
+3. untuk melunasi utang atau piutang: tekan satu list utang atau piutang, lalu akan muncul popup konfirmasi sebuah form pelunasan.
+3. ada tombol plus (+), untuk menampilkan 2 opsi pengisian form, yaitu form Utang dan Form Piutang.
+4. di tab "Utang" dan "Piutang" punya fitur jump to page, yaitu pindah untuk melihat utang atau piutang di bulan lain (pagination lain)
+5. di tab "Utang" dan tab "piutang" punya fitur filter: berdasarkan "akun" dan "rentang waktu". ketika hanya menggunakan filter "akun", maka itu hanya akan memfilter list utang atau piutang (tergantung tab) bulan itu saja. namun jika menggunakan filter "rentang waktu", maka list utang atau piutang ditampilkan secara infinity scroll sesuai rentang waktu yang dipilih.
+5. di tab "Utang" dan "Piutang" punya fitur edit dan hapus utang atau piutang, dengan cara long press. mengedit utang atau piutang berarti mengambil data dari database, diparsing lalu dibuka pada form yang sesuai, yaitu form utang atau piutang, lalu tekan "simpan" untuk meng-update database. fitur hapus, bisa menghapus seluruh list utang atau piutang dalam satu bulan atau memilih utang atau piutang mana saya yang ingin dihapus dalam satu bulan. fitur hapus list utang atau piutang juga berlaku saat sedang jump top page
+
+# Atur
+di tab atur, akan menampilkan hal-hal berikut
+1. edit profil
+2. login / logout google drive (google drive API)
+3. mode gelap / terang
+4. kelola akun: membuat akun baru dan mengisi saldo awal
+5. kelola label: membuat label baru
+6. backup / restore JSON
+7. ekspor CSV
+8. danger zone: reset seluruh database. keamanannya dengan 2 kali verifikasi dengan metode berbeda.
+
+
+# FORM UTAMA
+ada total 5 form utama, yaitu pengeluaran, pemasukan, transfer antarakun, utang dan piutang:
+
+## Form untuk transaksi
+### Form Pengeluaran
+form pengeluaran berisi fields:
+1. "Nominal (Rp)": dengan prefix tulisan "Rp" dan formatting, yaitu setiap 3 angka diberikan titik. tujuannya untuk keterbacaan
+2. "Biaya tambahan (opsional)": dengan prefix tulisan "Rp" dan formatting, yaitu setiap 3 angka diberikan titik. tujuannya untuk keterbacaan. Biaya tambahan otomasis dianggap pengeluaran
+3. "Kuantitas (Qty)": default bernilai 1
+4. "Akun sumber": berbentuk dropdown, dan ada opsi untuk menambahkan akun
+5. "label / tag": berbentuk chip atau capsule, dan ada opsi untuk menambahkan label
+6. "tanggal dan waktu": secara default menggunakan tanggal dan waktu saat itu
+7. "Catatan / deskripsi"
+field yang wajib diisi adalah "Nominal (Rp)", "Akun sumber", "label / tag", "tanggal dan waktu" dan"Catatan / deskripsi"
+
+### Form Pemasukan
+form pemasukan berisi fields:
+1. "Nominal (Rp)": dengan prefix tulisan "Rp" dan formatting, yaitu setiap 3 angka diberikan titik. tujuannya untuk keterbacaan
+2. "Akun tujuan": berbentuk dropdown, dan ada opsi untuk menambahkan akun
+3. "label / tag": berbentuk chip atau capsule, dan ada opsi untuk menambahkan label
+4. "tanggal dan waktu": secara default menggunakan tanggal dan waktu saat itu
+5. "Catatan / deskripsi"
+field yang wajib diisi adalah "Nominal (Rp)", "Akun tujuan", "label / tag", "tanggal dan waktu" dan"Catatan / deskripsi"
+
+### Form transfer antarakun
+form transfer antarakun berisi fields:
+1. "Nominal (Rp)": dengan prefix tulisan "Rp" dan formatting, yaitu setiap 3 angka diberikan titik. tujuannya untuk keterbacaan
+2. "Akun sumber": berbentuk dropdown, dan ada opsi untuk menambahkan akun
+3. "Akun tujuan": berbentuk dropdown, dan ada opsi untuk menambahkan akun
+4. "Biaya tambahan (opsional)": dengan prefix tulisan "Rp" dan formatting, yaitu setiap 3 angka diberikan titik. tujuannya untuk keterbacaan. Biaya tambahan otomasis dianggap pengeluaran
+5. "label / tag": berbentuk chip atau capsule, dan ada opsi untuk menambahkan label
+6. "tanggal dan waktu": secara default menggunakan tanggal dan waktu saat itu
+7. "Catatan / deskripsi (opsional)"
+field yang wajib diisi adalah "Nominal (Rp)", "Akun sumber", "Akun tujuan", "label / tag" dan "tanggal dan waktu"
+
+
+## Form untuk utang atau piutang
+### Form pembuatan utang
+form pembuatan utang berisi fields:
+1. "Nominal (Rp)": dengan prefix tulisan "Rp" dan formatting, yaitu setiap 3 angka diberikan titik. tujuannya untuk keterbacaan
+2. "Pihak pemberi dana": nama orang
+3. "Akun untuk menerima": berbentuk dropdown, dan ada opsi untuk menambahkan akun
+4. "tanggal dan waktu": secara default menggunakan tanggal dan waktu saat itu
+5. "tanggal tenggat waktu"
+6. "Catatan / deskripsi"
+field yang wajib diisi adalah "Nominal (Rp)", "Pihak pemberi dana", "Akun untuk menerima", "tanggal dan waktu", "tanggal tenggat waktu" dan "Catatan / deskripsi"
+
+### Form pembuatan piutang
+form pembuatan piutang berisi fields:
+1. "Nominal (Rp)": dengan prefix tulisan "Rp" dan formatting, yaitu setiap 3 angka diberikan titik. tujuannya untuk keterbacaan
+2. "Pihak penerima dana": nama orang
+3. "Akun untuk memberi": berbentuk dropdown, dan ada opsi untuk menambahkan akun
+4. "tanggal dan waktu": secara default menggunakan tanggal dan waktu saat itu
+5. "tanggal tenggat waktu"
+6. "Catatan / deskripsi"
+field yang wajib diisi adalah "Nominal (Rp)", "Pihak penerima dana", "Akun untuk memberi", "tanggal dan waktu", "tanggal tenggat waktu" dan "Catatan / deskripsi"
+
+
+
+# FORM TAMBAHAN
+ada total 4 form tambahan, yaitu tambah label, tambah akun, pelunasan utang dan pelunasan piutang:
+
+### Form tambah label
+Form tambah label berisi field:
+1. "Nama label baru"
+ketika field "Nama label baru" diisi, secara otomatis muncul field kedua. ketika field kedua diisi, secara otomatis muncul field ketiga. batasnya hingga 7 field. tujuannya agar efisien dan cepat.
+Nama label tidak boleh sama
+
+### Form tambah akun
+Form tambah akun berisi field:
+1. "Nama akun baru"
+2. "Saldo awal": dengan prefix tulisan "Rp" dan formatting, yaitu setiap 3 angka diberikan titik. tujuannya untuk keterbacaan
+ketika field "Nama akun baru" diisi, secara otomatis muncul field kedua. ketika field kedua diisi, secara otomatis muncul field ketiga. batasnya hingga 3 field. tujuannya agar efisien dan cepat.
+Nama akun tidak boleh sama
+
+### Form pelunasan utang
+Form pelunasan utang berisi field:
+1. "Akun untuk membayar": berbentuk dropdown, dan ada opsi untuk menambahkan akun
+2. "tanggal dan waktu": secara default menggunakan tanggal dan waktu saat itu
+
+### Form pelunasan piutang
+Form pelunasan piutang berisi field:
+1. "Akun untuk menerima": berbentuk dropdown, dan ada opsi untuk menambahkan akun
+2. "tanggal dan waktu": secara default menggunakan tanggal dan waktu saat itu
