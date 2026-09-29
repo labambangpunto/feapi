@@ -9,6 +9,7 @@ import '../controllers/theme_provider.dart';
 import '../models/akun_model.dart';
 import '../models/label_model.dart';
 import '../repositories/database_repository.dart';
+import '../services/backup_service.dart';
 
 class AturScreen extends ConsumerWidget {
   const AturScreen({super.key});
@@ -47,27 +48,52 @@ class AturScreen extends ConsumerWidget {
           ),
           const Divider(),
           ListTile(
-            leading: const Icon(Icons.cloud_sync),
-            title: const Text('Backup / Restore (Google Drive)'),
-            onTap: () {
-              // Placeholder untuk fitur enkripsi JSON & Google Drive API
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Segera hadir di tahap berikutnya'),
-                ),
+            leading: const Icon(Icons.cloud_upload),
+            title: const Text('Backup Data (Enkripsi JSON)'),
+            onTap: () async {
+              final backupService = BackupService(
+                ref.read(databaseRepositoryProvider),
               );
+              await backupService.backupJsonLokal('PasswordRahasia123');
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.cloud_download),
+            title: const Text('Restore Data (.enc)'),
+            onTap: () async {
+              try {
+                final backupService = BackupService(
+                  ref.read(databaseRepositoryProvider),
+                );
+                await backupService.restoreJsonLokal('PasswordRahasia123');
+
+                ref.invalidate(akunControllerProvider);
+                ref.invalidate(labelControllerProvider);
+                ref.invalidate(transaksiControllerProvider);
+                ref.invalidate(utangPiutangControllerProvider);
+
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Data berhasil dipulihkan.')),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Gagal memulihkan: $e')),
+                  );
+                }
+              }
             },
           ),
           ListTile(
             leading: const Icon(Icons.table_view),
             title: const Text('Ekspor CSV'),
-            onTap: () {
-              // Placeholder untuk fitur CSV
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Segera hadir di tahap berikutnya'),
-                ),
+            onTap: () async {
+              final backupService = BackupService(
+                ref.read(databaseRepositoryProvider),
               );
+              await backupService.eksporCsv();
             },
           ),
           const Divider(),
