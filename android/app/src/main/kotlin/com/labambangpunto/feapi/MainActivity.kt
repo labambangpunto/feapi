@@ -1,4 +1,4 @@
-package com.example.feapi
+package com.labambangpunto.feapi
 
 import io.flutter.embedding.android.FlutterActivity
 

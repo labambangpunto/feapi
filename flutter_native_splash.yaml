@@ -1,0 +1,11 @@
+flutter_native_splash:
+  # Konfigurasi untuk iOS dan Android di bawah versi 12
+  color: "#FFFFFF"
+  image: assets/splash/logo.png
+  android: true
+  ios: true
+
+  # Konfigurasi wajib untuk Android 12 ke atas
+  android_12:
+    color: "#FFFFFF"
+    image: assets/splash/logo.png
