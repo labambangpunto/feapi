@@ -15,7 +15,7 @@ class HomeScreen extends ConsumerWidget {
     final akunState = ref.watch(akunControllerProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Beranda')),
+      appBar: AppBar(title: const Text('')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [

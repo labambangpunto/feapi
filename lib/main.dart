@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:flutter/foundation.dart';
-import 'package:material_3_expressive/material_3_expressive.dart';
 
 import 'screens/main_screen.dart';
 import 'controllers/theme_provider.dart';
