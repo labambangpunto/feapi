@@ -3,8 +3,9 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Feapi - Master Your Finances</title>
+    <title>Feapi</title>
     <link rel="icon" type="image/svg+xml" href="./assets/logo.png" />
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -51,7 +52,7 @@
               surface: {
                 light: "#fbfdf8",
                 dark: "#111418",
-                lightVariant: "#e1e3de",
+                lightVariant: "",
                 darkVariant: "#44474f",
               },
             },
@@ -223,15 +224,24 @@
             class="flex-shrink-0 flex items-center gap-2 cursor-pointer"
             onclick="window.scrollTo(0, 0)"
           >
-            <div
-              class="w-10 h-10 rounded-xl bg-gradient-brand flex items-center justify-center text-white font-bold text-xl shadow-lg"
-            >
-              <img src="./assets/logo-glass.png" alt="Logo Feapi" />
-            </div>
+            <img
+              src="./assets/logo-glass.png"
+              alt="App logo"
+              class="w-10 h-10 object-contain"
+            />
             <span class="font-bold text-2xl tracking-tight">Feapi</span>
+            <span
+              class="px-2 py-0.5 rounded-md bg-primary-100 dark:bg-primary-900/50 text-primary-700 dark:text-primary-300 text-[10px] font-bold uppercase tracking-wider border border-primary-200 dark:border-primary-800 ml-1"
+              >Beta</span
+            >
           </div>
 
           <div class="hidden md:flex space-x-8 items-center">
+            <a
+              href="#about"
+              class="text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 font-medium transition-colors"
+              >Story</a
+            >
             <a
               href="#features"
               class="text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 font-medium transition-colors"
@@ -324,19 +334,21 @@
             <div
               class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-surface-lightVariant dark:bg-surface-darkVariant text-sm font-medium mb-6 m3-card"
             >
-              <span class="flex h-2 w-2 rounded-full bg-secondary-400"></span>
-              Beta Version v1.0.0 Available
+              <span
+                class="flex h-2 w-2 rounded-full bg-secondary-400 animate-pulse"
+              ></span>
+              Latest Release v1.1.1-Beta Available
             </div>
             <h1 class="text-5xl lg:text-7xl font-extrabold leading-tight mb-6">
-              Take Control of Your <br />
-              <span class="text-gradient">Financial Future.</span>
+              Manage your money, <br />
+              <span class="text-gradient">stress-free.</span>
             </h1>
             <p
               class="text-lg lg:text-xl text-gray-600 dark:text-gray-400 mb-8 max-w-lg"
             >
-              Feapi is your personal, secure, and intuitive money manager. Track
-              expenses, set budgets, and achieve your goals with beautiful
-              insights.
+              Meet Feapi, your friendly and secure personal money manager. Track
+              expenses, set realistic budgets, and reach your financial goals
+              with ease.
             </p>
             <div class="flex flex-col sm:flex-row gap-4">
               <a
@@ -356,7 +368,7 @@
                     d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
                   ></path>
                 </svg>
-                Download Feapi
+                Download Feapi (Beta)
               </a>
               <a
                 href="#features"
@@ -367,6 +379,9 @@
             </div>
             <p class="mt-4 text-sm text-gray-500 dark:text-gray-500">
               Available for Android & Linux. Windows coming soon.
+              <span class="text-primary-600 dark:text-primary-400 font-medium"
+                >Currently in Beta phase.</span
+              >
             </p>
           </div>
 
@@ -380,7 +395,7 @@
             <div class="phone-mockup aspect-[9/20] w-full">
               <div class="phone-notch"></div>
               <img
-                src="./assets/screenshot-1.png"
+                src="./assets/screenshot-1.jpg"
                 alt="Feapi App Dashboard"
                 class="w-full h-full object-cover block"
               />
@@ -390,15 +405,73 @@
       </div>
     </section>
 
+    <section id="about" class="py-16 relative z-20">
+      <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div
+          class="m3-card p-10 md:p-12 reveal relative overflow-hidden bg-gradient-to-br from-surface-container to-primary-50 dark:from-surface-container dark:to-primary-950/20 border border-primary-100 dark:border-primary-900/30"
+        >
+          <div class="absolute top-0 right-0 p-8 opacity-10">
+            <svg
+              class="w-32 h-32 text-primary-500"
+              fill="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
+              />
+            </svg>
+          </div>
+          <h2 class="text-3xl font-bold mb-4 relative z-10">
+            Built for myself, shared with you. 🤝
+          </h2>
+          <p
+            class="text-lg text-gray-600 dark:text-gray-400 mb-6 relative z-10 leading-relaxed"
+          >
+            To be completely honest, I initially built Feapi simply because I
+            couldn't find a financial tracker that perfectly fit my own everyday
+            needs. I wanted something fast, beautiful, and completely offline to
+            protect my privacy.
+          </p>
+          <p
+            class="text-lg text-gray-600 dark:text-gray-400 mb-8 relative z-10 leading-relaxed"
+          >
+            After using it daily and refining it, I decided to release the
+            source code on GitHub. The goal isn't to build a massive commercial
+            product, but rather to share a tool that works wonderfully for me,
+            in the hopes that it might just be exactly what you've been looking
+            for too!
+          </p>
+          <div
+            class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300 text-sm font-bold relative z-10 border border-primary-200 dark:border-primary-800"
+          >
+            <svg
+              class="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
+              ></path>
+            </svg>
+            100% Open Source (GPLv3 License)
+          </div>
+        </div>
+      </div>
+    </section>
+
     <section id="features" class="py-20 bg-surface-container dark:bg-[#15181c]">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="text-center mb-16 reveal">
           <h2 class="text-4xl font-bold mb-4">
-            Everything you need to manage wealth
+            Features built to make life easier
           </h2>
           <p class="text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-            Feapi provides powerful tools wrapped in an intuitive, material
-            design interface to make tracking your money effortless.
+            Feapi provides powerful yet friendly tools wrapped in a comfortable
+            interface to make tracking your money feel less like a chore.
           </p>
         </div>
 
@@ -422,14 +495,14 @@
                 ></path>
               </svg>
             </div>
-            <h3 class="text-xl font-bold mb-3">Visual Analytics</h3>
+            <h3 class="text-xl font-bold mb-3">Clear Visual Insights</h3>
             <p class="text-gray-600 dark:text-gray-400">
-              Understand your spending habits instantly with beautiful,
-              interactive charts and customizable date ranges.
+              Understand where your money goes instantly with beautiful,
+              interactive charts that just make sense.
             </p>
           </div>
 
-          <!-- Feature 2 -->
+          <!-- Feature 2 (New AES Backup) -->
           <div class="m3-card p-8 reveal" style="transition-delay: 100ms">
             <div
               class="w-14 h-14 rounded-2xl bg-secondary-100 dark:bg-secondary-900/20 text-secondary-400 flex items-center justify-center mb-6"
@@ -444,14 +517,14 @@
                   stroke-linecap="round"
                   stroke-linejoin="round"
                   stroke-width="2"
-                  d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
+                  d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
                 ></path>
               </svg>
             </div>
-            <h3 class="text-xl font-bold mb-3">Smart Budgeting</h3>
+            <h3 class="text-xl font-bold mb-3">Secure Encrypted Backups</h3>
             <p class="text-gray-600 dark:text-gray-400">
-              Set limits for different categories. Feapi alerts you before you
-              overspend, keeping you on track.
+              Back up your data with military-grade AES-256 encryption. Keep
+              your financial history safe, portable, and completely private.
             </p>
           </div>
 
@@ -474,10 +547,10 @@
                 ></path>
               </svg>
             </div>
-            <h3 class="text-xl font-bold mb-3">Local & Secure</h3>
+            <h3 class="text-xl font-bold mb-3">Your Data Stays Yours</h3>
             <p class="text-gray-600 dark:text-gray-400">
-              Your data stays on your device. No mandatory cloud sync means
-              complete privacy for your financial data.
+              Your data stays locally on your device. No sneaky cloud syncs
+              means absolute privacy for your sensitive financial info.
             </p>
           </div>
 
@@ -500,10 +573,10 @@
                 ></path>
               </svg>
             </div>
-            <h3 class="text-xl font-bold mb-3">Custom Categories</h3>
+            <h3 class="text-xl font-bold mb-3">Make It Your Own</h3>
             <p class="text-gray-600 dark:text-gray-400">
-              Organize transactions your way with unlimited custom categories,
-              icons, and color coding.
+              Organize everything exactly how you like it with unlimited custom
+              categories, fun icons, and color coding.
             </p>
           </div>
 
@@ -511,32 +584,6 @@
           <div class="m3-card p-8 reveal" style="transition-delay: 100ms">
             <div
               class="w-14 h-14 rounded-2xl bg-primary-100 dark:bg-primary-900/40 text-primary-600 dark:text-primary-400 flex items-center justify-center mb-6"
-            >
-              <svg
-                class="w-8 h-8"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                ></path>
-              </svg>
-            </div>
-            <h3 class="text-xl font-bold mb-3">Multi-Currency</h3>
-            <p class="text-gray-600 dark:text-gray-400">
-              Traveling or holding different assets? Feapi supports tracking
-              balances in multiple currencies seamlessly.
-            </p>
-          </div>
-
-          <!-- Feature 6 -->
-          <div class="m3-card p-8 reveal" style="transition-delay: 200ms">
-            <div
-              class="w-14 h-14 rounded-2xl bg-secondary-100 dark:bg-secondary-900/20 text-secondary-400 flex items-center justify-center mb-6"
             >
               <svg
                 class="w-8 h-8"
@@ -565,9 +612,9 @@
     <section id="display" class="py-24 relative overflow-hidden">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="text-center mb-16 reveal">
-          <h2 class="text-4xl font-bold mb-4">See Feapi in Action</h2>
+          <h2 class="text-4xl font-bold mb-4">A quick peek inside</h2>
           <p class="text-gray-600 dark:text-gray-400">
-            A beautiful interface designed for clarity and ease of use.
+            Designed to feel familiar, clean, and incredibly comfortable to use.
           </p>
         </div>
 
@@ -583,7 +630,7 @@
             >
               <div class="phone-notch"></div>
               <img
-                src="./assets/screenshot-1.png"
+                src="./assets/screenshot-1.jpg"
                 alt="Main Dashboard"
                 class="w-full h-full object-cover block"
               />
@@ -601,7 +648,7 @@
             >
               <div class="phone-notch"></div>
               <img
-                src="./assets/screenshot-2.png"
+                src="./assets/screenshot-2.jpg"
                 alt="Quick Entry"
                 class="w-full h-full object-cover block"
               />
@@ -619,12 +666,12 @@
             >
               <div class="phone-notch"></div>
               <img
-                src="./assets/screenshot-3.png"
+                src="./assets/screenshot-3.jpg"
                 alt="Smart Budgets"
                 class="w-full h-full object-cover block"
               />
             </div>
-            <p class="text-center mt-4 font-medium">Backup Data</p>
+            <p class="text-center mt-4 font-medium">Smart Budgets</p>
           </div>
         </div>
       </div>
@@ -643,12 +690,15 @@
             class="absolute -top-24 -right-24 w-64 h-64 bg-gradient-brand opacity-10 rounded-full blur-3xl"
           ></div>
 
-          <h2 class="text-4xl font-bold mb-6 relative z-10">Get Feapi Today</h2>
+          <h2 class="text-4xl font-bold mb-6 relative z-10">
+            Ready to give it a try?
+          </h2>
           <p
             class="text-lg text-gray-600 dark:text-gray-400 mb-10 max-w-2xl mx-auto relative z-10"
           >
-            Currently available exclusively via GitHub Releases. Download the
-            package for your specific platform below.
+            Feapi is currently in <b>Beta</b>. Since this is a personal
+            open-source project, it is available exclusively via our GitHub
+            Releases page. Grab the right package for your device below!
           </p>
 
           <div
@@ -656,7 +706,7 @@
           >
             <!-- Android Download -->
             <a
-              href="https://github.com/labambangpunto/feapi/releases/download/v1.0.0-beta/feapi-v1.0.0-beta.apk"
+              href="https://github.com/labambangpunto/feapi/releases/download/v1.1.0-beta/feapi-v1.1.0-beta.apk"
               target="_self"
               rel="noopener noreferrer"
               class="m3-card p-6 flex flex-col items-center hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors border-2 border-transparent hover:border-primary-500 cursor-pointer group"
@@ -681,7 +731,7 @@
 
             <!-- Linux Download -->
             <a
-              href="https://github.com/labambangpunto/feapi/releases/download/v1.0.0-beta/feapi-v1.0.0-beta-linux-x64.tar.gz"
+              href="https://github.com/labambangpunto/feapi/releases/download/v1.1.0-beta/feapi-v1.1.0-beta-linux-x64.tar.gz"
               target="_self"
               rel="noopener noreferrer"
               class="m3-card p-6 flex flex-col items-center hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors border-2 border-transparent hover:border-secondary-500 cursor-pointer group"
@@ -732,9 +782,10 @@
     <section id="how-to-use" class="py-24">
       <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="text-center mb-10 reveal">
-          <h2 class="text-4xl font-bold mb-4">Getting Started</h2>
+          <h2 class="text-4xl font-bold mb-4">Let's get you set up</h2>
           <p class="text-gray-600 dark:text-gray-400 mb-8">
-            Follow these simple steps to install and start using Feapi.
+            Installing apps outside of official stores can seem tricky, but just
+            follow these simple steps and you'll be ready in no time!
           </p>
 
           <!-- Platform Toggle Buttons -->
@@ -1086,11 +1137,11 @@
         class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-6"
       >
         <div class="flex items-center gap-2">
-          <div
-            class="w-8 h-8 rounded-lg bg-gradient-brand flex items-center justify-center text-white font-bold text-sm"
-          >
-            <img src="./assets/logo-glass.png" alt="Logo Feapi" />
-          </div>
+          <img
+            src="./assets/logo-glass.png"
+            alt="App logo"
+            class="w-8 h-8 object-contain"
+          />
           <span class="font-bold text-xl tracking-tight">Feapi</span>
         </div>
 
@@ -1099,12 +1150,12 @@
             class="flex gap-6 text-sm font-medium text-gray-600 dark:text-gray-400"
           >
             <a
-              href="./privacy-policy-feapi-app.md"
+              href="#privacy"
               class="hover:text-primary-500 dark:hover:text-primary-400 transition-colors"
               >Privacy Policy</a
             >
             <a
-              href="./terms-of-service-feapi-app.md"
+              href="#terms"
               class="hover:text-primary-500 dark:hover:text-primary-400 transition-colors"
               >Terms of Service</a
             >
@@ -1117,7 +1168,7 @@
 
         <div class="flex gap-4">
           <a
-            href="https://github.com/labambangpunto/feapi/"
+            href="https://github.com/labambangpunto/feapi"
             target="_self"
             class="text-gray-500 hover:text-primary-500 transition-colors"
             aria-label="GitHub"
