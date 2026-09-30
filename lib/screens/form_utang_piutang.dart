@@ -6,6 +6,7 @@ import '../controllers/utang_piutang_controller.dart';
 import '../models/utang_piutang_model.dart';
 import '../utils/currency_formatter.dart';
 import '../controllers/summary_provider.dart';
+import '../utils/currency_format.dart';
 
 class FormUtangPiutangScreen extends ConsumerStatefulWidget {
   final TipeUtangPiutang tipe;
@@ -33,7 +34,7 @@ class _FormUtangPiutangScreenState
     super.initState();
     if (widget.dataEdit != null) {
       final d = widget.dataEdit!;
-      _nominalController.text = d.nominal.toInt().toString();
+      _nominalController.text = widget.dataEdit!.nominal.toRibuan();
       _pihakController.text = d.pihakTerkait;
       _catatanController.text = d.catatan;
       _selectedAkunId = d.akunId;

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:flutter/foundation.dart';
+import 'package:material_3_expressive/material_3_expressive.dart';
 
 import 'screens/main_screen.dart';
 import 'controllers/theme_provider.dart';
@@ -29,16 +30,22 @@ class MyApp extends ConsumerWidget {
 
     return MaterialApp(
       title: 'Pencatat Keuangan',
-      debugShowCheckedModeBanner:
-          false, // Menghilangkan pita "DEBUG" di pojok kanan atas
-      theme: ThemeData.light(),
-      darkTheme: ThemeData.dark(),
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        useMaterial3: true,
+        fontFamily: 'SN Pro', // Menerapkan font kustom secara global
+        colorSchemeSeed: Colors.blue, // Sesuaikan warna dasar aplikasi
+        // Terapkan ekstensi textTheme atau pengaturan spesifik dari material_3_expressive di sini
+        // textTheme: ExpressiveTextTheme(), // (Contoh jika package menyediakan class ini)
+      ),
+      darkTheme: ThemeData(
+        useMaterial3: true,
+        fontFamily: 'SN Pro',
+        brightness: Brightness.dark,
+        colorSchemeSeed: Colors.blue,
+      ),
       themeMode: themeMode,
       home: const MainScreen(),
     );
   }
 }
-
-// ==========================================
-// WIDGET DEBUGGING AWAL
-// ==========================================

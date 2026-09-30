@@ -3,10 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../controllers/utang_piutang_controller.dart';
 import '../models/utang_piutang_model.dart';
-import 'form_utang_piutang.dart';
 import '../controllers/akun_controller.dart';
 import '../controllers/transaksi_controller.dart';
 import '../models/transaksi_model.dart';
+import '../utils/currency_format.dart';
+import 'form_utang_piutang.dart';
 
 class UtangScreen extends ConsumerStatefulWidget {
   const UtangScreen({super.key});
@@ -165,7 +166,7 @@ class _UtangScreenState extends ConsumerState<UtangScreen> {
               item.isLunas
                   ? const Icon(Icons.check_circle, color: Colors.green)
                   : Text(
-                      'Rp ${item.nominal}',
+                      item.nominal.toIdr(),
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         color: item.tipe == TipeUtangPiutang.utang
@@ -231,7 +232,7 @@ class _UtangScreenState extends ConsumerState<UtangScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    'Nominal: Rp ${item.nominal}',
+                    'Nominal: ${item.nominal.toIdr()}',
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 16),

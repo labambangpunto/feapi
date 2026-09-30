@@ -6,6 +6,7 @@ import '../controllers/label_controller.dart';
 import '../controllers/transaksi_controller.dart';
 import '../models/transaksi_model.dart';
 import '../utils/currency_formatter.dart';
+import '../utils/currency_format.dart';
 import '../controllers/summary_provider.dart';
 
 class FormTransaksiScreen extends ConsumerStatefulWidget {
@@ -40,9 +41,10 @@ class _FormTransaksiScreenState extends ConsumerState<FormTransaksiScreen> {
     // Mengisi form jika ada dataEdit
     if (widget.dataEdit != null) {
       final d = widget.dataEdit!;
-      _nominalController.text = d.nominal.toInt().toString();
-      if (d.biayaTambahan != null) {
-        _biayaTambahanController.text = d.biayaTambahan!.toInt().toString();
+      _nominalController.text = widget.dataEdit!.nominal.toRibuan();
+      if (widget.dataEdit!.biayaTambahan != null) {
+        _biayaTambahanController.text = widget.dataEdit!.biayaTambahan!
+            .toRibuan();
       }
       _kuantitasController.text = d.kuantitas.toString();
       _catatanController.text = d.catatan;
