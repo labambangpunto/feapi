@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../controllers/transaksi_controller.dart';
 import '../models/transaksi_model.dart';
+import '../utils/currency_format.dart';
+
 import 'form_transaksi.dart';
 
 class TransaksiScreen extends ConsumerStatefulWidget {
@@ -49,10 +51,16 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => Center(child: Text('Error: $err')),
         data: (transaksiList) {
-          // Logika Filter Tanggal
-          var filteredList = transaksiList;
+          // Hapus List<TransaksiModel> dari parameter ini
+
+          // Lakukan casting eksplisit di dalam blok
+          final List<TransaksiModel> listData = List<TransaksiModel>.from(
+            transaksiList as Iterable,
+          );
+
+          var filteredList = listData;
           if (_filterTanggal != null) {
-            filteredList = transaksiList
+            filteredList = listData
                 .where(
                   (t) =>
                       t.waktu.year == _filterTanggal!.year &&
@@ -72,7 +80,7 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
             controller: _scrollController,
             itemCount: filteredList.length,
             itemBuilder: (context, index) {
-              final t = filteredList[index];
+              final TransaksiModel t = filteredList[index]; // Deklarasikan tipe TransaksiModel di sini
               return ListTile(
                 title: Text(t.catatan),
                 subtitle: Text(t.waktu.toString().split(' ')[0]),
@@ -80,7 +88,7 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      'Rp ${t.nominal}',
+                      t.nominal.toIdr(), // Ekstensi ini sekarang akan terbaca tanpa error
                       style: TextStyle(
                         color: t.tipe == TipeTransaksi.pemasukan
                             ? Colors.green

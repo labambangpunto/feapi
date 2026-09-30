@@ -4,6 +4,7 @@ import 'package:fl_chart/fl_chart.dart';
 
 import '../controllers/summary_provider.dart';
 import '../controllers/akun_controller.dart';
+import '../utils/currency_format.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -14,7 +15,7 @@ class HomeScreen extends ConsumerWidget {
     final akunState = ref.watch(akunControllerProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Beranda')),
+      appBar: AppBar(title: const Text('')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -30,9 +31,15 @@ class HomeScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Total Saldo', style: TextStyle(fontSize: 16)),
                   Text(
-                    'Rp ${summary.totalSaldo}',
+                    'Total Saldo',
+
+                    style: Theme.of(context)
+                        .textTheme
+                        .headlineMedium, // Tipografi M3 Expressive
+                  ),
+                  Text(
+                    summary.totalSaldo.toIdr(),
                     style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
@@ -54,7 +61,7 @@ class HomeScreen extends ConsumerWidget {
                       children: [
                         const Text('Pemasukan'),
                         Text(
-                          'Rp ${summary.totalPemasukan}',
+                          summary.totalPemasukan.toIdr(),
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                       ],
@@ -71,7 +78,7 @@ class HomeScreen extends ConsumerWidget {
                       children: [
                         const Text('Pengeluaran'),
                         Text(
-                          'Rp ${summary.totalPengeluaran}',
+                          summary.totalPengeluaran.toIdr(),
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                       ],
@@ -92,12 +99,11 @@ class HomeScreen extends ConsumerWidget {
               if (akunList.isEmpty) return const Text('Belum ada akun.');
               return Column(
                 children: akunList.map((akun) {
-                  final saldoRiil = summary.saldoPerAkun[akun.id] ?? 0;
                   return ListTile(
                     leading: const Icon(Icons.account_balance_wallet),
                     title: Text(akun.nama),
                     trailing: Text(
-                      'Rp $saldoRiil',
+                      (summary.saldoPerAkun[akun.id] ?? 0).toIdr(),
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                   );
@@ -125,7 +131,8 @@ class HomeScreen extends ConsumerWidget {
                         PieChartSectionData(
                           color: Colors.green,
                           value: summary.totalPemasukan,
-                          title: 'Masuk\nRp ${summary.totalPemasukan}',
+                          // Sebelumnya: title: 'Masuk\nRp ${summary.totalPemasukan}'
+                          title: 'Masuk\n${summary.totalPemasukan.toIdr()}',
                           radius: 60,
                           titleStyle: const TextStyle(
                             fontSize: 12,
@@ -136,7 +143,8 @@ class HomeScreen extends ConsumerWidget {
                         PieChartSectionData(
                           color: Colors.red,
                           value: summary.totalPengeluaran,
-                          title: 'Keluar\nRp ${summary.totalPengeluaran}',
+                          // Sebelumnya: title: 'Keluar\nRp ${summary.totalPengeluaran}'
+                          title: 'Keluar\n${summary.totalPengeluaran.toIdr()}',
                           radius: 60,
                           titleStyle: const TextStyle(
                             fontSize: 12,

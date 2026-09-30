@@ -6,10 +6,11 @@ import '../controllers/label_controller.dart';
 import '../controllers/transaksi_controller.dart';
 import '../controllers/utang_piutang_controller.dart';
 import '../controllers/theme_provider.dart';
-import '../models/akun_model.dart';
-import '../models/label_model.dart';
 import '../repositories/database_repository.dart';
 import '../services/backup_service.dart';
+
+import 'kelola_akun_screen.dart';
+import 'kelola_label_screen.dart';
 
 class AturScreen extends ConsumerWidget {
   const AturScreen({super.key});
@@ -26,14 +27,24 @@ class AturScreen extends ConsumerWidget {
           ListTile(
             leading: const Icon(Icons.account_balance_wallet),
             title: const Text('Kelola Akun'),
-            subtitle: const Text('Buat akun baru dan isi saldo awal'),
-            onTap: () => _tampilFormTambahAkun(context, ref),
+            subtitle: const Text('Tambah, edit, atau hapus akun'),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const KelolaAkunScreen()),
+              );
+            },
           ),
           ListTile(
             leading: const Icon(Icons.label),
             title: const Text('Kelola Label'),
-            subtitle: const Text('Buat label baru'),
-            onTap: () => _tampilFormTambahLabel(context, ref),
+            subtitle: const Text('Tambah, edit, atau hapus label'),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const KelolaLabelScreen()),
+              );
+            },
           ),
           const Divider(),
           SwitchListTile(
@@ -93,7 +104,7 @@ class AturScreen extends ConsumerWidget {
                 } catch (e) {
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
+                      const SnackBar(
                         content: Text(
                           'Gagal memulihkan: Password salah atau file korup',
                         ),
@@ -149,7 +160,6 @@ class AturScreen extends ConsumerWidget {
                     'Tindakan ini akan menghapus permanen seluruh transaksi, utang, akun, dan label. Lanjutkan?',
                   ),
                   const SizedBox(height: 16),
-                  // Verifikasi 1: Checkbox
                   CheckboxListTile(
                     title: const Text('Saya paham risiko ini'),
                     value: step1Checked,
@@ -159,14 +169,13 @@ class AturScreen extends ConsumerWidget {
                     contentPadding: EdgeInsets.zero,
                   ),
                   const SizedBox(height: 8),
-                  // Verifikasi 2: Ketik teks
                   TextField(
                     controller: textController,
                     decoration: const InputDecoration(
                       labelText: 'Ketik "RESET" untuk konfirmasi',
                       border: OutlineInputBorder(),
                     ),
-                    onChanged: (val) => setState(() {}), // Refresh tombol hapus
+                    onChanged: (val) => setState(() {}),
                   ),
                 ],
               ),
@@ -179,12 +188,10 @@ class AturScreen extends ConsumerWidget {
                   style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
                   onPressed: (step1Checked && textController.text == 'RESET')
                       ? () async {
-                          // 1. Eksekusi reset di database
                           await ref
                               .read(databaseRepositoryProvider)
                               .resetDatabase();
 
-                          // 2. Refresh (invalidate) semua state controller Riverpod agar UI menjadi kosong
                           ref.invalidate(akunControllerProvider);
                           ref.invalidate(labelControllerProvider);
                           ref.invalidate(transaksiControllerProvider);
@@ -199,7 +206,7 @@ class AturScreen extends ConsumerWidget {
                             );
                           }
                         }
-                      : null, // Tombol disable jika dua verifikasi belum terpenuhi
+                      : null,
                   child: const Text(
                     'Hapus Semua',
                     style: TextStyle(color: Colors.white),
@@ -210,89 +217,6 @@ class AturScreen extends ConsumerWidget {
           },
         );
       },
-    );
-  }
-
-  void _tampilFormTambahAkun(BuildContext context, WidgetRef ref) {
-    final namaController = TextEditingController();
-    final saldoController = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Form Tambah Akun'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: namaController,
-              decoration: const InputDecoration(labelText: 'Nama akun baru'),
-            ),
-            TextField(
-              controller: saldoController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Saldo awal',
-                prefixText: 'Rp ',
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Batal'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (namaController.text.isEmpty) return;
-              final akun = AkunModel(
-                id: DateTime.now().millisecondsSinceEpoch.toString(),
-                nama: namaController.text,
-                saldoAwal:
-                    double.tryParse(saldoController.text.replaceAll('.', '')) ??
-                    0,
-              );
-              ref.read(akunControllerProvider.notifier).tambahAkun(akun);
-              Navigator.pop(context);
-            },
-            child: const Text('Simpan'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _tampilFormTambahLabel(BuildContext context, WidgetRef ref) {
-    final namaController = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Form Tambah Label'),
-        content: TextField(
-          controller: namaController,
-          decoration: const InputDecoration(labelText: 'Nama label baru'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Batal'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (namaController.text.isEmpty) return;
-              final label = LabelModel(
-                id: DateTime.now().millisecondsSinceEpoch.toString(),
-                nama: namaController.text,
-              );
-              ref.read(labelControllerProvider.notifier).tambahLabel(label);
-              Navigator.pop(context);
-            },
-            child: const Text('Simpan'),
-          ),
-        ],
-      ),
     );
   }
 

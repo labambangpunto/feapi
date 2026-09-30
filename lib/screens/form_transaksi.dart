@@ -6,7 +6,10 @@ import '../controllers/label_controller.dart';
 import '../controllers/transaksi_controller.dart';
 import '../models/transaksi_model.dart';
 import '../utils/currency_formatter.dart';
+import '../utils/currency_format.dart';
 import '../controllers/summary_provider.dart';
+import 'kelola_akun_screen.dart';
+import 'kelola_label_screen.dart';
 
 class FormTransaksiScreen extends ConsumerStatefulWidget {
   final TipeTransaksi tipeTransaksi;
@@ -40,9 +43,10 @@ class _FormTransaksiScreenState extends ConsumerState<FormTransaksiScreen> {
     // Mengisi form jika ada dataEdit
     if (widget.dataEdit != null) {
       final d = widget.dataEdit!;
-      _nominalController.text = d.nominal.toInt().toString();
-      if (d.biayaTambahan != null) {
-        _biayaTambahanController.text = d.biayaTambahan!.toInt().toString();
+      _nominalController.text = widget.dataEdit!.nominal.toRibuan();
+      if (widget.dataEdit!.biayaTambahan != null) {
+        _biayaTambahanController.text = widget.dataEdit!.biayaTambahan!
+            .toRibuan();
       }
       _kuantitasController.text = d.kuantitas.toString();
       _catatanController.text = d.catatan;
@@ -57,7 +61,7 @@ class _FormTransaksiScreenState extends ConsumerState<FormTransaksiScreen> {
   Widget build(BuildContext context) {
     final akunState = ref.watch(akunControllerProvider);
     final labelState = ref.watch(labelControllerProvider);
-
+    final summary = ref.watch(summaryProvider);
     final isPengeluaran = widget.tipeTransaksi == TipeTransaksi.pengeluaran;
     final isPemasukan = widget.tipeTransaksi == TipeTransaksi.pemasukan;
     final isTransfer = widget.tipeTransaksi == TipeTransaksi.transfer;
@@ -107,32 +111,78 @@ class _FormTransaksiScreenState extends ConsumerState<FormTransaksiScreen> {
                   DropdownButtonFormField<String>(
                     initialValue: _selectedAkunSumberId,
                     hint: const Text('Akun Sumber'),
-                    items: akunList
-                        .map(
-                          (a) => DropdownMenuItem(
-                            value: a.id,
-                            child: Text(a.nama),
+                    items: [
+                      ...akunList.map((a) {
+                        final saldo =
+                            summary.saldoPerAkun[a.id] ??
+                            0; // Ambil saldo terkini
+                        return DropdownMenuItem(
+                          value: a.id,
+                          child: Text('${a.nama} (${saldo.toIdr()})'),
+                        );
+                      }),
+                      const DropdownMenuItem(
+                        value: 'add_new',
+                        child: Text(
+                          '+ Tambahkan akun',
+                          style: TextStyle(
+                            color: Colors.blue,
+                            fontWeight: FontWeight.bold,
                           ),
-                        )
-                        .toList(),
-                    onChanged: (val) =>
-                        setState(() => _selectedAkunSumberId = val),
+                        ),
+                      ),
+                    ],
+                    onChanged: (val) {
+                      if (val == 'add_new') {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const KelolaAkunScreen(),
+                          ),
+                        );
+                      } else {
+                        setState(() => _selectedAkunSumberId = val);
+                      }
+                    },
                   ),
                 if (isTransfer) const SizedBox(height: 16),
                 if (isPemasukan || isTransfer)
                   DropdownButtonFormField<String>(
                     initialValue: _selectedAkunTujuanId,
                     hint: const Text('Akun Tujuan'),
-                    items: akunList
-                        .map(
-                          (a) => DropdownMenuItem(
-                            value: a.id,
-                            child: Text(a.nama),
+                    items: [
+                      ...akunList.map((a) {
+                        final saldo =
+                            summary.saldoPerAkun[a.id] ??
+                            0; // Ambil saldo terkini
+                        return DropdownMenuItem(
+                          value: a.id,
+                          child: Text('${a.nama} (${saldo.toIdr()})'),
+                        );
+                      }),
+                      const DropdownMenuItem(
+                        value: 'add_new',
+                        child: Text(
+                          '+ Tambahkan akun',
+                          style: TextStyle(
+                            color: Colors.blue,
+                            fontWeight: FontWeight.bold,
                           ),
-                        )
-                        .toList(),
-                    onChanged: (val) =>
-                        setState(() => _selectedAkunTujuanId = val),
+                        ),
+                      ),
+                    ],
+                    onChanged: (val) {
+                      if (val == 'add_new') {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const KelolaAkunScreen(),
+                          ),
+                        );
+                      } else {
+                        setState(() => _selectedAkunTujuanId = val);
+                      }
+                    },
                   ),
               ],
             ),
@@ -143,17 +193,29 @@ class _FormTransaksiScreenState extends ConsumerState<FormTransaksiScreen> {
           labelState.maybeWhen(
             data: (labelList) => Wrap(
               spacing: 8,
-              children: labelList
-                  .map(
-                    (l) => ChoiceChip(
-                      label: Text(l.nama),
-                      selected: _selectedLabelId == l.id,
-                      onSelected: (selected) => setState(
-                        () => _selectedLabelId = selected ? l.id : null,
-                      ),
+              children: [
+                ...labelList.map(
+                  (l) => ChoiceChip(
+                    label: Text(l.nama),
+                    selected: _selectedLabelId == l.id,
+                    onSelected: (selected) => setState(
+                      () => _selectedLabelId = selected ? l.id : null,
                     ),
-                  )
-                  .toList(),
+                  ),
+                ),
+                ActionChip(
+                  label: const Text('Tambah'),
+                  avatar: const Icon(Icons.add, size: 16),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const KelolaLabelScreen(),
+                      ),
+                    );
+                  },
+                ),
+              ],
             ),
             orElse: () => const CircularProgressIndicator(),
           ),
@@ -197,7 +259,17 @@ class _FormTransaksiScreenState extends ConsumerState<FormTransaksiScreen> {
           .showSnackBar(const SnackBar(content: Text('Isi field wajib!')));
       return;
     }
-
+    if (_nominalController.text.isEmpty ||
+        (_selectedAkunSumberId == null &&
+            widget.tipeTransaksi != TipeTransaksi.pemasukan) ||
+        (_selectedAkunTujuanId == null &&
+            widget.tipeTransaksi == TipeTransaksi.transfer) ||
+        _selectedLabelId == null) {
+      // Validasi label ditambahkan di sini
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Isi field wajib!')));
+      return;
+    }
     final nominal = double.parse(_nominalController.text.replaceAll('.', ''));
     final biayaTambahan = _biayaTambahanController.text.isNotEmpty
         ? double.parse(_biayaTambahanController.text.replaceAll('.', ''))

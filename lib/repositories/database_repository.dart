@@ -115,6 +115,16 @@ class DatabaseRepository {
     return await db.delete('akun', where: 'id = ?', whereArgs: [id]);
   }
 
+  Future<int> updateAkun(AkunModel akun) async {
+    final db = await _dbHelper.database;
+    return await db.update(
+      'akun',
+      {'nama': akun.nama, 'saldoAwal': akun.saldoAwal},
+      where: 'id = ?',
+      whereArgs: [akun.id],
+    );
+  }
+
   // ==============================
   // CRUD LABEL
   // ==============================
@@ -138,6 +148,15 @@ class DatabaseRepository {
     return await db.delete('label', where: 'id = ?', whereArgs: [id]);
   }
 
+  Future<int> updateLabel(LabelModel label) async {
+    final db = await _dbHelper.database;
+    return await db.update(
+      'label',
+      {'nama': label.nama},
+      where: 'id = ?',
+      whereArgs: [label.id],
+    );
+  }
   // ==============================
   // CRUD UTANG PIUTANG
   // ==============================

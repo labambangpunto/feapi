@@ -31,6 +31,11 @@ class LabelController extends StateNotifier<AsyncValue<List<LabelModel>>> {
     await fetchLabel();
   }
 
+  Future<void> updateLabel(LabelModel label) async {
+    await _repository.updateLabel(label);
+    await fetchLabel(); // Refresh state menggunakan fungsi yang sudah ada
+  }
+
   Future<void> hapusLabel(String id) async {
     await _repository.deleteLabel(id);
     await fetchLabel();

@@ -31,6 +31,11 @@ class AkunController extends StateNotifier<AsyncValue<List<AkunModel>>> {
     await fetchAkun(); // Refresh state setelah insert
   }
 
+  Future<void> updateAkun(AkunModel akun) async {
+    await _repository.updateAkun(akun);
+    await fetchAkun(); // Refresh state menggunakan fungsi yang sudah ada
+  }
+
   Future<void> hapusAkun(String id) async {
     await _repository.deleteAkun(id);
     await fetchAkun(); // Refresh state setelah delete
