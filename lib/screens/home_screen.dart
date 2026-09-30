@@ -99,7 +99,6 @@ class HomeScreen extends ConsumerWidget {
               if (akunList.isEmpty) return const Text('Belum ada akun.');
               return Column(
                 children: akunList.map((akun) {
-                  final saldoRiil = summary.saldoPerAkun[akun.id] ?? 0;
                   return ListTile(
                     leading: const Icon(Icons.account_balance_wallet),
                     title: Text(akun.nama),
