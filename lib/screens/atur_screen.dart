@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:image/image.dart' as img;
 
 import '../controllers/akun_controller.dart';
 import '../controllers/label_controller.dart';
@@ -64,15 +65,33 @@ class _AturScreenState extends ConsumerState<AturScreen> {
                       final picker = ImagePicker();
                       final xFile = await picker.pickImage(
                         source: ImageSource.gallery,
-                        imageQuality:
-                            50, // Kompresi agar Base64 tidak terlalu besar
-                        maxWidth: 400,
                       );
+
                       if (xFile != null) {
+                        // Tampilkan indikator loading jika perlu, karena proses image cukup berat di utas utama
                         final bytes = await xFile.readAsBytes();
-                        setStateDialog(() {
-                          base64Image = base64Encode(bytes);
-                        });
+
+                        // Decode gambar mentah
+                        img.Image? decodedImage = img.decodeImage(bytes);
+
+                        if (decodedImage != null) {
+                          // Resize ke 200x200 (cukup untuk avatar yang tidak bisa di-zoom)
+                          img.Image resizedImage = img.copyResize(
+                            decodedImage,
+                            width: 200,
+                          );
+
+                          // Kompresi ulang menjadi JPG dengan kualitas 60%
+                          final compressedBytes = img.encodeJpg(
+                            resizedImage,
+                            quality: 60,
+                          );
+
+                          setStateDialog(() {
+                            // Base64 yang dihasilkan kini berukuran sangat kecil (biasanya di bawah 20KB)
+                            base64Image = base64Encode(compressedBytes);
+                          });
+                        }
                       }
                     },
                     child: CircleAvatar(

@@ -6,6 +6,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:googleapis/drive/v3.dart' as drive;
 import 'package:googleapis_auth/auth_io.dart';
 import 'package:http/http.dart' as http;
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class GoogleAuthClient extends http.BaseClient {
   final Map<String, String> _headers;
@@ -20,7 +21,6 @@ class GoogleAuthClient extends http.BaseClient {
 }
 
 class GoogleDriveService {
-  // Singleton pattern agar objek autentikasi persisten di memori
   static final GoogleDriveService _instance = GoogleDriveService._internal();
   factory GoogleDriveService() => _instance;
   GoogleDriveService._internal();
@@ -34,16 +34,21 @@ class GoogleDriveService {
     defaultValue: '',
   );
   static const String _backupFileName = 'feapi_app_data.enc';
+  static const String _refreshTokenKey = 'drive_refresh_token';
   static const _scopes = [drive.DriveApi.driveAppdataScope];
 
   final GoogleSignIn _googleSignIn = GoogleSignIn(scopes: _scopes);
+  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
+
+  // Penyimpanan sesi di RAM sebagai fallback utama saat runtime
   AutoRefreshingAuthClient? _desktopAuthClient;
 
-  // Fungsi untuk memeriksa status sesi
   Future<bool> hasSession() async {
     if (!kIsWeb &&
         (Platform.isWindows || Platform.isMacOS || Platform.isLinux)) {
-      return _desktopAuthClient != null;
+      if (_desktopAuthClient != null) return true;
+      final savedToken = await _secureStorage.read(key: _refreshTokenKey);
+      return savedToken != null;
     } else {
       return await _googleSignIn.isSignedIn();
     }
@@ -62,18 +67,59 @@ class GoogleDriveService {
   Future<drive.DriveApi?> _getDriveApi() async {
     if (!kIsWeb &&
         (Platform.isWindows || Platform.isMacOS || Platform.isLinux)) {
+      // 1. Cek sesi aktif di RAM terlebih dahulu
       if (_desktopAuthClient != null) {
         return drive.DriveApi(_desktopAuthClient!);
       }
 
       final clientId = ClientId(_desktopClientId, _desktopClientSecret);
 
+      // 2. Cek token yang tersimpan di Secure Storage
+      try {
+        final savedRefreshToken = await _secureStorage.read(
+          key: _refreshTokenKey,
+        );
+
+        if (savedRefreshToken != null) {
+          final credentials = AccessCredentials(
+            // Membuat token akses kedaluwarsa secara artifisial agar sistem langsung melakukan refresh
+            AccessToken(
+              'Bearer',
+              'dummy_token',
+              DateTime.now().toUtc().subtract(const Duration(days: 1)),
+            ),
+            savedRefreshToken,
+            _scopes,
+          );
+
+          _desktopAuthClient = autoRefreshingClient(
+            clientId,
+            credentials,
+            http.Client(),
+          );
+          return drive.DriveApi(_desktopAuthClient!);
+        }
+      } catch (e) {
+        debugPrint('Gagal memuat sesi dari storage: $e');
+      }
+
+      // 3. Fallback: Buka browser untuk persetujuan pengguna jika RAM dan Storage kosong
       try {
         _desktopAuthClient = await clientViaUserConsent(clientId, _scopes, (
           String url,
         ) {
           _launchUrl(url);
         });
+
+        // Simpan token otorisasi ke storage untuk sesi berikutnya
+        final newRefreshToken = _desktopAuthClient?.credentials.refreshToken;
+        if (newRefreshToken != null) {
+          await _secureStorage.write(
+            key: _refreshTokenKey,
+            value: newRefreshToken,
+          );
+        }
+
         return drive.DriveApi(_desktopAuthClient!);
       } catch (e) {
         debugPrint('Desktop Auth Error: $e');
@@ -145,6 +191,7 @@ class GoogleDriveService {
         (Platform.isWindows || Platform.isMacOS || Platform.isLinux)) {
       _desktopAuthClient?.close();
       _desktopAuthClient = null;
+      await _secureStorage.delete(key: _refreshTokenKey);
     } else {
       await _googleSignIn.signOut();
     }
