@@ -26,7 +26,6 @@ class BackupService {
     final transaksi = await _dbRepo.getSemuaTransaksi();
 
     List<List<dynamic>> rows = [];
-    // Header CSV
     rows.add([
       'ID',
       'Tipe',
@@ -37,7 +36,6 @@ class BackupService {
       'Catatan',
     ]);
 
-    // Isi Data
     for (var t in transaksi) {
       rows.add([
         t.id,
@@ -64,9 +62,7 @@ class BackupService {
     final utang = await _dbRepo.getSemuaUtangPiutang();
 
     final Map<String, dynamic> seluruhData = {
-      'akun': akun
-          .map((e) => {'id': e.id, 'nama': e.nama, 'saldoAwal': e.saldoAwal})
-          .toList(),
+      'akun': akun.map((e) => {'id': e.id, 'nama': e.nama}).toList(),
       'label': label.map((e) => {'id': e.id, 'nama': e.nama}).toList(),
       'transaksi': transaksi
           .map(
@@ -134,13 +130,7 @@ class BackupService {
 
     if (data['akun'] != null) {
       for (var item in data['akun']) {
-        await _dbRepo.insertAkun(
-          AkunModel(
-            id: item['id'],
-            nama: item['nama'],
-            saldoAwal: (item['saldoAwal'] as num).toDouble(),
-          ),
-        );
+        await _dbRepo.insertAkun(AkunModel(id: item['id'], nama: item['nama']));
       }
     }
     if (data['label'] != null) {
@@ -198,14 +188,12 @@ class BackupService {
 
     if (!kIsWeb &&
         (Platform.isLinux || Platform.isWindows || Platform.isMacOS)) {
-      // Desktop: dialog Save As (file langsung ditulis oleh saveFile)
       await FilePicker.saveFile(
         dialogTitle: 'Simpan file $fileName',
         fileName: fileName,
         bytes: bytes,
       );
     } else {
-      // Mobile: Share UI
       final dir = await getTemporaryDirectory();
       final path = '${dir.path}/$fileName';
       await File(path).writeAsBytes(bytes);

@@ -36,11 +36,8 @@ class KelolaLabelScreen extends ConsumerWidget {
                     ),
                     IconButton(
                       icon: const Icon(Icons.delete, color: Colors.red),
-                      onPressed: () {
-                        ref
-                            .read(labelControllerProvider.notifier)
-                            .hapusLabel(label.id);
-                      },
+                      onPressed: () =>
+                          _tampilDialogHapusLabel(context, ref, label),
                     ),
                   ],
                 ),
@@ -113,6 +110,36 @@ class KelolaLabelScreen extends ConsumerWidget {
               Navigator.pop(context);
             },
             child: const Text('Simpan'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _tampilDialogHapusLabel(
+    BuildContext context,
+    WidgetRef ref,
+    LabelModel label,
+  ) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Hapus Label', style: TextStyle(color: Colors.red)),
+        content: Text(
+          'Apakah Anda yakin ingin menghapus label "${label.nama}"?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () {
+              ref.read(labelControllerProvider.notifier).hapusLabel(label.id);
+              Navigator.pop(context);
+            },
+            child: const Text('Hapus', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),

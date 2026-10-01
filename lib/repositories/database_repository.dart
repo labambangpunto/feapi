@@ -90,11 +90,7 @@ class DatabaseRepository {
 
   Future<int> insertAkun(AkunModel akun) async {
     final db = await _dbHelper.database;
-    return await db.insert('akun', {
-      'id': akun.id,
-      'nama': akun.nama,
-      'saldoAwal': akun.saldoAwal,
-    });
+    return await db.insert('akun', {'id': akun.id, 'nama': akun.nama});
   }
 
   Future<List<AkunModel>> getSemuaAkun() async {
@@ -102,11 +98,7 @@ class DatabaseRepository {
     final List<Map<String, dynamic>> maps = await db.query('akun');
 
     return List.generate(maps.length, (i) {
-      return AkunModel(
-        id: maps[i]['id'],
-        nama: maps[i]['nama'],
-        saldoAwal: maps[i]['saldoAwal'],
-      );
+      return AkunModel(id: maps[i]['id'], nama: maps[i]['nama']);
     });
   }
 
@@ -119,7 +111,7 @@ class DatabaseRepository {
     final db = await _dbHelper.database;
     return await db.update(
       'akun',
-      {'nama': akun.nama, 'saldoAwal': akun.saldoAwal},
+      {'nama': akun.nama},
       where: 'id = ?',
       whereArgs: [akun.id],
     );

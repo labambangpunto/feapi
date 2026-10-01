@@ -5,7 +5,7 @@ import '../controllers/akun_controller.dart';
 import '../controllers/utang_piutang_controller.dart';
 import '../models/utang_piutang_model.dart';
 import '../utils/currency_formatter.dart';
-import '../controllers/summary_provider.dart';
+
 import '../utils/currency_format.dart';
 import 'kelola_akun_screen.dart';
 
@@ -47,7 +47,7 @@ class _FormUtangPiutangScreenState
   @override
   Widget build(BuildContext context) {
     final akunState = ref.watch(akunControllerProvider);
-    final summary = ref.watch(summaryProvider);
+
     final isUtang = widget.tipe == TipeUtangPiutang.utang;
 
     return Scaffold(
@@ -79,12 +79,7 @@ class _FormUtangPiutangScreenState
               ),
               items: [
                 ...akunList.map((a) {
-                  final saldo =
-                      summary.saldoPerAkun[a.id] ?? 0; // Ambil saldo terkini
-                  return DropdownMenuItem(
-                    value: a.id,
-                    child: Text('${a.nama} (${saldo.toIdr()})'),
-                  );
+                  return DropdownMenuItem(value: a.id, child: Text(a.nama));
                 }),
                 const DropdownMenuItem(
                   value: 'add_new',
@@ -161,24 +156,6 @@ class _FormUtangPiutangScreenState
     }
 
     final nominal = double.parse(_nominalController.text.replaceAll('.', ''));
-
-    // Validasi pencegahan saldo minus saat memberikan Piutang
-    if (widget.tipe == TipeUtangPiutang.piutang) {
-      final summary = ref.read(summaryProvider);
-      double saldoTersedia = summary.saldoPerAkun[_selectedAkunId] ?? 0;
-
-      if (widget.dataEdit != null &&
-          widget.dataEdit!.akunId == _selectedAkunId) {
-        saldoTersedia += widget.dataEdit!.nominal;
-      }
-
-      if (nominal > saldoTersedia) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Peringatan: Saldo tidak cukup!')),
-        );
-        return; // Hentikan penyimpanan
-      }
-    }
 
     final data = UtangPiutangModel(
       id:

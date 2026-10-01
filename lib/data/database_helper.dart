@@ -39,12 +39,11 @@ class DatabaseHelper {
 
     // Tabel Akun
     await db.execute('''
-    CREATE TABLE akun (
-      id $idType,
-      nama $textType,
-      saldoAwal $realType
-    )
-    ''');
+  CREATE TABLE akun(
+    id TEXT PRIMARY KEY,
+    nama TEXT
+  )
+''');
 
     // Tabel Label
     await db.execute('''

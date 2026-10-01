@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter/services.dart';
 
 import '../controllers/akun_controller.dart';
 import '../models/akun_model.dart';
-import '../utils/currency_format.dart';
-import '../utils/currency_formatter.dart';
 
 class KelolaAkunScreen extends ConsumerWidget {
   const KelolaAkunScreen({super.key});
@@ -27,9 +24,9 @@ class KelolaAkunScreen extends ConsumerWidget {
             itemCount: akunList.length,
             itemBuilder: (context, index) {
               final akun = akunList[index];
+
               return ListTile(
                 title: Text(akun.nama),
-                subtitle: Text('Saldo awal: ${akun.saldoAwal.toIdr()}'),
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -39,11 +36,8 @@ class KelolaAkunScreen extends ConsumerWidget {
                     ),
                     IconButton(
                       icon: const Icon(Icons.delete, color: Colors.red),
-                      onPressed: () {
-                        ref
-                            .read(akunControllerProvider.notifier)
-                            .hapusAkun(akun.id);
-                      },
+                      onPressed: () =>
+                          _tampilDialogHapusAkun(context, ref, akun),
                     ),
                   ],
                 ),
@@ -61,72 +55,56 @@ class KelolaAkunScreen extends ConsumerWidget {
 
   void _tampilFormTambahAkun(BuildContext context, WidgetRef ref) {
     final namaController = TextEditingController();
-    final saldoController = TextEditingController();
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Tambah Akun Baru'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: namaController,
-              decoration: const InputDecoration(labelText: 'Nama akun'),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Tambah Akun Baru'),
+          content: TextField(
+            controller: namaController,
+            decoration: const InputDecoration(labelText: 'Nama akun'),
+            onChanged: (val) => setState(() {}),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Batal'),
             ),
-            TextField(
-              controller: saldoController,
-              keyboardType: TextInputType.number,
-              inputFormatters: [
-                FilteringTextInputFormatter.digitsOnly,
-                CurrencyFormatter(), // Sesuaikan dengan nama class yang ada di currency_formatter.dart Anda
-              ],
-              decoration: const InputDecoration(
-                labelText: 'Saldo awal (Permanen)',
-                prefixText: 'Rp ',
-                helperText: 'Saldo awal tidak dapat \ndiubah setelah disimpan.',
-              ),
+            ElevatedButton(
+              onPressed: (namaController.text.trim().isNotEmpty)
+                  ? () {
+                      final namaBaru = namaController.text.trim();
+                      final currentAkun =
+                          ref.read(akunControllerProvider).value ?? [];
+
+                      final isDuplicate = currentAkun.any(
+                        (a) => a.nama.toLowerCase() == namaBaru.toLowerCase(),
+                      );
+
+                      if (isDuplicate) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Nama akun sudah digunakan'),
+                          ),
+                        );
+                        return;
+                      }
+
+                      final akun = AkunModel(
+                        id: DateTime.now().millisecondsSinceEpoch.toString(),
+                        nama: namaBaru,
+                      );
+                      ref
+                          .read(akunControllerProvider.notifier)
+                          .tambahAkun(akun);
+                      Navigator.pop(context);
+                    }
+                  : null,
+              child: const Text('Simpan'),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Batal'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final namaBaru = namaController.text.trim();
-              if (namaBaru.isEmpty) return;
-
-              // Ambil daftar akun saat ini
-              final currentAkun = ref.read(akunControllerProvider).value ?? [];
-
-              // Cek duplikasi (case-insensitive)
-              final isDuplicate = currentAkun.any(
-                (a) => a.nama.toLowerCase() == namaBaru.toLowerCase(),
-              );
-
-              if (isDuplicate) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Nama akun sudah digunakan')),
-                );
-                return; // Hentikan proses simpan
-              }
-
-              final akun = AkunModel(
-                id: DateTime.now().millisecondsSinceEpoch.toString(),
-                nama: namaBaru,
-                saldoAwal:
-                    double.tryParse(saldoController.text.replaceAll('.', '')) ??
-                    0,
-              );
-              ref.read(akunControllerProvider.notifier).tambahAkun(akun);
-              Navigator.pop(context);
-            },
-            child: const Text('Simpan'),
-          ),
-        ],
       ),
     );
   }
@@ -142,19 +120,9 @@ class KelolaAkunScreen extends ConsumerWidget {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Edit Akun'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: namaController,
-              decoration: const InputDecoration(labelText: 'Nama akun'),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Saldo awal: ${akunLama.saldoAwal.toIdr()}\n(Saldo awal tidak dapat diedit)',
-              style: const TextStyle(color: Colors.grey, fontSize: 12),
-            ),
-          ],
+        content: TextField(
+          controller: namaController,
+          decoration: const InputDecoration(labelText: 'Nama akun'),
         ),
         actions: [
           TextButton(
@@ -168,7 +136,6 @@ class KelolaAkunScreen extends ConsumerWidget {
 
               final currentAkun = ref.read(akunControllerProvider).value ?? [];
 
-              // Cek duplikasi dengan mengabaikan ID akun yang sedang diedit
               final isDuplicate = currentAkun.any(
                 (a) =>
                     a.id != akunLama.id &&
@@ -182,11 +149,7 @@ class KelolaAkunScreen extends ConsumerWidget {
                 return;
               }
 
-              final akunUpdate = AkunModel(
-                id: akunLama.id,
-                nama: namaEdit,
-                saldoAwal: akunLama.saldoAwal,
-              );
+              final akunUpdate = AkunModel(id: akunLama.id, nama: namaEdit);
               ref.read(akunControllerProvider.notifier).updateAkun(akunUpdate);
               Navigator.pop(context);
             },
@@ -194,6 +157,79 @@ class KelolaAkunScreen extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+
+  void _tampilDialogHapusAkun(
+    BuildContext context,
+    WidgetRef ref,
+    AkunModel akun,
+  ) {
+    bool isChecked = false;
+    final textController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text(
+                'Hapus Akun',
+                style: TextStyle(color: Colors.red),
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Apakah Anda yakin ingin menghapus permanen akun "${akun.nama}"?',
+                  ),
+                  const SizedBox(height: 16),
+                  CheckboxListTile(
+                    title: const Text(
+                      'Saya paham akun ini akan dihapus permanen',
+                    ),
+                    value: isChecked,
+                    onChanged: (val) =>
+                        setState(() => isChecked = val ?? false),
+                    controlAffinity: ListTileControlAffinity.leading,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: textController,
+                    decoration: const InputDecoration(
+                      labelText: 'Ketik "HAPUS" untuk konfirmasi',
+                    ),
+                    onChanged: (val) => setState(() {}),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Batal'),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                  onPressed: (isChecked && textController.text == 'HAPUS')
+                      ? () {
+                          ref
+                              .read(akunControllerProvider.notifier)
+                              .hapusAkun(akun.id);
+                          Navigator.pop(context);
+                        }
+                      : null,
+                  child: const Text(
+                    'Hapus',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 }

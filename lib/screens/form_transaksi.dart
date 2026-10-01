@@ -7,13 +7,12 @@ import '../controllers/transaksi_controller.dart';
 import '../models/transaksi_model.dart';
 import '../utils/currency_formatter.dart';
 import '../utils/currency_format.dart';
-import '../controllers/summary_provider.dart';
 import 'kelola_akun_screen.dart';
 import 'kelola_label_screen.dart';
 
 class FormTransaksiScreen extends ConsumerStatefulWidget {
   final TipeTransaksi tipeTransaksi;
-  final TransaksiModel? dataEdit; // Tambahan untuk mode edit
+  final TransaksiModel? dataEdit;
 
   const FormTransaksiScreen({
     super.key,
@@ -40,7 +39,6 @@ class _FormTransaksiScreenState extends ConsumerState<FormTransaksiScreen> {
   @override
   void initState() {
     super.initState();
-    // Mengisi form jika ada dataEdit
     if (widget.dataEdit != null) {
       final d = widget.dataEdit!;
       _nominalController.text = widget.dataEdit!.nominal.toRibuan();
@@ -61,7 +59,7 @@ class _FormTransaksiScreenState extends ConsumerState<FormTransaksiScreen> {
   Widget build(BuildContext context) {
     final akunState = ref.watch(akunControllerProvider);
     final labelState = ref.watch(labelControllerProvider);
-    final summary = ref.watch(summaryProvider);
+
     final isPengeluaran = widget.tipeTransaksi == TipeTransaksi.pengeluaran;
     final isPemasukan = widget.tipeTransaksi == TipeTransaksi.pemasukan;
     final isTransfer = widget.tipeTransaksi == TipeTransaksi.transfer;
@@ -84,7 +82,6 @@ class _FormTransaksiScreenState extends ConsumerState<FormTransaksiScreen> {
               prefixText: 'Rp ',
             ),
           ),
-
           if (isPengeluaran || isTransfer)
             TextField(
               controller: _biayaTambahanController,
@@ -95,14 +92,12 @@ class _FormTransaksiScreenState extends ConsumerState<FormTransaksiScreen> {
                 prefixText: 'Rp ',
               ),
             ),
-
           if (isPengeluaran)
             TextField(
               controller: _kuantitasController,
               keyboardType: TextInputType.number,
               decoration: const InputDecoration(labelText: 'Kuantitas (Qty)'),
             ),
-
           const SizedBox(height: 16),
           akunState.maybeWhen(
             data: (akunList) => Column(
@@ -112,15 +107,10 @@ class _FormTransaksiScreenState extends ConsumerState<FormTransaksiScreen> {
                     initialValue: _selectedAkunSumberId,
                     hint: const Text('Akun Sumber'),
                     items: [
-                      ...akunList.map((a) {
-                        final saldo =
-                            summary.saldoPerAkun[a.id] ??
-                            0; // Ambil saldo terkini
-                        return DropdownMenuItem(
-                          value: a.id,
-                          child: Text('${a.nama} (${saldo.toIdr()})'),
-                        );
-                      }),
+                      ...akunList.map(
+                        (a) =>
+                            DropdownMenuItem(value: a.id, child: Text(a.nama)),
+                      ),
                       const DropdownMenuItem(
                         value: 'add_new',
                         child: Text(
@@ -151,15 +141,10 @@ class _FormTransaksiScreenState extends ConsumerState<FormTransaksiScreen> {
                     initialValue: _selectedAkunTujuanId,
                     hint: const Text('Akun Tujuan'),
                     items: [
-                      ...akunList.map((a) {
-                        final saldo =
-                            summary.saldoPerAkun[a.id] ??
-                            0; // Ambil saldo terkini
-                        return DropdownMenuItem(
-                          value: a.id,
-                          child: Text('${a.nama} (${saldo.toIdr()})'),
-                        );
-                      }),
+                      ...akunList.map(
+                        (a) =>
+                            DropdownMenuItem(value: a.id, child: Text(a.nama)),
+                      ),
                       const DropdownMenuItem(
                         value: 'add_new',
                         child: Text(
@@ -188,7 +173,6 @@ class _FormTransaksiScreenState extends ConsumerState<FormTransaksiScreen> {
             ),
             orElse: () => const CircularProgressIndicator(),
           ),
-
           const SizedBox(height: 16),
           labelState.maybeWhen(
             data: (labelList) => Wrap(
@@ -204,7 +188,7 @@ class _FormTransaksiScreenState extends ConsumerState<FormTransaksiScreen> {
                   ),
                 ),
                 ActionChip(
-                  label: const Text('Tambah'),
+                  label: const Text('+ Tambah'),
                   avatar: const Icon(Icons.add, size: 16),
                   onPressed: () {
                     Navigator.push(
@@ -219,7 +203,6 @@ class _FormTransaksiScreenState extends ConsumerState<FormTransaksiScreen> {
             ),
             orElse: () => const CircularProgressIndicator(),
           ),
-
           const SizedBox(height: 16),
           ListTile(
             title: const Text('Tanggal & Waktu'),
@@ -254,51 +237,18 @@ class _FormTransaksiScreenState extends ConsumerState<FormTransaksiScreen> {
         (_selectedAkunSumberId == null &&
             widget.tipeTransaksi != TipeTransaksi.pemasukan) ||
         (_selectedAkunTujuanId == null &&
-            widget.tipeTransaksi == TipeTransaksi.transfer)) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Isi field wajib!')));
-      return;
-    }
-    if (_nominalController.text.isEmpty ||
-        (_selectedAkunSumberId == null &&
-            widget.tipeTransaksi != TipeTransaksi.pemasukan) ||
-        (_selectedAkunTujuanId == null &&
             widget.tipeTransaksi == TipeTransaksi.transfer) ||
         _selectedLabelId == null) {
-      // Validasi label ditambahkan di sini
       ScaffoldMessenger.of(context)
           .showSnackBar(const SnackBar(content: Text('Isi field wajib!')));
       return;
     }
+
     final nominal = double.parse(_nominalController.text.replaceAll('.', ''));
     final biayaTambahan = _biayaTambahanController.text.isNotEmpty
         ? double.parse(_biayaTambahanController.text.replaceAll('.', ''))
         : null;
     final qty = int.parse(_kuantitasController.text);
-
-    // Validasi pencegahan saldo minus
-    if (widget.tipeTransaksi == TipeTransaksi.pengeluaran ||
-        widget.tipeTransaksi == TipeTransaksi.transfer) {
-      final summary = ref.read(summaryProvider);
-      double saldoTersedia = summary.saldoPerAkun[_selectedAkunSumberId] ?? 0;
-
-      // Jika dalam mode edit, kembalikan sementara nominal lama ke saldo tersedia agar kalkulasi akurat
-      if (widget.dataEdit != null &&
-          widget.dataEdit!.akunSumberId == _selectedAkunSumberId) {
-        saldoTersedia +=
-            (widget.dataEdit!.nominal * widget.dataEdit!.kuantitas) +
-            (widget.dataEdit!.biayaTambahan ?? 0);
-      }
-
-      final totalBeban = (nominal * qty) + (biayaTambahan ?? 0);
-
-      if (totalBeban > saldoTersedia) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Peringatan: Saldo tidak cukup!')),
-        );
-        return; // Hentikan penyimpanan
-      }
-    }
 
     final transaksi = TransaksiModel(
       id:
