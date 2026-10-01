@@ -1,5 +1,8 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../controllers/akun_controller.dart';
 import '../controllers/label_controller.dart';
@@ -11,6 +14,11 @@ import '../services/backup_service.dart';
 import '../services/google_drive_service.dart';
 import 'kelola_akun_screen.dart';
 import 'kelola_label_screen.dart';
+
+// Tambahkan provider lokal untuk membaca state profil di halaman ini
+final profilProvider = FutureProvider<Map<String, dynamic>?>((ref) async {
+  return await ref.read(databaseRepositoryProvider).getProfil();
+});
 
 class AturScreen extends ConsumerStatefulWidget {
   const AturScreen({super.key});
@@ -35,15 +43,143 @@ class _AturScreenState extends ConsumerState<AturScreen> {
     }
   }
 
+  Future<void> _editProfil(Map<String, dynamic>? currentProfil) async {
+    final namaController = TextEditingController(
+      text: currentProfil?['nama'] ?? '',
+    );
+    String? base64Image = currentProfil?['fotoBase64'];
+
+    await showDialog(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            return AlertDialog(
+              title: const Text('Edit Profil'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  GestureDetector(
+                    onTap: () async {
+                      final picker = ImagePicker();
+                      final xFile = await picker.pickImage(
+                        source: ImageSource.gallery,
+                        imageQuality:
+                            50, // Kompresi agar Base64 tidak terlalu besar
+                        maxWidth: 400,
+                      );
+                      if (xFile != null) {
+                        final bytes = await xFile.readAsBytes();
+                        setStateDialog(() {
+                          base64Image = base64Encode(bytes);
+                        });
+                      }
+                    },
+                    child: CircleAvatar(
+                      radius: 40,
+                      backgroundImage: base64Image != null
+                          ? MemoryImage(base64Decode(base64Image!))
+                          : null,
+                      child: base64Image == null
+                          ? const Icon(Icons.camera_alt, size: 30)
+                          : null,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: namaController,
+                    maxLength: 32,
+                    decoration: const InputDecoration(labelText: 'Nama anda'),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Batal'),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    await ref
+                        .read(databaseRepositoryProvider)
+                        .saveProfil(namaController.text.trim(), base64Image);
+                    ref.invalidate(profilProvider); // Segarkan UI
+                    if (context.mounted) Navigator.pop(context);
+                  },
+                  child: const Text('Simpan'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final themeMode = ref.watch(themeProvider);
     final isDark = themeMode == ThemeMode.dark;
+    final profilAsync = ref.watch(profilProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Pengaturan')),
       body: ListView(
         children: [
+          // BAGIAN PROFIL
+          profilAsync.when(
+            data: (profil) => Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 30,
+                    backgroundImage:
+                        profil != null && profil['fotoBase64'] != null
+                        ? MemoryImage(base64Decode(profil['fotoBase64']))
+                        : null,
+                    child: profil == null || profil['fotoBase64'] == null
+                        ? const Icon(Icons.person, size: 30)
+                        : null,
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          profil?['nama']?.isNotEmpty == true
+                              ? profil!['nama']
+                              : 'Pengguna',
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        InkWell(
+                          onTap: () => _editProfil(profil),
+                          child: const Text(
+                            'Edit Profil',
+                            style: TextStyle(
+                              color: Colors.blue,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            loading: () => const Padding(
+              padding: EdgeInsets.all(16),
+              child: CircularProgressIndicator(),
+            ),
+            error: (_, _) => const SizedBox.shrink(),
+          ),
+          const Divider(),
+
           ListTile(
             leading: const Icon(Icons.account_balance_wallet),
             title: const Text('Kelola Akun'),
@@ -72,9 +208,8 @@ class _AturScreenState extends ConsumerState<AturScreen> {
             title: const Text('Mode Gelap'),
             value: isDark,
             onChanged: (value) {
-              ref.read(themeProvider.notifier).state = value
-                  ? ThemeMode.dark
-                  : ThemeMode.light;
+              // Menggunakan toggleTheme dari StateNotifier baru
+              ref.read(themeProvider.notifier).toggleTheme(value);
             },
           ),
           const Divider(),
@@ -105,6 +240,8 @@ class _AturScreenState extends ConsumerState<AturScreen> {
               ],
             ),
           ),
+
+          // ... Sisa kode ListTile (Backup GDrive, Restore GDrive, Logout, Backup Lokal, CSV, Reset) tetap sama persis sesuai format Anda sebelumnya ...
           ListTile(
             leading: const Icon(Icons.cloud_upload, color: Colors.blue),
             title: const Text('Backup ke Google Drive'),
@@ -191,6 +328,7 @@ class _AturScreenState extends ConsumerState<AturScreen> {
                 ref.invalidate(labelControllerProvider);
                 ref.invalidate(transaksiControllerProvider);
                 ref.invalidate(utangPiutangControllerProvider);
+                ref.invalidate(profilProvider);
 
                 await _checkDriveSession();
 
@@ -273,7 +411,7 @@ class _AturScreenState extends ConsumerState<AturScreen> {
           ListTile(
             leading: const Icon(Icons.save_alt),
             title: const Text('Simpan Otomatis ke Folder'),
-            subtitle: const Text('Feapi/backup/'),
+            subtitle: const Text('feapi/backup/'),
             onTap: () async {
               final password = await _tampilDialogPassword(
                 context,
@@ -288,7 +426,7 @@ class _AturScreenState extends ConsumerState<AturScreen> {
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                        content: Text('Tersimpan di Documents/Feapi/backup/'),
+                        content: Text('Tersimpan di Documents/feapi/backup/'),
                       ),
                     );
                   }
@@ -340,6 +478,7 @@ class _AturScreenState extends ConsumerState<AturScreen> {
                   ref.invalidate(labelControllerProvider);
                   ref.invalidate(transaksiControllerProvider);
                   ref.invalidate(utangPiutangControllerProvider);
+                  ref.invalidate(profilProvider);
 
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -416,7 +555,7 @@ class _AturScreenState extends ConsumerState<AturScreen> {
             onTap: () {
               showAboutDialog(
                 context: context,
-                applicationName: 'Feapi App',
+                applicationName: 'feapi App',
                 applicationVersion: '1.0.0',
                 applicationIcon: const Icon(
                   Icons.account_balance_wallet,
@@ -503,6 +642,7 @@ class _AturScreenState extends ConsumerState<AturScreen> {
                           ref.invalidate(labelControllerProvider);
                           ref.invalidate(transaksiControllerProvider);
                           ref.invalidate(utangPiutangControllerProvider);
+                          ref.invalidate(profilProvider);
 
                           if (context.mounted) {
                             Navigator.pop(context);

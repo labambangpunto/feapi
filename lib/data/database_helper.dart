@@ -39,11 +39,11 @@ class DatabaseHelper {
 
     // Tabel Akun
     await db.execute('''
-  CREATE TABLE akun(
-    id TEXT PRIMARY KEY,
-    nama TEXT
-  )
-''');
+    CREATE TABLE akun(
+      id TEXT PRIMARY KEY,
+      nama TEXT
+    )
+    ''');
 
     // Tabel Label
     await db.execute('''
@@ -85,6 +85,14 @@ class DatabaseHelper {
       catatan $textType,
       isLunas $intType,
       FOREIGN KEY (akunId) REFERENCES akun (id)
+    )
+    ''');
+
+    await db.execute('''
+    CREATE TABLE profil (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      nama TEXT,
+      fotoBase64 TEXT
     )
     ''');
   }

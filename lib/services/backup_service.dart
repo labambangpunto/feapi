@@ -127,9 +127,11 @@ class BackupService {
     final label = await _dbRepo.getSemuaLabel();
     final transaksi = await _dbRepo.getSemuaTransaksi();
     final utang = await _dbRepo.getSemuaUtangPiutang();
+    final profil = await _dbRepo.getProfil();
 
     final Map<String, dynamic> seluruhData = {
       'akun': akun.map((e) => {'id': e.id, 'nama': e.nama}).toList(),
+      'profil': profil,
       'label': label.map((e) => {'id': e.id, 'nama': e.nama}).toList(),
       'transaksi': transaksi
           .map(
@@ -190,7 +192,12 @@ class BackupService {
     final Map<String, dynamic> data = jsonDecode(decryptedJson);
 
     await _dbRepo.resetDatabase();
-
+    if (data['profil'] != null) {
+      await _dbRepo.saveProfil(
+        data['profil']['nama'],
+        data['profil']['fotoBase64'],
+      );
+    }
     if (data['akun'] != null) {
       for (var item in data['akun']) {
         await _dbRepo.insertAkun(AkunModel(id: item['id'], nama: item['nama']));

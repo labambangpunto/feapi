@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sqflite/sqflite.dart';
 
 import '../data/database_helper.dart';
 import '../models/transaksi_model.dart';
@@ -216,5 +217,23 @@ class DatabaseRepository {
 
   Future<void> resetDatabase() async {
     await _dbHelper.resetSeluruhDatabase();
+  }
+
+  // ==============================
+  // BUAT PROFIL YGY
+  // ==============================
+  Future<Map<String, dynamic>?> getProfil() async {
+    final db = await _dbHelper.database;
+    final result = await db.query('profil', where: 'id = 1');
+    return result.isNotEmpty ? result.first : null;
+  }
+
+  Future<void> saveProfil(String nama, String? fotoBase64) async {
+    final db = await _dbHelper.database;
+    await db.insert('profil', {
+      'id': 1,
+      'nama': nama,
+      'fotoBase64': fotoBase64,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 }
