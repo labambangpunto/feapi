@@ -570,9 +570,8 @@ class _AturScreenState extends ConsumerState<AturScreen> {
                 final path = await backupService.simpanCsvKeFolder();
 
                 if (context.mounted && path != null) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('CSV tersimpan di:\n$path')),
-                  );
+                  ScaffoldMessenger.of(context)
+                      .showSnackBar(SnackBar(content: Text('CSV tersimpan')));
                 }
               } catch (e) {
                 if (context.mounted) {
