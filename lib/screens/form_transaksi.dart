@@ -107,10 +107,17 @@ class _FormTransaksiScreenState extends ConsumerState<FormTransaksiScreen> {
                     initialValue: _selectedAkunSumberId,
                     hint: const Text('Akun Sumber'),
                     items: [
-                      ...akunList.map(
-                        (a) =>
-                            DropdownMenuItem(value: a.id, child: Text(a.nama)),
-                      ),
+                      ...akunList
+                          .where(
+                            (a) =>
+                                !a.isDibekukan || a.id == _selectedAkunSumberId,
+                          )
+                          .map(
+                            (a) => DropdownMenuItem(
+                              value: a.id,
+                              child: Text(a.nama),
+                            ),
+                          ),
                       const DropdownMenuItem(
                         value: 'add_new',
                         child: Text(
@@ -141,10 +148,17 @@ class _FormTransaksiScreenState extends ConsumerState<FormTransaksiScreen> {
                     initialValue: _selectedAkunTujuanId,
                     hint: const Text('Akun Tujuan'),
                     items: [
-                      ...akunList.map(
-                        (a) =>
-                            DropdownMenuItem(value: a.id, child: Text(a.nama)),
-                      ),
+                      ...akunList
+                          .where(
+                            (a) =>
+                                !a.isDibekukan || a.id == _selectedAkunTujuanId,
+                          )
+                          .map(
+                            (a) => DropdownMenuItem(
+                              value: a.id,
+                              child: Text(a.nama),
+                            ),
+                          ),
                       const DropdownMenuItem(
                         value: 'add_new',
                         child: Text(
@@ -178,15 +192,17 @@ class _FormTransaksiScreenState extends ConsumerState<FormTransaksiScreen> {
             data: (labelList) => Wrap(
               spacing: 8,
               children: [
-                ...labelList.map(
-                  (l) => ChoiceChip(
-                    label: Text(l.nama),
-                    selected: _selectedLabelId == l.id,
-                    onSelected: (selected) => setState(
-                      () => _selectedLabelId = selected ? l.id : null,
+                ...labelList
+                    .where((l) => !l.isDibekukan || l.id == _selectedLabelId)
+                    .map(
+                      (l) => ChoiceChip(
+                        label: Text(l.nama),
+                        selected: _selectedLabelId == l.id,
+                        onSelected: (selected) => setState(
+                          () => _selectedLabelId = selected ? l.id : null,
+                        ),
+                      ),
                     ),
-                  ),
-                ),
                 ActionChip(
                   label: const Text('+ Tambah'),
                   avatar: const Icon(Icons.add, size: 16),

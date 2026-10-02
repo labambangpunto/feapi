@@ -91,7 +91,7 @@ class DatabaseRepository {
 
   Future<int> insertAkun(AkunModel akun) async {
     final db = await _dbHelper.database;
-    return await db.insert('akun', {'id': akun.id, 'nama': akun.nama});
+    return await db.insert('akun', akun.toMap());
   }
 
   Future<List<AkunModel>> getSemuaAkun() async {
@@ -99,7 +99,7 @@ class DatabaseRepository {
     final List<Map<String, dynamic>> maps = await db.query('akun');
 
     return List.generate(maps.length, (i) {
-      return AkunModel(id: maps[i]['id'], nama: maps[i]['nama']);
+      return AkunModel.fromMap(maps[i]);
     });
   }
 
@@ -112,7 +112,7 @@ class DatabaseRepository {
     final db = await _dbHelper.database;
     return await db.update(
       'akun',
-      {'nama': akun.nama},
+      akun.toMap(),
       where: 'id = ?',
       whereArgs: [akun.id],
     );
@@ -124,7 +124,7 @@ class DatabaseRepository {
 
   Future<int> insertLabel(LabelModel label) async {
     final db = await _dbHelper.database;
-    return await db.insert('label', {'id': label.id, 'nama': label.nama});
+    return await db.insert('label', label.toMap());
   }
 
   Future<List<LabelModel>> getSemuaLabel() async {
@@ -132,7 +132,7 @@ class DatabaseRepository {
     final List<Map<String, dynamic>> maps = await db.query('label');
 
     return List.generate(maps.length, (i) {
-      return LabelModel(id: maps[i]['id'], nama: maps[i]['nama']);
+      return LabelModel.fromMap(maps[i]);
     });
   }
 
@@ -145,7 +145,7 @@ class DatabaseRepository {
     final db = await _dbHelper.database;
     return await db.update(
       'label',
-      {'nama': label.nama},
+      label.toMap(),
       where: 'id = ?',
       whereArgs: [label.id],
     );

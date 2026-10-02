@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../controllers/label_controller.dart';
+import '../controllers/transaksi_controller.dart';
 import '../models/label_model.dart';
 
 class KelolaLabelScreen extends ConsumerWidget {
@@ -24,20 +25,43 @@ class KelolaLabelScreen extends ConsumerWidget {
             itemCount: labelList.length,
             itemBuilder: (context, index) {
               final label = labelList[index];
+              final isDibekukan = label.isDibekukan;
+
               return ListTile(
-                title: Text(label.nama),
+                title: Text(
+                  label.nama,
+                  style: TextStyle(
+                    decoration: isDibekukan ? TextDecoration.lineThrough : null,
+                    color: isDibekukan ? Colors.grey : Colors.black,
+                  ),
+                ),
+                subtitle: isDibekukan
+                    ? const Text(
+                        'Dibekukan',
+                        style: TextStyle(color: Colors.red),
+                      )
+                    : null,
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    if (!isDibekukan)
+                      IconButton(
+                        icon: const Icon(Icons.edit, color: Colors.blue),
+                        onPressed: () =>
+                            _tampilFormFormLabel(context, ref, dataEdit: label),
+                      ),
                     IconButton(
-                      icon: const Icon(Icons.edit, color: Colors.blue),
-                      onPressed: () =>
-                          _tampilFormFormLabel(context, ref, dataEdit: label),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.delete, color: Colors.red),
-                      onPressed: () =>
-                          _tampilDialogHapusLabel(context, ref, label),
+                      icon: Icon(
+                        isDibekukan ? Icons.restore : Icons.delete,
+                        color: isDibekukan ? Colors.green : Colors.red,
+                      ),
+                      onPressed: () {
+                        if (isDibekukan) {
+                          _pulihkanLabel(context, ref, label);
+                        } else {
+                          _cekDanHapusAtauBekukan(context, ref, label);
+                        }
+                      },
                     ),
                   ],
                 ),
@@ -51,6 +75,67 @@ class KelolaLabelScreen extends ConsumerWidget {
         child: const Icon(Icons.add),
       ),
     );
+  }
+
+  void _cekDanHapusAtauBekukan(
+    BuildContext context,
+    WidgetRef ref,
+    LabelModel label,
+  ) {
+    final transaksiList = ref.read(transaksiControllerProvider).value ?? [];
+    final isDigunakanDiTransaksi = transaksiList.any(
+      (t) => t.labelId == label.id,
+    );
+
+    if (isDigunakanDiTransaksi) {
+      _tampilDialogBekukanLabel(context, ref, label);
+    } else {
+      _tampilDialogHapusLabel(context, ref, label);
+    }
+  }
+
+  void _tampilDialogBekukanLabel(
+    BuildContext context,
+    WidgetRef ref,
+    LabelModel label,
+  ) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text(
+          'Label Sedang Digunakan',
+          style: TextStyle(color: Colors.orange),
+        ),
+        content: Text(
+          'Label "${label.nama}" tidak bisa dihapus karena terikat pada transaksi.\n\nApakah Anda ingin membekukannya? (Label tidak akan muncul di form input baru)',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+            onPressed: () {
+              final labelDibekukan = label.copyWith(isDibekukan: true);
+              ref
+                  .read(labelControllerProvider.notifier)
+                  .updateLabel(labelDibekukan);
+              Navigator.pop(context);
+            },
+            child: const Text('Bekukan', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _pulihkanLabel(BuildContext context, WidgetRef ref, LabelModel label) {
+    final labelDipulihkan = label.copyWith(isDibekukan: false);
+    ref.read(labelControllerProvider.notifier).updateLabel(labelDipulihkan);
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Label berhasil dipulihkan')));
   }
 
   void _tampilFormFormLabel(
@@ -80,8 +165,6 @@ class KelolaLabelScreen extends ConsumerWidget {
 
               final currentLabel =
                   ref.read(labelControllerProvider).value ?? [];
-
-              // Cek duplikasi dengan mengabaikan ID jika sedang mode edit
               final isDuplicate = currentLabel.any(
                 (l) =>
                     l.id != dataEdit?.id &&
@@ -100,6 +183,7 @@ class KelolaLabelScreen extends ConsumerWidget {
                     dataEdit?.id ??
                     DateTime.now().millisecondsSinceEpoch.toString(),
                 nama: namaLabel,
+                isDibekukan: dataEdit?.isDibekukan ?? false,
               );
 
               if (dataEdit != null) {

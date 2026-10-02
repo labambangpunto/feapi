@@ -41,7 +41,8 @@ class DatabaseHelper {
     await db.execute('''
     CREATE TABLE akun(
       id TEXT PRIMARY KEY,
-      nama TEXT
+      nama TEXT,
+      isDibekukan INTEGER DEFAULT 0
     )
     ''');
 
@@ -49,7 +50,8 @@ class DatabaseHelper {
     await db.execute('''
     CREATE TABLE label (
       id $idType,
-      nama $textType
+      nama $textType,
+      isDibekukan INTEGER DEFAULT 0
     )
     ''');
 

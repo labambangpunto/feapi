@@ -78,9 +78,11 @@ class _FormUtangPiutangScreenState
                 isUtang ? 'Akun untuk Menerima' : 'Akun untuk Memberi',
               ),
               items: [
-                ...akunList.map((a) {
-                  return DropdownMenuItem(value: a.id, child: Text(a.nama));
-                }),
+                ...akunList
+                    .where((a) => !a.isDibekukan || a.id == _selectedAkunId)
+                    .map((a) {
+                      return DropdownMenuItem(value: a.id, child: Text(a.nama));
+                    }),
                 const DropdownMenuItem(
                   value: 'add_new',
                   child: Text(

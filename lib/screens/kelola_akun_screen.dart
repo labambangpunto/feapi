@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../controllers/akun_controller.dart';
+import '../controllers/transaksi_controller.dart';
+import '../controllers/utang_piutang_controller.dart';
 import '../models/akun_model.dart';
 
 class KelolaAkunScreen extends ConsumerWidget {
@@ -24,20 +26,44 @@ class KelolaAkunScreen extends ConsumerWidget {
             itemCount: akunList.length,
             itemBuilder: (context, index) {
               final akun = akunList[index];
+              final isDibekukan = akun
+                  .isDibekukan; // Membutuhkan properti isDibekukan di AkunModel
 
               return ListTile(
-                title: Text(akun.nama),
+                title: Text(
+                  akun.nama,
+                  style: TextStyle(
+                    decoration: isDibekukan ? TextDecoration.lineThrough : null,
+                    color: isDibekukan ? Colors.grey : Colors.black,
+                  ),
+                ),
+                subtitle: isDibekukan
+                    ? const Text(
+                        'Dibekukan',
+                        style: TextStyle(color: Colors.red),
+                      )
+                    : null,
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    if (!isDibekukan)
+                      IconButton(
+                        icon: const Icon(Icons.edit, color: Colors.blue),
+                        onPressed: () =>
+                            _tampilFormEditAkun(context, ref, akun),
+                      ),
                     IconButton(
-                      icon: const Icon(Icons.edit, color: Colors.blue),
-                      onPressed: () => _tampilFormEditAkun(context, ref, akun),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.delete, color: Colors.red),
-                      onPressed: () =>
-                          _tampilDialogHapusAkun(context, ref, akun),
+                      icon: Icon(
+                        isDibekukan ? Icons.restore : Icons.delete,
+                        color: isDibekukan ? Colors.green : Colors.red,
+                      ),
+                      onPressed: () {
+                        if (isDibekukan) {
+                          _pulihkanAkun(context, ref, akun);
+                        } else {
+                          _cekDanHapusAtauBekukan(context, ref, akun);
+                        }
+                      },
                     ),
                   ],
                 ),
@@ -53,9 +79,73 @@ class KelolaAkunScreen extends ConsumerWidget {
     );
   }
 
+  void _cekDanHapusAtauBekukan(
+    BuildContext context,
+    WidgetRef ref,
+    AkunModel akun,
+  ) {
+    final transaksiList = ref.read(transaksiControllerProvider).value ?? [];
+    final utangList = ref.read(utangPiutangControllerProvider).value ?? [];
+
+    final isDigunakanDiTransaksi = transaksiList.any(
+      (t) => t.akunSumberId == akun.id || t.akunTujuanId == akun.id,
+    );
+    final isDigunakanDiUtang = utangList.any((u) => u.akunId == akun.id);
+
+    if (isDigunakanDiTransaksi || isDigunakanDiUtang) {
+      _tampilDialogBekukanAkun(context, ref, akun);
+    } else {
+      _tampilDialogHapusAkun(context, ref, akun);
+    }
+  }
+
+  void _tampilDialogBekukanAkun(
+    BuildContext context,
+    WidgetRef ref,
+    AkunModel akun,
+  ) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text(
+          'Akun Sedang Digunakan',
+          style: TextStyle(color: Colors.orange),
+        ),
+        content: Text(
+          'Akun "${akun.nama}" tidak bisa dihapus karena terikat pada transaksi atau utang/piutang.\n\nApakah Anda ingin membekukannya? (Akun tidak akan muncul di form input baru)',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+            onPressed: () {
+              // Membutuhkan metode copyWith di AkunModel
+              final akunDibekukan = akun.copyWith(isDibekukan: true);
+              ref
+                  .read(akunControllerProvider.notifier)
+                  .updateAkun(akunDibekukan);
+              Navigator.pop(context);
+            },
+            child: const Text('Bekukan', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _pulihkanAkun(BuildContext context, WidgetRef ref, AkunModel akun) {
+    final akunDipulihkan = akun.copyWith(isDibekukan: false);
+    ref.read(akunControllerProvider.notifier).updateAkun(akunDipulihkan);
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Akun berhasil dipulihkan')));
+  }
+
   void _tampilFormTambahAkun(BuildContext context, WidgetRef ref) {
     final namaController = TextEditingController();
-
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
@@ -77,7 +167,6 @@ class KelolaAkunScreen extends ConsumerWidget {
                       final namaBaru = namaController.text.trim();
                       final currentAkun =
                           ref.read(akunControllerProvider).value ?? [];
-
                       final isDuplicate = currentAkun.any(
                         (a) => a.nama.toLowerCase() == namaBaru.toLowerCase(),
                       );
@@ -94,6 +183,7 @@ class KelolaAkunScreen extends ConsumerWidget {
                       final akun = AkunModel(
                         id: DateTime.now().millisecondsSinceEpoch.toString(),
                         nama: namaBaru,
+                        isDibekukan: false, // Menyesuaikan model baru
                       );
                       ref
                           .read(akunControllerProvider.notifier)
@@ -115,7 +205,6 @@ class KelolaAkunScreen extends ConsumerWidget {
     AkunModel akunLama,
   ) {
     final namaController = TextEditingController(text: akunLama.nama);
-
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -135,7 +224,6 @@ class KelolaAkunScreen extends ConsumerWidget {
               if (namaEdit.isEmpty) return;
 
               final currentAkun = ref.read(akunControllerProvider).value ?? [];
-
               final isDuplicate = currentAkun.any(
                 (a) =>
                     a.id != akunLama.id &&
@@ -149,7 +237,7 @@ class KelolaAkunScreen extends ConsumerWidget {
                 return;
               }
 
-              final akunUpdate = AkunModel(id: akunLama.id, nama: namaEdit);
+              final akunUpdate = akunLama.copyWith(nama: namaEdit);
               ref.read(akunControllerProvider.notifier).updateAkun(akunUpdate);
               Navigator.pop(context);
             },
@@ -167,7 +255,6 @@ class KelolaAkunScreen extends ConsumerWidget {
   ) {
     bool isChecked = false;
     final textController = TextEditingController();
-
     showDialog(
       context: context,
       builder: (context) {
