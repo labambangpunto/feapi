@@ -33,7 +33,7 @@ class _FormTransaksiScreenState extends ConsumerState<FormTransaksiScreen> {
 
   String? _selectedAkunSumberId;
   String? _selectedAkunTujuanId;
-  String? _selectedLabelId;
+  List<String> _selectedLabelIds = []; // Tambahkan ini
   DateTime _selectedDate = DateTime.now();
 
   @override
@@ -50,7 +50,12 @@ class _FormTransaksiScreenState extends ConsumerState<FormTransaksiScreen> {
       _catatanController.text = d.catatan;
       _selectedAkunSumberId = d.akunSumberId;
       _selectedAkunTujuanId = d.akunTujuanId;
-      _selectedLabelId = d.labelId;
+
+      // Pisahkan ID label dengan koma jika ada
+      if (d.labelId != null && d.labelId!.isNotEmpty) {
+        _selectedLabelIds = d.labelId!.split(',');
+      }
+
       _selectedDate = d.waktu;
     }
   }
@@ -138,7 +143,14 @@ class _FormTransaksiScreenState extends ConsumerState<FormTransaksiScreen> {
                           ),
                         );
                       } else {
-                        setState(() => _selectedAkunSumberId = val);
+                        setState(() {
+                          _selectedAkunSumberId = val;
+                          // Reset akun tujuan jika sama dengan akun sumber
+                          if (widget.tipeTransaksi == TipeTransaksi.transfer &&
+                              _selectedAkunTujuanId == val) {
+                            _selectedAkunTujuanId = null;
+                          }
+                        });
                       }
                     },
                   ),
@@ -179,7 +191,14 @@ class _FormTransaksiScreenState extends ConsumerState<FormTransaksiScreen> {
                           ),
                         );
                       } else {
-                        setState(() => _selectedAkunTujuanId = val);
+                        setState(() {
+                          _selectedAkunTujuanId = val;
+                          // Reset akun sumber jika sama dengan akun tujuan
+                          if (widget.tipeTransaksi == TipeTransaksi.transfer &&
+                              _selectedAkunSumberId == val) {
+                            _selectedAkunSumberId = null;
+                          }
+                        });
                       }
                     },
                   ),
@@ -193,14 +212,23 @@ class _FormTransaksiScreenState extends ConsumerState<FormTransaksiScreen> {
               spacing: 8,
               children: [
                 ...labelList
-                    .where((l) => !l.isDibekukan || l.id == _selectedLabelId)
+                    .where(
+                      (l) => !l.isDibekukan || _selectedLabelIds.contains(l.id),
+                    )
                     .map(
-                      (l) => ChoiceChip(
+                      // Gunakan FilterChip alih-alih ChoiceChip
+                      (l) => FilterChip(
                         label: Text(l.nama),
-                        selected: _selectedLabelId == l.id,
-                        onSelected: (selected) => setState(
-                          () => _selectedLabelId = selected ? l.id : null,
-                        ),
+                        selected: _selectedLabelIds.contains(l.id),
+                        onSelected: (selected) {
+                          setState(() {
+                            if (selected) {
+                              _selectedLabelIds.add(l.id);
+                            } else {
+                              _selectedLabelIds.remove(l.id);
+                            }
+                          });
+                        },
                       ),
                     ),
                 ActionChip(
@@ -236,6 +264,7 @@ class _FormTransaksiScreenState extends ConsumerState<FormTransaksiScreen> {
           ),
           TextField(
             controller: _catatanController,
+            maxLength: 128, // Tambahkan baris ini
             decoration: const InputDecoration(labelText: 'Catatan / Deskripsi'),
           ),
           const SizedBox(height: 24),
@@ -248,15 +277,41 @@ class _FormTransaksiScreenState extends ConsumerState<FormTransaksiScreen> {
     );
   }
 
+  String _autoFormatText(String input) {
+    // 5. Hapus karakter terlarang
+    String res = input.replaceAll(RegExp(r'[\\/:*?"<>|~#%&{}$]'), '');
+    // 4. Hapus spasi ganda
+    res = res.replaceAll(RegExp(r'\s{2,}'), ' ');
+    // 3. Hapus titik di awal teks
+    res = res.replaceFirst(RegExp(r'^\.+'), '');
+    // 2. Hapus spasi di awal dan akhir
+    res = res.trim();
+    // 1. Huruf pertama otomatis kapital
+    if (res.isNotEmpty) {
+      res = res[0].toUpperCase() + res.substring(1);
+    }
+    return res;
+  }
+
   void _simpanTransaksi() {
     if (_nominalController.text.isEmpty ||
         (_selectedAkunSumberId == null &&
             widget.tipeTransaksi != TipeTransaksi.pemasukan) ||
         (_selectedAkunTujuanId == null &&
             widget.tipeTransaksi == TipeTransaksi.transfer) ||
-        _selectedLabelId == null) {
+        _selectedLabelIds.isEmpty) {
+      // Ubah validasi label menjadi ini
       ScaffoldMessenger.of(context)
           .showSnackBar(const SnackBar(content: Text('Isi field wajib!')));
+      return;
+    }
+    if (widget.tipeTransaksi == TipeTransaksi.transfer &&
+        _selectedAkunSumberId == _selectedAkunTujuanId) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Akun sumber dan tujuan tidak boleh sama!'),
+        ),
+      );
       return;
     }
 
@@ -265,6 +320,9 @@ class _FormTransaksiScreenState extends ConsumerState<FormTransaksiScreen> {
         ? double.parse(_biayaTambahanController.text.replaceAll('.', ''))
         : null;
     final qty = int.parse(_kuantitasController.text);
+
+    // Terapkan auto-format pada catatan
+    final catatanFormatted = _autoFormatText(_catatanController.text);
 
     final transaksi = TransaksiModel(
       id:
@@ -276,9 +334,9 @@ class _FormTransaksiScreenState extends ConsumerState<FormTransaksiScreen> {
       kuantitas: qty,
       akunSumberId: _selectedAkunSumberId,
       akunTujuanId: _selectedAkunTujuanId,
-      labelId: _selectedLabelId,
+      labelId: _selectedLabelIds.join(','), // Gabungkan ID dengan koma
       waktu: _selectedDate,
-      catatan: _catatanController.text,
+      catatan: catatanFormatted,
     );
 
     if (widget.dataEdit != null) {

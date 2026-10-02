@@ -168,10 +168,12 @@ class _UtangScreenState extends ConsumerState<UtangScreen> {
                   : Text(
                       item.nominal.toIdr(),
                       style: TextStyle(
+                        fontSize: 16, // 1. Perbesar ukuran font
                         fontWeight: FontWeight.bold,
+                        // 2. Utang menjadi hijau, Piutang menjadi merah
                         color: item.tipe == TipeUtangPiutang.utang
-                            ? Colors.red
-                            : Colors.green,
+                            ? Colors.green
+                            : Colors.red,
                       ),
                     ),
               PopupMenuButton<String>(

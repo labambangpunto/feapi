@@ -138,6 +138,7 @@ class _FormUtangPiutangScreenState
           ),
           TextField(
             controller: _catatanController,
+            maxLength: 128, // Tambahkan baris ini
             decoration: const InputDecoration(labelText: 'Catatan / Deskripsi'),
           ),
           const SizedBox(height: 24),
@@ -147,11 +148,27 @@ class _FormUtangPiutangScreenState
     );
   }
 
+  String _autoFormatText(String input) {
+    String res = input.replaceAll(RegExp(r'[\\/:*?"<>|~#%&{}$]'), '');
+    res = res.replaceAll(RegExp(r'\s{2,}'), ' ');
+    res = res.replaceFirst(RegExp(r'^\.+'), '');
+    res = res.trim();
+    if (res.isNotEmpty) {
+      res = res[0].toUpperCase() + res.substring(1);
+    }
+    return res;
+  }
+
   void _simpanData() {
+    // Terapkan auto-format pada pihak terkait dan catatan
+    final pihakFormatted = _autoFormatText(_pihakController.text);
+    final catatanFormatted = _autoFormatText(_catatanController.text);
+
     if (_nominalController.text.isEmpty ||
-        _pihakController.text.isEmpty ||
+        pihakFormatted.isEmpty || // Gunakan variabel format untuk cek validasi
         _selectedAkunId == null ||
-        _catatanController.text.isEmpty) {
+        catatanFormatted.isEmpty) {
+      // Gunakan variabel format untuk cek validasi
       ScaffoldMessenger.of(context)
           .showSnackBar(const SnackBar(content: Text('Isi field wajib!')));
       return;
@@ -165,13 +182,14 @@ class _FormUtangPiutangScreenState
           DateTime.now().millisecondsSinceEpoch.toString(),
       tipe: widget.tipe,
       nominal: nominal,
-      pihakTerkait: _pihakController.text,
+      pihakTerkait: pihakFormatted, // Gunakan teks yang sudah diformat
       akunId: _selectedAkunId,
       waktu: _waktu,
       tenggatWaktu: _tenggatWaktu,
-      catatan: _catatanController.text,
+      catatan: catatanFormatted, // Gunakan teks yang sudah diformat
       isLunas: widget.dataEdit?.isLunas ?? false,
     );
+    // ... sisa kode di bawahnya tetap sama
 
     if (widget.dataEdit != null) {
       ref

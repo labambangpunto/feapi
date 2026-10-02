@@ -153,6 +153,7 @@ class KelolaAkunScreen extends ConsumerWidget {
           title: const Text('Tambah Akun Baru'),
           content: TextField(
             controller: namaController,
+            maxLength: 16, // Ubah dari 32 menjadi 16
             decoration: const InputDecoration(labelText: 'Nama akun'),
             onChanged: (val) => setState(() {}),
           ),
@@ -164,7 +165,16 @@ class KelolaAkunScreen extends ConsumerWidget {
             ElevatedButton(
               onPressed: (namaController.text.trim().isNotEmpty)
                   ? () {
-                      final namaBaru = namaController.text.trim();
+                      // Terapkan auto-format pada input mentah
+                      final namaBaru = _autoFormatNama(namaController.text);
+
+                      if (namaBaru.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Nama tidak valid')),
+                        );
+                        return;
+                      }
+
                       final currentAkun =
                           ref.read(akunControllerProvider).value ?? [];
                       final isDuplicate = currentAkun.any(
@@ -182,8 +192,8 @@ class KelolaAkunScreen extends ConsumerWidget {
 
                       final akun = AkunModel(
                         id: DateTime.now().millisecondsSinceEpoch.toString(),
-                        nama: namaBaru,
-                        isDibekukan: false, // Menyesuaikan model baru
+                        nama: namaBaru, // Gunakan nama yang telah diformat
+                        isDibekukan: false,
                       );
                       ref
                           .read(akunControllerProvider.notifier)
@@ -211,6 +221,7 @@ class KelolaAkunScreen extends ConsumerWidget {
         title: const Text('Edit Akun'),
         content: TextField(
           controller: namaController,
+          maxLength: 16, // Tambahkan baris ini
           decoration: const InputDecoration(labelText: 'Nama akun'),
         ),
         actions: [
@@ -220,7 +231,8 @@ class KelolaAkunScreen extends ConsumerWidget {
           ),
           ElevatedButton(
             onPressed: () {
-              final namaEdit = namaController.text.trim();
+              // Terapkan auto-format pada input mentah
+              final namaEdit = _autoFormatNama(namaController.text);
               if (namaEdit.isEmpty) return;
 
               final currentAkun = ref.read(akunControllerProvider).value ?? [];
@@ -237,7 +249,9 @@ class KelolaAkunScreen extends ConsumerWidget {
                 return;
               }
 
-              final akunUpdate = akunLama.copyWith(nama: namaEdit);
+              final akunUpdate = akunLama.copyWith(
+                nama: namaEdit,
+              ); // Gunakan nama yang telah diformat
               ref.read(akunControllerProvider.notifier).updateAkun(akunUpdate);
               Navigator.pop(context);
             },
@@ -318,5 +332,16 @@ class KelolaAkunScreen extends ConsumerWidget {
         );
       },
     );
+  }
+
+  String _autoFormatNama(String input) {
+    // 4. Hapus karakter terlarang
+    String res = input.replaceAll(RegExp(r'[\\/:*?"<>|~#%&{}$]'), '');
+    // 3. Ganti spasi ganda (atau lebih) menjadi spasi tunggal
+    res = res.replaceAll(RegExp(r'\s{2,}'), ' ');
+    // 2. Hapus titik jika berada di paling awal nama
+    res = res.replaceFirst(RegExp(r'^\.+'), '');
+    // 1. Hapus spasi di awal dan di akhir nama
+    return res.trim();
   }
 }

@@ -50,6 +50,30 @@ class _AturScreenState extends ConsumerState<AturScreen> {
     );
     String? base64Image = currentProfil?['fotoBase64'];
 
+    String autoFormatNama(String input) {
+      // 5. Hapus karakter terlarang
+      String res = input.replaceAll(RegExp(r'[\\/:*?"<>|~#%&{}$]'), '');
+      // 4. Hapus spasi ganda
+      res = res.replaceAll(RegExp(r'\s{2,}'), ' ');
+      // 3. Hapus titik di awal teks
+      res = res.replaceFirst(RegExp(r'^\.+'), '');
+      // 2. Hapus spasi di awal dan akhir
+      res = res.trim();
+      // 1. Huruf pertama setiap kata menjadi kapital
+      if (res.isNotEmpty) {
+        res = res
+            .split(' ')
+            .map((word) {
+              if (word.isNotEmpty) {
+                return word[0].toUpperCase() + word.substring(1);
+              }
+              return '';
+            })
+            .join(' ');
+      }
+      return res;
+    }
+
     await showDialog(
       context: context,
       builder: (ctx) {
@@ -119,9 +143,16 @@ class _AturScreenState extends ConsumerState<AturScreen> {
                 ),
                 ElevatedButton(
                   onPressed: () async {
+                    // Terapkan auto-format pada input nama
+                    final namaFormatted = autoFormatNama(namaController.text);
+
                     await ref
                         .read(databaseRepositoryProvider)
-                        .saveProfil(namaController.text.trim(), base64Image);
+                        .saveProfil(
+                          namaFormatted,
+                          base64Image,
+                        ); // Gunakan nama yang sudah diformat
+
                     ref.invalidate(profilProvider); // Segarkan UI
                     if (context.mounted) Navigator.pop(context);
                   },
@@ -264,7 +295,7 @@ class _AturScreenState extends ConsumerState<AturScreen> {
           ListTile(
             leading: const Icon(Icons.cloud_upload, color: Colors.blue),
             title: const Text('Backup ke Google Drive'),
-            subtitle: const Text('Simpan data terenkripsi ke cloud'),
+            subtitle: const Text('Timpa data terenkripsi di cloud'),
             onTap: () async {
               final password = await _tampilDialogPassword(
                 context,
@@ -429,8 +460,8 @@ class _AturScreenState extends ConsumerState<AturScreen> {
           ),
           ListTile(
             leading: const Icon(Icons.save_alt),
-            title: const Text('Simpan Otomatis ke Folder'),
-            subtitle: const Text('feapi/backup/'),
+            title: const Text('Backup lokal'),
+            subtitle: const Text('Simpan berkas .enc di perangkat'),
             onTap: () async {
               final password = await _tampilDialogPassword(
                 context,
@@ -444,9 +475,7 @@ class _AturScreenState extends ConsumerState<AturScreen> {
                   await backupService.simpanBackupKeFolder(password);
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Tersimpan di Documents/feapi/backup/'),
-                      ),
+                      const SnackBar(content: Text('Berhasil tersimpan')),
                     );
                   }
                 } catch (e) {
@@ -461,10 +490,8 @@ class _AturScreenState extends ConsumerState<AturScreen> {
           ),
           ListTile(
             leading: const Icon(Icons.share),
-            title: const Text('Bagikan File Backup'),
-            subtitle: const Text(
-              'Bagikan file .enc tanpa menyimpan ke perangkat',
-            ),
+            title: const Text('Bagikan Backup'),
+            subtitle: const Text('Bagikan berkas .enc'),
             onTap: () async {
               final password = await _tampilDialogPassword(
                 context,
@@ -480,7 +507,9 @@ class _AturScreenState extends ConsumerState<AturScreen> {
           ),
           ListTile(
             leading: const Icon(Icons.settings_backup_restore),
-            title: const Text('Restore Data Lokal (.enc)'),
+            title: const Text('Restore Lokal'),
+            subtitle: const Text('Cari berkas .enc'),
+
             onTap: () async {
               final password = await _tampilDialogPassword(
                 context,
@@ -531,8 +560,8 @@ class _AturScreenState extends ConsumerState<AturScreen> {
           ),
           ListTile(
             leading: const Icon(Icons.folder),
-            title: const Text('Simpan ke Folder Pilihan'),
-            subtitle: const Text('Pilih sendiri lokasi penyimpanan .csv'),
+            title: const Text('Simpan CSV'),
+            subtitle: const Text('Simpan berkas .csv di perangkat'),
             onTap: () async {
               try {
                 final backupService = BackupService(
@@ -557,9 +586,7 @@ class _AturScreenState extends ConsumerState<AturScreen> {
           ListTile(
             leading: const Icon(Icons.share),
             title: const Text('Bagikan CSV'),
-            subtitle: const Text(
-              'Bagikan file .csv tanpa menyimpan ke perangkat',
-            ),
+            subtitle: const Text('Bagikan berkas .csv'),
             onTap: () async {
               final backupService = BackupService(
                 ref.read(databaseRepositoryProvider),
@@ -574,11 +601,11 @@ class _AturScreenState extends ConsumerState<AturScreen> {
             onTap: () {
               showAboutDialog(
                 context: context,
-                applicationName: 'feapi App',
-                applicationVersion: '1.0.0',
+                applicationName: 'Finance Tracker App',
+                applicationVersion: '1.2.0',
                 applicationIcon: const Icon(
                   Icons.account_balance_wallet,
-                  size: 48,
+                  size: 58,
                 ),
                 applicationLegalese: '© 2026 Developer',
                 children: [

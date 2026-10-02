@@ -151,6 +151,7 @@ class KelolaLabelScreen extends ConsumerWidget {
         title: Text(dataEdit == null ? 'Tambah Label' : 'Edit Label'),
         content: TextField(
           controller: namaController,
+          maxLength: 16, // Ubah dari 32 menjadi 16
           decoration: const InputDecoration(labelText: 'Nama label'),
         ),
         actions: [
@@ -160,11 +161,13 @@ class KelolaLabelScreen extends ConsumerWidget {
           ),
           ElevatedButton(
             onPressed: () {
-              final namaLabel = namaController.text.trim();
+              // Terapkan auto-format pada input mentah
+              final namaLabel = _autoFormatNama(namaController.text);
               if (namaLabel.isEmpty) return;
 
               final currentLabel =
                   ref.read(labelControllerProvider).value ?? [];
+
               final isDuplicate = currentLabel.any(
                 (l) =>
                     l.id != dataEdit?.id &&
@@ -182,7 +185,7 @@ class KelolaLabelScreen extends ConsumerWidget {
                 id:
                     dataEdit?.id ??
                     DateTime.now().millisecondsSinceEpoch.toString(),
-                nama: namaLabel,
+                nama: namaLabel, // Gunakan nama yang telah diformat
                 isDibekukan: dataEdit?.isDibekukan ?? false,
               );
 
@@ -228,5 +231,16 @@ class KelolaLabelScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  String _autoFormatNama(String input) {
+    // 4. Hapus karakter terlarang
+    String res = input.replaceAll(RegExp(r'[\\/:*?"<>|~#%&{}$]'), '');
+    // 3. Ganti spasi ganda (atau lebih) menjadi spasi tunggal
+    res = res.replaceAll(RegExp(r'\s{2,}'), ' ');
+    // 2. Hapus titik jika berada di paling awal nama
+    res = res.replaceFirst(RegExp(r'^\.+'), '');
+    // 1. Hapus spasi di awal dan di akhir nama
+    return res.trim();
   }
 }
