@@ -46,4 +46,7 @@ app.*.map.json
 
 # Widget Preview related
 .widget_preview/
-assets/ruang-bambang/
+
+
+/assets/ruang-bambang/
+env.json
