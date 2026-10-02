@@ -7,13 +7,12 @@ import '../controllers/transaksi_controller.dart';
 import '../models/transaksi_model.dart';
 import '../utils/currency_formatter.dart';
 import '../utils/currency_format.dart';
-import '../controllers/summary_provider.dart';
 import 'kelola_akun_screen.dart';
 import 'kelola_label_screen.dart';
 
 class FormTransaksiScreen extends ConsumerStatefulWidget {
   final TipeTransaksi tipeTransaksi;
-  final TransaksiModel? dataEdit; // Tambahan untuk mode edit
+  final TransaksiModel? dataEdit;
 
   const FormTransaksiScreen({
     super.key,
@@ -34,13 +33,12 @@ class _FormTransaksiScreenState extends ConsumerState<FormTransaksiScreen> {
 
   String? _selectedAkunSumberId;
   String? _selectedAkunTujuanId;
-  String? _selectedLabelId;
+  List<String> _selectedLabelIds = []; // Tambahkan ini
   DateTime _selectedDate = DateTime.now();
 
   @override
   void initState() {
     super.initState();
-    // Mengisi form jika ada dataEdit
     if (widget.dataEdit != null) {
       final d = widget.dataEdit!;
       _nominalController.text = widget.dataEdit!.nominal.toRibuan();
@@ -52,7 +50,12 @@ class _FormTransaksiScreenState extends ConsumerState<FormTransaksiScreen> {
       _catatanController.text = d.catatan;
       _selectedAkunSumberId = d.akunSumberId;
       _selectedAkunTujuanId = d.akunTujuanId;
-      _selectedLabelId = d.labelId;
+
+      // Pisahkan ID label dengan koma jika ada
+      if (d.labelId != null && d.labelId!.isNotEmpty) {
+        _selectedLabelIds = d.labelId!.split(',');
+      }
+
       _selectedDate = d.waktu;
     }
   }
@@ -61,7 +64,7 @@ class _FormTransaksiScreenState extends ConsumerState<FormTransaksiScreen> {
   Widget build(BuildContext context) {
     final akunState = ref.watch(akunControllerProvider);
     final labelState = ref.watch(labelControllerProvider);
-    final summary = ref.watch(summaryProvider);
+
     final isPengeluaran = widget.tipeTransaksi == TipeTransaksi.pengeluaran;
     final isPemasukan = widget.tipeTransaksi == TipeTransaksi.pemasukan;
     final isTransfer = widget.tipeTransaksi == TipeTransaksi.transfer;
@@ -84,7 +87,6 @@ class _FormTransaksiScreenState extends ConsumerState<FormTransaksiScreen> {
               prefixText: 'Rp ',
             ),
           ),
-
           if (isPengeluaran || isTransfer)
             TextField(
               controller: _biayaTambahanController,
@@ -95,14 +97,12 @@ class _FormTransaksiScreenState extends ConsumerState<FormTransaksiScreen> {
                 prefixText: 'Rp ',
               ),
             ),
-
           if (isPengeluaran)
             TextField(
               controller: _kuantitasController,
               keyboardType: TextInputType.number,
               decoration: const InputDecoration(labelText: 'Kuantitas (Qty)'),
             ),
-
           const SizedBox(height: 16),
           akunState.maybeWhen(
             data: (akunList) => Column(
@@ -112,15 +112,17 @@ class _FormTransaksiScreenState extends ConsumerState<FormTransaksiScreen> {
                     initialValue: _selectedAkunSumberId,
                     hint: const Text('Akun Sumber'),
                     items: [
-                      ...akunList.map((a) {
-                        final saldo =
-                            summary.saldoPerAkun[a.id] ??
-                            0; // Ambil saldo terkini
-                        return DropdownMenuItem(
-                          value: a.id,
-                          child: Text('${a.nama} (${saldo.toIdr()})'),
-                        );
-                      }),
+                      ...akunList
+                          .where(
+                            (a) =>
+                                !a.isDibekukan || a.id == _selectedAkunSumberId,
+                          )
+                          .map(
+                            (a) => DropdownMenuItem(
+                              value: a.id,
+                              child: Text(a.nama),
+                            ),
+                          ),
                       const DropdownMenuItem(
                         value: 'add_new',
                         child: Text(
@@ -141,7 +143,14 @@ class _FormTransaksiScreenState extends ConsumerState<FormTransaksiScreen> {
                           ),
                         );
                       } else {
-                        setState(() => _selectedAkunSumberId = val);
+                        setState(() {
+                          _selectedAkunSumberId = val;
+                          // Reset akun tujuan jika sama dengan akun sumber
+                          if (widget.tipeTransaksi == TipeTransaksi.transfer &&
+                              _selectedAkunTujuanId == val) {
+                            _selectedAkunTujuanId = null;
+                          }
+                        });
                       }
                     },
                   ),
@@ -151,15 +160,17 @@ class _FormTransaksiScreenState extends ConsumerState<FormTransaksiScreen> {
                     initialValue: _selectedAkunTujuanId,
                     hint: const Text('Akun Tujuan'),
                     items: [
-                      ...akunList.map((a) {
-                        final saldo =
-                            summary.saldoPerAkun[a.id] ??
-                            0; // Ambil saldo terkini
-                        return DropdownMenuItem(
-                          value: a.id,
-                          child: Text('${a.nama} (${saldo.toIdr()})'),
-                        );
-                      }),
+                      ...akunList
+                          .where(
+                            (a) =>
+                                !a.isDibekukan || a.id == _selectedAkunTujuanId,
+                          )
+                          .map(
+                            (a) => DropdownMenuItem(
+                              value: a.id,
+                              child: Text(a.nama),
+                            ),
+                          ),
                       const DropdownMenuItem(
                         value: 'add_new',
                         child: Text(
@@ -180,7 +191,14 @@ class _FormTransaksiScreenState extends ConsumerState<FormTransaksiScreen> {
                           ),
                         );
                       } else {
-                        setState(() => _selectedAkunTujuanId = val);
+                        setState(() {
+                          _selectedAkunTujuanId = val;
+                          // Reset akun sumber jika sama dengan akun tujuan
+                          if (widget.tipeTransaksi == TipeTransaksi.transfer &&
+                              _selectedAkunSumberId == val) {
+                            _selectedAkunSumberId = null;
+                          }
+                        });
                       }
                     },
                   ),
@@ -188,23 +206,33 @@ class _FormTransaksiScreenState extends ConsumerState<FormTransaksiScreen> {
             ),
             orElse: () => const CircularProgressIndicator(),
           ),
-
           const SizedBox(height: 16),
           labelState.maybeWhen(
             data: (labelList) => Wrap(
               spacing: 8,
               children: [
-                ...labelList.map(
-                  (l) => ChoiceChip(
-                    label: Text(l.nama),
-                    selected: _selectedLabelId == l.id,
-                    onSelected: (selected) => setState(
-                      () => _selectedLabelId = selected ? l.id : null,
+                ...labelList
+                    .where(
+                      (l) => !l.isDibekukan || _selectedLabelIds.contains(l.id),
+                    )
+                    .map(
+                      // Gunakan FilterChip alih-alih ChoiceChip
+                      (l) => FilterChip(
+                        label: Text(l.nama),
+                        selected: _selectedLabelIds.contains(l.id),
+                        onSelected: (selected) {
+                          setState(() {
+                            if (selected) {
+                              _selectedLabelIds.add(l.id);
+                            } else {
+                              _selectedLabelIds.remove(l.id);
+                            }
+                          });
+                        },
+                      ),
                     ),
-                  ),
-                ),
                 ActionChip(
-                  label: const Text('Tambah'),
+                  label: const Text('+ Tambah'),
                   avatar: const Icon(Icons.add, size: 16),
                   onPressed: () {
                     Navigator.push(
@@ -219,7 +247,6 @@ class _FormTransaksiScreenState extends ConsumerState<FormTransaksiScreen> {
             ),
             orElse: () => const CircularProgressIndicator(),
           ),
-
           const SizedBox(height: 16),
           ListTile(
             title: const Text('Tanggal & Waktu'),
@@ -237,6 +264,7 @@ class _FormTransaksiScreenState extends ConsumerState<FormTransaksiScreen> {
           ),
           TextField(
             controller: _catatanController,
+            maxLength: 128, // Tambahkan baris ini
             decoration: const InputDecoration(labelText: 'Catatan / Deskripsi'),
           ),
           const SizedBox(height: 24),
@@ -249,56 +277,52 @@ class _FormTransaksiScreenState extends ConsumerState<FormTransaksiScreen> {
     );
   }
 
+  String _autoFormatText(String input) {
+    // 5. Hapus karakter terlarang
+    String res = input.replaceAll(RegExp(r'[\\/:*?"<>|~#%&{}$]'), '');
+    // 4. Hapus spasi ganda
+    res = res.replaceAll(RegExp(r'\s{2,}'), ' ');
+    // 3. Hapus titik di awal teks
+    res = res.replaceFirst(RegExp(r'^\.+'), '');
+    // 2. Hapus spasi di awal dan akhir
+    res = res.trim();
+    // 1. Huruf pertama otomatis kapital
+    if (res.isNotEmpty) {
+      res = res[0].toUpperCase() + res.substring(1);
+    }
+    return res;
+  }
+
   void _simpanTransaksi() {
     if (_nominalController.text.isEmpty ||
         (_selectedAkunSumberId == null &&
             widget.tipeTransaksi != TipeTransaksi.pemasukan) ||
         (_selectedAkunTujuanId == null &&
-            widget.tipeTransaksi == TipeTransaksi.transfer)) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Isi field wajib!')));
-      return;
-    }
-    if (_nominalController.text.isEmpty ||
-        (_selectedAkunSumberId == null &&
-            widget.tipeTransaksi != TipeTransaksi.pemasukan) ||
-        (_selectedAkunTujuanId == null &&
             widget.tipeTransaksi == TipeTransaksi.transfer) ||
-        _selectedLabelId == null) {
-      // Validasi label ditambahkan di sini
+        _selectedLabelIds.isEmpty) {
+      // Ubah validasi label menjadi ini
       ScaffoldMessenger.of(context)
           .showSnackBar(const SnackBar(content: Text('Isi field wajib!')));
       return;
     }
+    if (widget.tipeTransaksi == TipeTransaksi.transfer &&
+        _selectedAkunSumberId == _selectedAkunTujuanId) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Akun sumber dan tujuan tidak boleh sama!'),
+        ),
+      );
+      return;
+    }
+
     final nominal = double.parse(_nominalController.text.replaceAll('.', ''));
     final biayaTambahan = _biayaTambahanController.text.isNotEmpty
         ? double.parse(_biayaTambahanController.text.replaceAll('.', ''))
         : null;
     final qty = int.parse(_kuantitasController.text);
 
-    // Validasi pencegahan saldo minus
-    if (widget.tipeTransaksi == TipeTransaksi.pengeluaran ||
-        widget.tipeTransaksi == TipeTransaksi.transfer) {
-      final summary = ref.read(summaryProvider);
-      double saldoTersedia = summary.saldoPerAkun[_selectedAkunSumberId] ?? 0;
-
-      // Jika dalam mode edit, kembalikan sementara nominal lama ke saldo tersedia agar kalkulasi akurat
-      if (widget.dataEdit != null &&
-          widget.dataEdit!.akunSumberId == _selectedAkunSumberId) {
-        saldoTersedia +=
-            (widget.dataEdit!.nominal * widget.dataEdit!.kuantitas) +
-            (widget.dataEdit!.biayaTambahan ?? 0);
-      }
-
-      final totalBeban = (nominal * qty) + (biayaTambahan ?? 0);
-
-      if (totalBeban > saldoTersedia) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Peringatan: Saldo tidak cukup!')),
-        );
-        return; // Hentikan penyimpanan
-      }
-    }
+    // Terapkan auto-format pada catatan
+    final catatanFormatted = _autoFormatText(_catatanController.text);
 
     final transaksi = TransaksiModel(
       id:
@@ -310,9 +334,9 @@ class _FormTransaksiScreenState extends ConsumerState<FormTransaksiScreen> {
       kuantitas: qty,
       akunSumberId: _selectedAkunSumberId,
       akunTujuanId: _selectedAkunTujuanId,
-      labelId: _selectedLabelId,
+      labelId: _selectedLabelIds.join(','), // Gabungkan ID dengan koma
       waktu: _selectedDate,
-      catatan: _catatanController.text,
+      catatan: catatanFormatted,
     );
 
     if (widget.dataEdit != null) {

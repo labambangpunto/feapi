@@ -19,6 +19,17 @@ class UtangScreen extends ConsumerStatefulWidget {
 class _UtangScreenState extends ConsumerState<UtangScreen> {
   DateTime? _filterTanggal;
 
+  // Variabel untuk fitur pencarian lokal
+  bool _isSearching = false;
+  String _searchQuery = '';
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(utangPiutangControllerProvider);
@@ -27,10 +38,50 @@ class _UtangScreenState extends ConsumerState<UtangScreen> {
       length: 2,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Utang & Piutang'),
+          title: _isSearching
+              ? TextField(
+                  controller: _searchController,
+                  autofocus: true,
+                  decoration: const InputDecoration(
+                    hintText: 'Cari pihak atau catatan...',
+                    border: InputBorder.none,
+                  ),
+                  onChanged: (value) {
+                    setState(() {
+                      _searchQuery = value;
+                    });
+                  },
+                )
+              : const Text('Utang & Piutang'),
           actions: [
+            // Tombol Pencarian Teks
+            if (_isSearching)
+              IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () {
+                  setState(() {
+                    if (_searchController.text.isEmpty) {
+                      _isSearching = false;
+                    }
+                    _searchController.clear();
+                    _searchQuery = '';
+                  });
+                },
+              )
+            else
+              IconButton(
+                icon: const Icon(Icons.search),
+                tooltip: 'Cari Data',
+                onPressed: () {
+                  setState(() {
+                    _isSearching = true;
+                  });
+                },
+              ),
+
+            // Tombol Filter Tanggal
             IconButton(
-              icon: const Icon(Icons.search),
+              icon: const Icon(Icons.calendar_month),
               tooltip: 'Filter Tanggal',
               onPressed: () async {
                 final date = await showDatePicker(
@@ -44,7 +95,8 @@ class _UtangScreenState extends ConsumerState<UtangScreen> {
             ),
             if (_filterTanggal != null)
               IconButton(
-                icon: const Icon(Icons.clear),
+                icon: const Icon(Icons.event_busy),
+                tooltip: 'Hapus Filter Tanggal',
                 onPressed: () => setState(() => _filterTanggal = null),
               ),
           ],
@@ -60,8 +112,10 @@ class _UtangScreenState extends ConsumerState<UtangScreen> {
           error: (err, stack) => Center(child: Text('Error: $err')),
           data: (listData) {
             var filteredList = listData;
+
+            // 1. Terapkan filter tanggal (jika ada)
             if (_filterTanggal != null) {
-              filteredList = listData
+              filteredList = filteredList
                   .where(
                     (e) =>
                         e.waktu.year == _filterTanggal!.year &&
@@ -69,6 +123,15 @@ class _UtangScreenState extends ConsumerState<UtangScreen> {
                         e.waktu.day == _filterTanggal!.day,
                   )
                   .toList();
+            }
+
+            // 2. Terapkan filter pencarian teks (pencarian lokal yang ringan)
+            if (_searchQuery.isNotEmpty) {
+              final query = _searchQuery.toLowerCase();
+              filteredList = filteredList.where((e) {
+                return e.pihakTerkait.toLowerCase().contains(query) ||
+                    e.catatan.toLowerCase().contains(query);
+              }).toList();
             }
 
             final listUtang = filteredList
@@ -146,64 +209,189 @@ class _UtangScreenState extends ConsumerState<UtangScreen> {
   ) {
     if (data.isEmpty) return const Center(child: Text('Data kosong'));
 
+    final akunList = ref.watch(akunControllerProvider).value ?? [];
+    const bulanMap = [
+      '',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'Mei',
+      'Jun',
+      'Jul',
+      'Agt',
+      'Sep',
+      'Okt',
+      'Nov',
+      'Des',
+    ];
+
     return ListView.builder(
       itemCount: data.length,
       itemBuilder: (context, index) {
         final item = data[index];
-        return ListTile(
-          title: Text(
-            '${item.pihakTerkait} - ${item.catatan}',
-            style: TextStyle(
-              decoration: item.isLunas ? TextDecoration.lineThrough : null,
-            ),
-          ),
-          subtitle: Text(
-            'Jatuh tempo: ${item.tenggatWaktu.toString().split(' ')[0]}',
-          ),
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              item.isLunas
-                  ? const Icon(Icons.check_circle, color: Colors.green)
-                  : Text(
-                      item.nominal.toIdr(),
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: item.tipe == TipeUtangPiutang.utang
-                            ? Colors.red
-                            : Colors.green,
-                      ),
-                    ),
-              PopupMenuButton<String>(
-                onSelected: (value) {
-                  if (value == 'edit') {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => FormUtangPiutangScreen(
-                          tipe: item.tipe,
-                          dataEdit: item,
+        final isUtang = item.tipe == TipeUtangPiutang.utang;
+
+        String namaAkun = 'Tidak diketahui';
+        if (item.akunId != null) {
+          try {
+            namaAkun = akunList.firstWhere((a) => a.id == item.akunId).nama;
+          } catch (_) {
+            namaAkun = 'Akun terhapus';
+          }
+        }
+
+        final tglBuat = item.waktu;
+        final tglJatuhTempo = item.tenggatWaktu;
+
+        final formatTglBuat =
+            '${tglBuat.day.toString().padLeft(2, '0')} ${bulanMap[tglBuat.month]} ${tglBuat.year}';
+        final formatJatuhTempo =
+            '${tglJatuhTempo.day.toString().padLeft(2, '0')} ${bulanMap[tglJatuhTempo.month]} ${tglJatuhTempo.year}';
+
+        return Card(
+          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: ListTile(
+              title: Text(
+                item.nominal.toIdr(),
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: item.isLunas
+                      ? Colors.grey
+                      : (isUtang ? Colors.green : Colors.red),
+                  decoration: item.isLunas ? TextDecoration.lineThrough : null,
+                ),
+              ),
+              subtitle: Padding(
+                padding: const EdgeInsets.only(top: 8.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (isUtang) ...[
+                      Text(
+                        'Dana ke $namaAkun',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
                         ),
                       ),
-                    );
-                  } else if (value == 'hapus') {
-                    ref
-                        .read(utangPiutangControllerProvider.notifier)
-                        .hapusUtangPiutang(item.id);
-                  }
-                },
-                itemBuilder: (context) => [
-                  const PopupMenuItem(value: 'edit', child: Text('Edit')),
-                  const PopupMenuItem(value: 'hapus', child: Text('Hapus')),
+                      Text('Harus bayar ke ${item.pihakTerkait}'),
+                    ] else ...[
+                      Text(
+                        'Dana dari $namaAkun',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      Text('Harus dibayar oleh ${item.pihakTerkait}'),
+                    ],
+
+                    const SizedBox(height: 6),
+                    Text(item.catatan, style: const TextStyle(fontSize: 14)),
+                    const SizedBox(height: 8),
+
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.yellow[50],
+                        border: Border.all(
+                          color: Colors.yellow[700]!,
+                          width: 1.5,
+                        ),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.calendar_today,
+                                size: 13,
+                                color: Colors.yellow[900],
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Dibuat: $formatTglBuat',
+                                style: TextStyle(
+                                  color: Colors.yellow[900],
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.event_busy,
+                                size: 14,
+                                color: Colors.yellow[900],
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Jatuh tempo: $formatJatuhTempo',
+                                style: TextStyle(
+                                  color: Colors.yellow[900],
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (item.isLunas)
+                    const Icon(Icons.check_circle, color: Colors.green),
+
+                  PopupMenuButton<String>(
+                    onSelected: (value) {
+                      if (value == 'edit') {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => FormUtangPiutangScreen(
+                              tipe: item.tipe,
+                              dataEdit: item,
+                            ),
+                          ),
+                        );
+                      } else if (value == 'hapus') {
+                        ref
+                            .read(utangPiutangControllerProvider.notifier)
+                            .hapusUtangPiutang(item.id);
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      const PopupMenuItem(value: 'edit', child: Text('Edit')),
+                      const PopupMenuItem(value: 'hapus', child: Text('Hapus')),
+                    ],
+                  ),
                 ],
               ),
-            ],
+              onTap: () {
+                if (!item.isLunas) {
+                  _tampilFormPelunasan(context, ref, item);
+                }
+              },
+            ),
           ),
-          onTap: () {
-            if (!item.isLunas) {
-              _tampilFormPelunasan(context, ref, item);
-            }
-          },
         );
       },
     );
@@ -214,8 +402,6 @@ class _UtangScreenState extends ConsumerState<UtangScreen> {
     WidgetRef ref,
     UtangPiutangModel item,
   ) {
-    // Fungsi ini sama persis dengan yang sudah dibuat sebelumnya
-    // Letakkan kodenya di sini
     String? selectedAkunId;
     DateTime selectedDate = DateTime.now();
     final isUtang = item.tipe == TipeUtangPiutang.utang;

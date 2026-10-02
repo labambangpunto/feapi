@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sqflite/sqflite.dart';
 
 import '../data/database_helper.dart';
 import '../models/transaksi_model.dart';
@@ -90,11 +91,7 @@ class DatabaseRepository {
 
   Future<int> insertAkun(AkunModel akun) async {
     final db = await _dbHelper.database;
-    return await db.insert('akun', {
-      'id': akun.id,
-      'nama': akun.nama,
-      'saldoAwal': akun.saldoAwal,
-    });
+    return await db.insert('akun', akun.toMap());
   }
 
   Future<List<AkunModel>> getSemuaAkun() async {
@@ -102,11 +99,7 @@ class DatabaseRepository {
     final List<Map<String, dynamic>> maps = await db.query('akun');
 
     return List.generate(maps.length, (i) {
-      return AkunModel(
-        id: maps[i]['id'],
-        nama: maps[i]['nama'],
-        saldoAwal: maps[i]['saldoAwal'],
-      );
+      return AkunModel.fromMap(maps[i]);
     });
   }
 
@@ -119,7 +112,7 @@ class DatabaseRepository {
     final db = await _dbHelper.database;
     return await db.update(
       'akun',
-      {'nama': akun.nama, 'saldoAwal': akun.saldoAwal},
+      akun.toMap(),
       where: 'id = ?',
       whereArgs: [akun.id],
     );
@@ -131,7 +124,7 @@ class DatabaseRepository {
 
   Future<int> insertLabel(LabelModel label) async {
     final db = await _dbHelper.database;
-    return await db.insert('label', {'id': label.id, 'nama': label.nama});
+    return await db.insert('label', label.toMap());
   }
 
   Future<List<LabelModel>> getSemuaLabel() async {
@@ -139,7 +132,7 @@ class DatabaseRepository {
     final List<Map<String, dynamic>> maps = await db.query('label');
 
     return List.generate(maps.length, (i) {
-      return LabelModel(id: maps[i]['id'], nama: maps[i]['nama']);
+      return LabelModel.fromMap(maps[i]);
     });
   }
 
@@ -152,7 +145,7 @@ class DatabaseRepository {
     final db = await _dbHelper.database;
     return await db.update(
       'label',
-      {'nama': label.nama},
+      label.toMap(),
       where: 'id = ?',
       whereArgs: [label.id],
     );
@@ -224,5 +217,23 @@ class DatabaseRepository {
 
   Future<void> resetDatabase() async {
     await _dbHelper.resetSeluruhDatabase();
+  }
+
+  // ==============================
+  // BUAT PROFIL YGY
+  // ==============================
+  Future<Map<String, dynamic>?> getProfil() async {
+    final db = await _dbHelper.database;
+    final result = await db.query('profil', where: 'id = 1');
+    return result.isNotEmpty ? result.first : null;
+  }
+
+  Future<void> saveProfil(String nama, String? fotoBase64) async {
+    final db = await _dbHelper.database;
+    await db.insert('profil', {
+      'id': 1,
+      'nama': nama,
+      'fotoBase64': fotoBase64,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 }

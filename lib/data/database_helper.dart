@@ -12,7 +12,7 @@ class DatabaseHelper {
 
   Future<Database> get database async {
     if (_database != null) return _database!;
-    _database = await _initDB('keuangan.db');
+    _database = await _initDB('feapi_app_data.db');
     return _database!;
   }
 
@@ -39,10 +39,10 @@ class DatabaseHelper {
 
     // Tabel Akun
     await db.execute('''
-    CREATE TABLE akun (
-      id $idType,
-      nama $textType,
-      saldoAwal $realType
+    CREATE TABLE akun(
+      id TEXT PRIMARY KEY,
+      nama TEXT,
+      isDibekukan INTEGER DEFAULT 0
     )
     ''');
 
@@ -50,7 +50,8 @@ class DatabaseHelper {
     await db.execute('''
     CREATE TABLE label (
       id $idType,
-      nama $textType
+      nama $textType,
+      isDibekukan INTEGER DEFAULT 0
     )
     ''');
 
@@ -86,6 +87,14 @@ class DatabaseHelper {
       catatan $textType,
       isLunas $intType,
       FOREIGN KEY (akunId) REFERENCES akun (id)
+    )
+    ''');
+
+    await db.execute('''
+    CREATE TABLE profil (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      nama TEXT,
+      fotoBase64 TEXT
     )
     ''');
   }

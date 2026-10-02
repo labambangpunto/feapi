@@ -1,12 +1,13 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:csv/csv.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart';
-import 'package:encrypt/encrypt.dart' as enc;
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/foundation.dart';
+import 'package:share_plus/share_plus.dart';
+
+import 'package:path_provider/path_provider.dart';
+import 'package:encrypt/encrypt.dart' as enc;
 
 import '../repositories/database_repository.dart';
 import '../models/akun_model.dart';
@@ -19,25 +20,23 @@ class BackupService {
 
   BackupService(this._dbRepo);
 
-  // ==============================
-  // EKSPOR CSV
-  // ==============================
-  Future<void> eksporCsv() async {
+  Future<String> _generateCsvString() async {
     final transaksi = await _dbRepo.getSemuaTransaksi();
+    List<List<dynamic>> rows = [
+      [
+        'ID',
+        'Tipe',
+        'Nominal',
+        'Biaya Tambahan',
+        'Kuantitas',
+        'Akun Sumber',
+        'Akun Tujuan',
+        'Label',
+        'Waktu',
+        'Catatan',
+      ],
+    ];
 
-    List<List<dynamic>> rows = [];
-    // Header CSV
-    rows.add([
-      'ID',
-      'Tipe',
-      'Nominal',
-      'Biaya Tambahan',
-      'Kuantitas',
-      'Waktu',
-      'Catatan',
-    ]);
-
-    // Isi Data
     for (var t in transaksi) {
       rows.add([
         t.id,
@@ -45,28 +44,94 @@ class BackupService {
         t.nominal,
         t.biayaTambahan ?? 0,
         t.kuantitas,
+        t.akunSumberId ?? '',
+        t.akunTujuanId ?? '',
+        t.labelId ?? '',
         t.waktu.toIso8601String(),
         t.catatan,
       ]);
     }
+    return const ListToCsvConverter().convert(rows);
+  }
 
-    String csvData = const ListToCsvConverter().convert(rows);
-    await _bagikanFile(csvData, 'transaksi_keuangan.csv');
+  // ==============================
+  // EKSPOR CSV
+  // ==============================
+  Future<String?> simpanCsvKeFolder() async {
+    final csvData = await _generateCsvString();
+    final bytes = Uint8List.fromList(utf8.encode(csvData));
+
+    // file_picker v13+ akan otomatis menulis 'bytes' ke lokasi yang dipilih
+    Uri? outputFile = await FilePicker.saveFile(
+      dialogTitle: 'Simpan file CSV',
+      fileName: 'feapi_app_data.csv',
+      bytes: bytes,
+    );
+
+    // Mengembalikan properti path dari Uri sebagai String
+    return outputFile?.path;
+  }
+
+  Future<void> bagikanCsvLangsung() async {
+    final csvData = await _generateCsvString();
+    final tempDir = await getTemporaryDirectory();
+    final file = File('${tempDir.path}/feapi_app_data.csv');
+
+    await file.writeAsString(csvData);
+    await SharePlus.instance.share(
+      ShareParams(files: [XFile(file.path)], text: 'Data CSV Feapi App'),
+    );
   }
 
   // ==============================
   // BACKUP JSON & ENKRIPSI
   // ==============================
-  Future<void> backupJsonLokal(String password) async {
+  Future<String?> simpanBackupKeFolder(String password) async {
+    final finalData = await generateEncryptedJson(password);
+    final bytes = Uint8List.fromList(utf8.encode(finalData));
+
+    // file_picker v13+ akan otomatis menulis 'bytes' ke lokasi yang dipilih
+    Uri? outputFile = await FilePicker.saveFile(
+      dialogTitle: 'Simpan file backup',
+      fileName: 'feapi_app_data.enc',
+      bytes: bytes,
+    );
+
+    // Mengembalikan properti path dari Uri sebagai String
+    return outputFile?.path;
+  }
+
+  Future<void> bagikanBackupLangsung(String password) async {
+    final finalData = await generateEncryptedJson(password);
+    final tempDir = await getTemporaryDirectory();
+    final file = File('${tempDir.path}/feapi_app_data.enc');
+
+    await file.writeAsString(finalData);
+    await SharePlus.instance.share(
+      ShareParams(files: [XFile(file.path)], text: 'Backup Feapi App'),
+    );
+  }
+
+  Future<void> restoreJsonLokal(String password) async {
+    final result = await FilePicker.pickFile();
+    if (result == null || result.path == null) return;
+
+    final file = File(result.path!);
+    final content = await file.readAsString();
+    await restoreFromEncryptedString(content, password);
+  }
+
+  // Menghasilkan string JSON terenkripsi
+  Future<String> generateEncryptedJson(String password) async {
     final akun = await _dbRepo.getSemuaAkun();
     final label = await _dbRepo.getSemuaLabel();
     final transaksi = await _dbRepo.getSemuaTransaksi();
     final utang = await _dbRepo.getSemuaUtangPiutang();
+    final profil = await _dbRepo.getProfil();
 
     final Map<String, dynamic> seluruhData = {
-      'akun': akun
-          .map((e) => {'id': e.id, 'nama': e.nama, 'saldoAwal': e.saldoAwal})
-          .toList(),
+      'akun': akun.map((e) => {'id': e.id, 'nama': e.nama}).toList(),
+      'profil': profil,
       'label': label.map((e) => {'id': e.id, 'nama': e.nama}).toList(),
       'transaksi': transaksi
           .map(
@@ -107,18 +172,14 @@ class BackupService {
     final encrypter = enc.Encrypter(enc.AES(key));
 
     final encrypted = encrypter.encrypt(rawJson, iv: iv);
-    final finalData = '${iv.base64}:${encrypted.base64}';
-
-    await _bagikanFile(finalData, 'backup_keuangan.enc');
+    return '${iv.base64}:${encrypted.base64}';
   }
 
-  Future<void> restoreJsonLokal(String password) async {
-    final result = await FilePicker.pickFile();
-
-    if (result == null || result.path == null) return;
-
-    final file = File(result.path!);
-    final content = await file.readAsString();
+  // Memproses string terenkripsi dan memasukkannya ke database
+  Future<void> restoreFromEncryptedString(
+    String content,
+    String password,
+  ) async {
     final parts = content.split(':');
     if (parts.length != 2) throw Exception('Format file tidak valid.');
 
@@ -131,16 +192,15 @@ class BackupService {
     final Map<String, dynamic> data = jsonDecode(decryptedJson);
 
     await _dbRepo.resetDatabase();
-
+    if (data['profil'] != null) {
+      await _dbRepo.saveProfil(
+        data['profil']['nama'],
+        data['profil']['fotoBase64'],
+      );
+    }
     if (data['akun'] != null) {
       for (var item in data['akun']) {
-        await _dbRepo.insertAkun(
-          AkunModel(
-            id: item['id'],
-            nama: item['nama'],
-            saldoAwal: (item['saldoAwal'] as num).toDouble(),
-          ),
-        );
+        await _dbRepo.insertAkun(AkunModel(id: item['id'], nama: item['nama']));
       }
     }
     if (data['label'] != null) {
@@ -190,29 +250,6 @@ class BackupService {
           ),
         );
       }
-    }
-  }
-
-  Future<void> _bagikanFile(String content, String fileName) async {
-    final bytes = Uint8List.fromList(utf8.encode(content));
-
-    if (!kIsWeb &&
-        (Platform.isLinux || Platform.isWindows || Platform.isMacOS)) {
-      // Desktop: dialog Save As (file langsung ditulis oleh saveFile)
-      await FilePicker.saveFile(
-        dialogTitle: 'Simpan file $fileName',
-        fileName: fileName,
-        bytes: bytes,
-      );
-    } else {
-      // Mobile: Share UI
-      final dir = await getTemporaryDirectory();
-      final path = '${dir.path}/$fileName';
-      await File(path).writeAsBytes(bytes);
-
-      await SharePlus.instance.share(
-        ShareParams(files: [XFile(path)], text: 'File Keuangan: $fileName'),
-      );
     }
   }
 }

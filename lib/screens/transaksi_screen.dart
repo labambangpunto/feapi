@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../controllers/transaksi_controller.dart';
+import '../controllers/akun_controller.dart';
+import '../controllers/label_controller.dart';
 import '../models/transaksi_model.dart';
+import '../models/akun_model.dart';
 import '../utils/currency_format.dart';
 
 import 'form_transaksi.dart';
@@ -21,6 +24,8 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
   @override
   Widget build(BuildContext context) {
     final transaksiState = ref.watch(transaksiControllerProvider);
+    final akunList = ref.watch(akunControllerProvider).value ?? [];
+    final labelList = ref.watch(labelControllerProvider).value ?? [];
 
     return Scaffold(
       appBar: AppBar(
@@ -28,7 +33,7 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.search),
-            tooltip: 'Filter / Jump to Page',
+            tooltip: 'Filter Tanggal',
             onPressed: () async {
               final date = await showDatePicker(
                 context: context,
@@ -51,16 +56,9 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => Center(child: Text('Error: $err')),
         data: (transaksiList) {
-          // Hapus List<TransaksiModel> dari parameter ini
-
-          // Lakukan casting eksplisit di dalam blok
-          final List<TransaksiModel> listData = List<TransaksiModel>.from(
-            transaksiList as Iterable,
-          );
-
-          var filteredList = listData;
+          var filteredList = transaksiList;
           if (_filterTanggal != null) {
-            filteredList = listData
+            filteredList = transaksiList
                 .where(
                   (t) =>
                       t.waktu.year == _filterTanggal!.year &&
@@ -80,23 +78,128 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
             controller: _scrollController,
             itemCount: filteredList.length,
             itemBuilder: (context, index) {
-              final TransaksiModel t = filteredList[index]; // Deklarasikan tipe TransaksiModel di sini
-              return ListTile(
-                title: Text(t.catatan),
-                subtitle: Text(t.waktu.toString().split(' ')[0]),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      t.nominal.toIdr(), // Ekstensi ini sekarang akan terbaca tanpa error
+              final TransaksiModel t = filteredList[index];
+
+              // Cari nama sumber (menggunakan orElse untuk menghindari pelemparan StateError)
+              String namaSumber = '-';
+              if (t.akunSumberId != null) {
+                namaSumber = akunList
+                    .firstWhere(
+                      (a) => a.id == t.akunSumberId,
+                      orElse: () => AkunModel(id: '', nama: 'Akun terhapus'),
+                    )
+                    .nama;
+              }
+
+              // Cari nama tujuan
+              String namaTujuan = '-';
+              if (t.akunTujuanId != null) {
+                namaTujuan = akunList
+                    .firstWhere(
+                      (a) => a.id == t.akunTujuanId,
+                      orElse: () => AkunModel(id: '', nama: 'Akun terhapus'),
+                    )
+                    .nama;
+              }
+
+              // Cari nama label
+              List<String> namaLabels = [];
+              if (t.labelId != null && t.labelId!.isNotEmpty) {
+                final labelIds = t.labelId!.split(',');
+                for (var id in labelIds) {
+                  try {
+                    namaLabels.add(
+                      labelList.firstWhere((l) => l.id == id).nama,
+                    );
+                  } catch (_) {
+                    namaLabels.add('Label terhapus');
+                  }
+                }
+              }
+
+              return Card(
+                margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: ListTile(
+                    title: Text(
+                      t.nominal.toIdr(),
                       style: TextStyle(
+                        fontSize: 18,
                         color: t.tipe == TipeTransaksi.pemasukan
                             ? Colors.green
-                            : Colors.red,
+                            : (t.tipe == TipeTransaksi.pengeluaran
+                                  ? Colors.red
+                                  : Colors.blue),
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    PopupMenuButton<String>(
+                    subtitle: Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            t.catatan,
+                            style: const TextStyle(
+                              fontSize: 15,
+                              color: Colors.black87,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+
+                          if (t.tipe == TipeTransaksi.pengeluaran) ...[
+                            // Menghapus penggunaan ?? pada properti non-nullable
+                            Text('Kuantitas: ${t.kuantitas}'),
+                            if (t.biayaTambahan != null && t.biayaTambahan! > 0)
+                              Text(
+                                'Biaya Tambahan: ${t.biayaTambahan!.toIdr()}',
+                              ),
+                            Text('Dari $namaSumber'),
+                          ] else if (t.tipe == TipeTransaksi.pemasukan) ...[
+                            Text('Ke $namaTujuan'),
+                          ] else if (t.tipe == TipeTransaksi.transfer) ...[
+                            if (t.biayaTambahan != null && t.biayaTambahan! > 0)
+                              Text(
+                                'Biaya Tambahan: ${t.biayaTambahan!.toIdr()}',
+                              ),
+                            Text('Dari $namaSumber ke $namaTujuan'),
+                          ],
+
+                          if (namaLabels.isNotEmpty) ...[
+                            const SizedBox(height: 6),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 4,
+                              children: namaLabels
+                                  .map(
+                                    (nl) => Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(
+                                          Icons.label_outline,
+                                          size: 14,
+                                          color: Colors.grey,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          nl,
+                                          style: const TextStyle(
+                                            color: Colors.grey,
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  )
+                                  .toList(),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    trailing: PopupMenuButton<String>(
                       onSelected: (value) {
                         if (value == 'edit') {
                           Navigator.push(
@@ -122,7 +225,7 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
                         ),
                       ],
                     ),
-                  ],
+                  ),
                 ),
               );
             },
