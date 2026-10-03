@@ -6,7 +6,9 @@ import '../models/utang_piutang_model.dart';
 import '../controllers/akun_controller.dart';
 import '../controllers/transaksi_controller.dart';
 import '../models/transaksi_model.dart';
+import '../models/akun_model.dart'; // Tambahan untuk tipe AkunModel
 import '../utils/currency_format.dart';
+import '../utils/currency_formatter.dart'; // Tambahan untuk form nominal
 import 'form_utang_piutang.dart';
 
 class UtangScreen extends ConsumerStatefulWidget {
@@ -19,67 +21,47 @@ class UtangScreen extends ConsumerStatefulWidget {
 class _UtangScreenState extends ConsumerState<UtangScreen> {
   DateTime? _filterTanggal;
 
-  // Variabel untuk fitur pencarian lokal
-  bool _isSearching = false;
-  String _searchQuery = '';
-  final TextEditingController _searchController = TextEditingController();
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
+  // Variabel untuk filter pencarian tingkat lanjut
+  bool _isFilterActive = false;
+  String _filterKataKunci = '';
+  String? _filterAkunId;
+  bool? _filterStatusLunas;
+  double? _filterMinNominal;
+  double? _filterMaxNominal;
 
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(utangPiutangControllerProvider);
+    final akunList = ref.watch(akunControllerProvider).value ?? [];
 
     return DefaultTabController(
       length: 2,
       child: Scaffold(
         appBar: AppBar(
-          title: _isSearching
-              ? TextField(
-                  controller: _searchController,
-                  autofocus: true,
-                  decoration: const InputDecoration(
-                    hintText: 'Cari pihak atau catatan...',
-                    border: InputBorder.none,
-                  ),
-                  onChanged: (value) {
-                    setState(() {
-                      _searchQuery = value;
-                    });
-                  },
-                )
-              : const Text('Utang & Piutang'),
+          title: const Text('Utang & Piutang'),
           actions: [
-            // Tombol Pencarian Teks
-            if (_isSearching)
+            if (_isFilterActive)
               IconButton(
-                icon: const Icon(Icons.close),
+                icon: const Icon(Icons.filter_alt_off),
+                tooltip: 'Hapus Filter',
                 onPressed: () {
                   setState(() {
-                    if (_searchController.text.isEmpty) {
-                      _isSearching = false;
-                    }
-                    _searchController.clear();
-                    _searchQuery = '';
+                    _isFilterActive = false;
+                    _filterKataKunci = '';
+                    _filterAkunId = null;
+                    _filterStatusLunas = null;
+                    _filterMinNominal = null;
+                    _filterMaxNominal = null;
                   });
                 },
               )
             else
               IconButton(
                 icon: const Icon(Icons.search),
-                tooltip: 'Cari Data',
-                onPressed: () {
-                  setState(() {
-                    _isSearching = true;
-                  });
-                },
+                tooltip: 'Cari / Filter',
+                onPressed: () => _tampilFormFilter(akunList),
               ),
 
-            // Tombol Filter Tanggal
             IconButton(
               icon: const Icon(Icons.calendar_month),
               tooltip: 'Filter Tanggal',
@@ -125,13 +107,39 @@ class _UtangScreenState extends ConsumerState<UtangScreen> {
                   .toList();
             }
 
-            // 2. Terapkan filter pencarian teks (pencarian lokal yang ringan)
-            if (_searchQuery.isNotEmpty) {
-              final query = _searchQuery.toLowerCase();
-              filteredList = filteredList.where((e) {
-                return e.pihakTerkait.toLowerCase().contains(query) ||
-                    e.catatan.toLowerCase().contains(query);
-              }).toList();
+            // 2. Terapkan filter pencarian lanjutan
+            if (_isFilterActive) {
+              if (_filterStatusLunas != null) {
+                filteredList = filteredList
+                    .where((e) => e.isLunas == _filterStatusLunas)
+                    .toList();
+              }
+
+              if (_filterKataKunci.isNotEmpty) {
+                final query = _filterKataKunci.toLowerCase();
+                filteredList = filteredList.where((e) {
+                  return e.pihakTerkait.toLowerCase().contains(query) ||
+                      e.catatan.toLowerCase().contains(query);
+                }).toList();
+              }
+
+              if (_filterAkunId != null) {
+                filteredList = filteredList
+                    .where((e) => e.akunId == _filterAkunId)
+                    .toList();
+              }
+
+              if (_filterMinNominal != null) {
+                filteredList = filteredList
+                    .where((e) => e.nominal >= _filterMinNominal!)
+                    .toList();
+              }
+
+              if (_filterMaxNominal != null) {
+                filteredList = filteredList
+                    .where((e) => e.nominal <= _filterMaxNominal!)
+                    .toList();
+              }
             }
 
             final listUtang = filteredList
@@ -143,8 +151,8 @@ class _UtangScreenState extends ConsumerState<UtangScreen> {
 
             return TabBarView(
               children: [
-                _buildList(listUtang, context, ref),
-                _buildList(listPiutang, context, ref),
+                _buildList(listUtang, context, ref, akunList),
+                _buildList(listPiutang, context, ref, akunList),
               ],
             );
           },
@@ -206,10 +214,12 @@ class _UtangScreenState extends ConsumerState<UtangScreen> {
     List<UtangPiutangModel> data,
     BuildContext context,
     WidgetRef ref,
+    List<AkunModel> akunList,
   ) {
-    if (data.isEmpty) return const Center(child: Text('Data kosong'));
+    if (data.isEmpty) {
+      return const Center(child: Text('Tidak ada data yang cocok'));
+    }
 
-    final akunList = ref.watch(akunControllerProvider).value ?? [];
     const bulanMap = [
       '',
       'Jan',
@@ -503,6 +513,186 @@ class _UtangScreenState extends ConsumerState<UtangScreen> {
                   child: const Text('Lunas'),
                 ),
               ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _tampilFormFilter(List<AkunModel> akunList) {
+    String tempKataKunci = _filterKataKunci;
+    String? tempAkunId = _filterAkunId;
+    bool? tempStatusLunas = _filterStatusLunas;
+
+    final kataCtrl = TextEditingController(text: tempKataKunci);
+    final minCtrl = TextEditingController(
+      text: _filterMinNominal != null ? _filterMinNominal!.toRibuan() : '',
+    );
+    final maxCtrl = TextEditingController(
+      text: _filterMaxNominal != null ? _filterMaxNominal!.toRibuan() : '',
+    );
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setStateSheet) {
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+                left: 16,
+                right: 16,
+                top: 24,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Filter Utang & Piutang',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    DropdownButtonFormField<bool?>(
+                      initialValue: tempStatusLunas,
+                      decoration: const InputDecoration(
+                        labelText: 'Status Pelunasan',
+                      ),
+                      items: const [
+                        DropdownMenuItem(
+                          value: null,
+                          child: Text('Semua Status'),
+                        ),
+                        DropdownMenuItem(value: true, child: Text('Lunas')),
+                        DropdownMenuItem(
+                          value: false,
+                          child: Text('Belum Lunas'),
+                        ),
+                      ],
+                      onChanged: (val) =>
+                          setStateSheet(() => tempStatusLunas = val),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: kataCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'Pihak Terkait atau Catatan',
+                        prefixIcon: Icon(Icons.search),
+                      ),
+                      onChanged: (val) => tempKataKunci = val,
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      initialValue: tempAkunId,
+                      decoration: const InputDecoration(
+                        labelText: 'Pilih Akun Terkait',
+                      ),
+                      items: [
+                        const DropdownMenuItem(
+                          value: null,
+                          child: Text('Semua Akun'),
+                        ),
+                        ...akunList.map(
+                          (a) => DropdownMenuItem(
+                            value: a.id,
+                            child: Text(a.nama),
+                          ),
+                        ),
+                      ],
+                      onChanged: (val) => setStateSheet(() => tempAkunId = val),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: minCtrl,
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [CurrencyFormatter()],
+                            decoration: const InputDecoration(
+                              labelText: 'Nominal Min (Rp)',
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: TextField(
+                            controller: maxCtrl,
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [CurrencyFormatter()],
+                            decoration: const InputDecoration(
+                              labelText: 'Nominal Max (Rp)',
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () {
+                              Navigator.pop(context);
+                              setState(() {
+                                _isFilterActive = false;
+                                _filterKataKunci = '';
+                                _filterAkunId = null;
+                                _filterStatusLunas = null;
+                                _filterMinNominal = null;
+                                _filterMaxNominal = null;
+                              });
+                            },
+                            child: const Text('Reset'),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () {
+                              Navigator.pop(context);
+                              setState(() {
+                                _filterKataKunci = tempKataKunci.trim();
+                                _filterAkunId = tempAkunId;
+                                _filterStatusLunas = tempStatusLunas;
+
+                                _filterMinNominal = minCtrl.text.isNotEmpty
+                                    ? double.parse(
+                                        minCtrl.text.replaceAll('.', ''),
+                                      )
+                                    : null;
+                                _filterMaxNominal = maxCtrl.text.isNotEmpty
+                                    ? double.parse(
+                                        maxCtrl.text.replaceAll('.', ''),
+                                      )
+                                    : null;
+
+                                _isFilterActive =
+                                    _filterKataKunci.isNotEmpty ||
+                                    _filterAkunId != null ||
+                                    _filterStatusLunas != null ||
+                                    _filterMinNominal != null ||
+                                    _filterMaxNominal != null;
+                              });
+                            },
+                            child: const Text('Terapkan Filter'),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                ),
+              ),
             );
           },
         );

@@ -1,7 +1,7 @@
 name: feapi
 description: "Personal Finance Tracker"
 publish_to: "none" # Remove this line if you wish to publish to pub.dev
-version: 1.2.0+1
+version: 1.3.0+1
 
 environment:
   sdk: ^3.13.4
@@ -11,7 +11,7 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.8
-  material_3_expressive: ^1.1.3
+  material_3_expressive: ^1.1.5
   # dependensi lain
   sqflite_common_ffi: ^2.4.0+2
   flutter_riverpod: ^2.5.1
