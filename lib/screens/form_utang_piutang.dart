@@ -5,7 +5,8 @@ import '../controllers/akun_controller.dart';
 import '../controllers/utang_piutang_controller.dart';
 import '../models/utang_piutang_model.dart';
 import '../utils/currency_formatter.dart';
-
+import '../controllers/transaksi_controller.dart';
+import '../models/transaksi_model.dart';
 import '../utils/currency_format.dart';
 import 'kelola_akun_screen.dart';
 
@@ -165,16 +166,16 @@ class _FormUtangPiutangScreenState
     final catatanFormatted = _autoFormatText(_catatanController.text);
 
     if (_nominalController.text.isEmpty ||
-        pihakFormatted.isEmpty || // Gunakan variabel format untuk cek validasi
+        pihakFormatted.isEmpty ||
         _selectedAkunId == null ||
         catatanFormatted.isEmpty) {
-      // Gunakan variabel format untuk cek validasi
       ScaffoldMessenger.of(context)
           .showSnackBar(const SnackBar(content: Text('Isi field wajib!')));
       return;
     }
 
     final nominal = double.parse(_nominalController.text.replaceAll('.', ''));
+    final isUtang = widget.tipe == TipeUtangPiutang.utang;
 
     final data = UtangPiutangModel(
       id:
@@ -182,23 +183,44 @@ class _FormUtangPiutangScreenState
           DateTime.now().millisecondsSinceEpoch.toString(),
       tipe: widget.tipe,
       nominal: nominal,
-      pihakTerkait: pihakFormatted, // Gunakan teks yang sudah diformat
+      pihakTerkait: pihakFormatted,
       akunId: _selectedAkunId,
       waktu: _waktu,
       tenggatWaktu: _tenggatWaktu,
-      catatan: catatanFormatted, // Gunakan teks yang sudah diformat
+      catatan: catatanFormatted,
       isLunas: widget.dataEdit?.isLunas ?? false,
     );
-    // ... sisa kode di bawahnya tetap sama
 
     if (widget.dataEdit != null) {
+      // Mode Edit: Hanya update data utang/piutang (log transaksi tidak diubah otomatis)
       ref
           .read(utangPiutangControllerProvider.notifier)
           .updateUtangPiutang(data);
     } else {
+      // Mode Tambah Baru: Simpan data utang/piutang
       ref
           .read(utangPiutangControllerProvider.notifier)
           .tambahUtangPiutang(data);
+
+      // Otomatis buat log transaksi
+      final transaksiBaru = TransaksiModel(
+        // Tambahkan prefix 'tx_' agar ID tidak bentrok dengan ID utang jika di-generate di milidetik yang persis sama
+        id: 'tx_${DateTime.now().millisecondsSinceEpoch}',
+        tipe: isUtang ? TipeTransaksi.pemasukan : TipeTransaksi.pengeluaran,
+        nominal: nominal,
+        // Jika Utang (masuk), akun sumber kosong, akun tujuan terisi.
+        // Jika Piutang (keluar), akun sumber terisi, akun tujuan kosong.
+        akunSumberId: isUtang ? null : _selectedAkunId,
+        akunTujuanId: isUtang ? _selectedAkunId : null,
+        labelId: isUtang ? 'label_utang' : 'label_piutang',
+        waktu: _waktu,
+        catatan:
+            '${isUtang ? "Utang dari" : "Piutang ke"} $pihakFormatted - $catatanFormatted',
+      );
+
+      ref
+          .read(transaksiControllerProvider.notifier)
+          .tambahTransaksi(transaksiBaru);
     }
 
     Navigator.pop(context);

@@ -131,8 +131,35 @@ class DatabaseRepository {
     final db = await _dbHelper.database;
     final List<Map<String, dynamic>> maps = await db.query('label');
 
-    return List.generate(maps.length, (i) {
-      return LabelModel.fromMap(maps[i]);
+    // Cek keberadaan label default
+    bool hasUtang = maps.any((m) => m['id'] == 'label_utang');
+    bool hasPiutang = maps.any((m) => m['id'] == 'label_piutang');
+
+    // Sisipkan label default jika belum ada
+    if (!hasUtang) {
+      final labelUtang = LabelModel(
+        id: 'label_utang',
+        nama: 'Utang',
+        isDibekukan: false,
+      );
+      await db.insert('label', labelUtang.toMap());
+    }
+    if (!hasPiutang) {
+      final labelPiutang = LabelModel(
+        id: 'label_piutang',
+        nama: 'Piutang',
+        isDibekukan: false,
+      );
+      await db.insert('label', labelPiutang.toMap());
+    }
+
+    // Ambil ulang data jika terjadi penambahan
+    final List<Map<String, dynamic>> finalMaps = (!hasUtang || !hasPiutang)
+        ? await db.query('label')
+        : maps;
+
+    return List.generate(finalMaps.length, (i) {
+      return LabelModel.fromMap(finalMaps[i]);
     });
   }
 

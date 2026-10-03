@@ -32,7 +32,7 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
   String? _filterLabelId;
   double? _filterMinNominal;
   double? _filterMaxNominal;
-  TipeTransaksi? _filterTipe; // Variabel baru untuk jenis transaksi
+  TipeTransaksi? _filterTipe;
 
   @override
   Widget build(BuildContext context) {
@@ -56,7 +56,7 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
                   _filterLabelId = null;
                   _filterMinNominal = null;
                   _filterMaxNominal = null;
-                  _filterTipe = null; // Reset filter jenis transaksi
+                  _filterTipe = null;
                 });
               },
             )
@@ -85,7 +85,6 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => Center(child: Text('Error: $err')),
         data: (transaksiList) {
-          // Fungsi helper untuk menerjemahkan ID menjadi Nama
           String getAkunName(String? id) {
             if (id == null) return '-';
             try {
@@ -109,7 +108,6 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
           var filteredList = transaksiList;
 
           if (!_isFilterActive) {
-            // Mode Normal: Filter HANYA pada hari yang dipilih
             filteredList = filteredList
                 .where(
                   (t) =>
@@ -119,7 +117,6 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
                 )
                 .toList();
           } else {
-            // Mode Pencarian: Filter pada SATU BULAN yang dipilih
             filteredList = filteredList
                 .where(
                   (t) =>
@@ -128,7 +125,6 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
                 )
                 .toList();
 
-            // Eksekusi Parameter Filter
             if (_filterTipe != null) {
               filteredList = filteredList
                   .where((t) => t.tipe == _filterTipe)
@@ -195,7 +191,6 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
 
           return Column(
             children: [
-              // Header Penunjuk Waktu & Status Filter
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(
@@ -230,8 +225,6 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
                   ],
                 ),
               ),
-
-              // Daftar Transaksi
               Expanded(
                 child: filteredList.isEmpty
                     ? const Center(
@@ -243,9 +236,33 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
                         itemBuilder: (context, index) {
                           final TransaksiModel t = filteredList[index];
 
+                          // Tambahkan kalkulasi nominal final
+                          final double totalNominal =
+                              (t.nominal * t.kuantitas) +
+                              (t.biayaTambahan ?? 0);
+
                           String namaSumber = getAkunName(t.akunSumberId);
                           String namaTujuan = getAkunName(t.akunTujuanId);
                           List<String> namaLabels = getLabelNames(t.labelId);
+
+                          // Menentukan ikon, warna, dan teks akun yang disederhanakan
+                          IconData iconTipe;
+                          Color colorTipe;
+                          String textAkun;
+
+                          if (t.tipe == TipeTransaksi.pemasukan) {
+                            iconTipe = Icons.arrow_downward;
+                            colorTipe = Colors.green;
+                            textAkun = 'Ke $namaTujuan';
+                          } else if (t.tipe == TipeTransaksi.pengeluaran) {
+                            iconTipe = Icons.arrow_upward;
+                            colorTipe = Colors.red;
+                            textAkun = 'Dari $namaSumber';
+                          } else {
+                            iconTipe = Icons.swap_horiz;
+                            colorTipe = Colors.blue;
+                            textAkun = '$namaSumber ➔ $namaTujuan';
+                          }
 
                           return Card(
                             margin: const EdgeInsets.symmetric(
@@ -255,20 +272,23 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
                             child: Padding(
                               padding: const EdgeInsets.symmetric(vertical: 8),
                               child: ListTile(
+                                leading: CircleAvatar(
+                                  backgroundColor: colorTipe.withValues(
+                                    alpha: 0.15,
+                                  ),
+                                  child: Icon(iconTipe, color: colorTipe),
+                                ),
                                 title: Text(
-                                  t.nominal.toIdr(),
+                                  totalNominal
+                                      .toIdr(), // Gunakan totalNominal di sini
                                   style: TextStyle(
                                     fontSize: 18,
-                                    color: t.tipe == TipeTransaksi.pemasukan
-                                        ? Colors.green
-                                        : (t.tipe == TipeTransaksi.pengeluaran
-                                              ? Colors.red
-                                              : Colors.blue),
+                                    color: colorTipe,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
                                 subtitle: Padding(
-                                  padding: const EdgeInsets.only(top: 6),
+                                  padding: const EdgeInsets.only(top: 4),
                                   child: Column(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
@@ -276,65 +296,19 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
                                       Text(
                                         t.catatan,
                                         style: const TextStyle(
-                                          fontSize: 15,
+                                          fontSize: 14,
                                           color: Colors.black87,
                                           fontWeight: FontWeight.w500,
                                         ),
                                       ),
-                                      const SizedBox(height: 6),
-
-                                      if (t.tipe ==
-                                          TipeTransaksi.pengeluaran) ...[
-                                        Text('Kuantitas: ${t.kuantitas}'),
-                                        if (t.biayaTambahan != null &&
-                                            t.biayaTambahan! > 0)
-                                          Text(
-                                            'Biaya Tambahan: ${t.biayaTambahan!.toIdr()}',
-                                          ),
-                                        Text('Dari $namaSumber'),
-                                      ] else if (t.tipe ==
-                                          TipeTransaksi.pemasukan) ...[
-                                        Text('Ke $namaTujuan'),
-                                      ] else if (t.tipe ==
-                                          TipeTransaksi.transfer) ...[
-                                        if (t.biayaTambahan != null &&
-                                            t.biayaTambahan! > 0)
-                                          Text(
-                                            'Biaya Tambahan: ${t.biayaTambahan!.toIdr()}',
-                                          ),
-                                        Text('Dari $namaSumber ke $namaTujuan'),
-                                      ],
-
-                                      if (namaLabels.isNotEmpty) ...[
-                                        const SizedBox(height: 6),
-                                        Wrap(
-                                          spacing: 8,
-                                          runSpacing: 4,
-                                          children: namaLabels
-                                              .map(
-                                                (nl) => Row(
-                                                  mainAxisSize:
-                                                      MainAxisSize.min,
-                                                  children: [
-                                                    const Icon(
-                                                      Icons.label_outline,
-                                                      size: 14,
-                                                      color: Colors.grey,
-                                                    ),
-                                                    const SizedBox(width: 4),
-                                                    Text(
-                                                      nl,
-                                                      style: const TextStyle(
-                                                        color: Colors.grey,
-                                                        fontSize: 13,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              )
-                                              .toList(),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        textAkun,
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey,
                                         ),
-                                      ],
+                                      ),
                                     ],
                                   ),
                                 ),
@@ -351,12 +325,42 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
                                         ),
                                       );
                                     } else if (value == 'hapus') {
-                                      ref
-                                          .read(
-                                            transaksiControllerProvider
-                                                .notifier,
-                                          )
-                                          .hapusTransaksi(t.id);
+                                      showDialog(
+                                        context: context,
+                                        builder: (ctx) => AlertDialog(
+                                          title: const Text('Konfirmasi Hapus'),
+                                          content: const Text(
+                                            'Apakah Anda yakin ingin menghapus transaksi ini?',
+                                          ),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () =>
+                                                  Navigator.pop(ctx),
+                                              child: const Text('Batal'),
+                                            ),
+                                            ElevatedButton(
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: Colors.red,
+                                              ),
+                                              onPressed: () {
+                                                ref
+                                                    .read(
+                                                      transaksiControllerProvider
+                                                          .notifier,
+                                                    )
+                                                    .hapusTransaksi(t.id);
+                                                Navigator.pop(ctx);
+                                              },
+                                              child: const Text(
+                                                'Hapus',
+                                                style: TextStyle(
+                                                  color: Colors.white,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      );
                                     }
                                   },
                                   itemBuilder: (context) => [
@@ -369,6 +373,13 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
                                       child: Text('Hapus'),
                                     ),
                                   ],
+                                ),
+                                onTap: () => _tampilSummaryTransaksi(
+                                  context,
+                                  t,
+                                  namaSumber,
+                                  namaTujuan,
+                                  namaLabels,
                                 ),
                               ),
                             ),
@@ -444,13 +455,155 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
     );
   }
 
+  void _tampilSummaryTransaksi(
+    BuildContext context,
+    TransaksiModel t,
+    String namaSumber,
+    String namaTujuan,
+    List<String> namaLabels,
+  ) {
+    final double totalNominal =
+        (t.nominal * t.kuantitas) + (t.biayaTambahan ?? 0);
+
+    const bulanMap = [
+      '',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'Mei',
+      'Jun',
+      'Jul',
+      'Agt',
+      'Sep',
+      'Okt',
+      'Nov',
+      'Des',
+    ];
+    final tglStr =
+        '${t.waktu.day.toString().padLeft(2, '0')} ${bulanMap[t.waktu.month]} ${t.waktu.year}';
+
+    final isPengeluaran = t.tipe == TipeTransaksi.pengeluaran;
+    final isPemasukan = t.tipe == TipeTransaksi.pemasukan;
+    final isTransfer = t.tipe == TipeTransaksi.transfer;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Detail Transaksi'),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                totalNominal.toIdr(), // Gunakan totalNominal di sini
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: isPemasukan
+                      ? Colors.green
+                      : (isPengeluaran ? Colors.red : Colors.blue),
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              if (isPengeluaran) ...[
+                Text('Kuantitas: ${t.kuantitas}'),
+                if (t.biayaTambahan != null && t.biayaTambahan! > 0)
+                  Text('Biaya Tambahan: ${t.biayaTambahan!.toIdr()}'),
+                const SizedBox(height: 4),
+                Text(
+                  'Sumber dana: $namaSumber',
+                  style: const TextStyle(color: Colors.black87),
+                ),
+              ] else if (isPemasukan) ...[
+                Text(
+                  'Tujuan dana: $namaTujuan',
+                  style: const TextStyle(color: Colors.black87),
+                ),
+              ] else if (isTransfer) ...[
+                if (t.biayaTambahan != null && t.biayaTambahan! > 0)
+                  Text('Biaya Tambahan: ${t.biayaTambahan!.toIdr()}'),
+                const SizedBox(height: 4),
+                Text(
+                  'Dari: $namaSumber',
+                  style: const TextStyle(color: Colors.black87),
+                ),
+                Text(
+                  'Ke: $namaTujuan',
+                  style: const TextStyle(color: Colors.black87),
+                ),
+              ],
+
+              const SizedBox(height: 12),
+              const Divider(),
+              Row(
+                children: [
+                  const Icon(
+                    Icons.calendar_today,
+                    size: 14,
+                    color: Colors.grey,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    tglStr,
+                    style: const TextStyle(color: Colors.grey, fontSize: 13),
+                  ),
+                ],
+              ),
+              if (namaLabels.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  children: namaLabels
+                      .map(
+                        (nl) => Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade200,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.label_outline,
+                                size: 12,
+                                color: Colors.grey,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(nl, style: const TextStyle(fontSize: 12)),
+                            ],
+                          ),
+                        ),
+                      )
+                      .toList(),
+                ),
+              ],
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Tutup'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _tampilFormFilter(List<AkunModel> akunList, List<LabelModel> labelList) {
     String tempCatatan = _filterCatatan;
     String? tempAkunId = _filterAkunId;
     String? tempLabelId = _filterLabelId;
     TipeTransaksi? tempTipe = _filterTipe;
 
-    // Inisialisasi controller dengan nilai yang sudah ada sebelumnya (jika ada)
     final catatanCtrl = TextEditingController(text: tempCatatan);
     final minCtrl = TextEditingController(
       text: _filterMinNominal != null ? _filterMinNominal!.toRibuan() : '',
@@ -631,7 +784,6 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
                                       )
                                     : null;
 
-                                // Aktifkan status filter jika ada minimal satu field yang diisi
                                 _isFilterActive =
                                     _filterCatatan.isNotEmpty ||
                                     _filterAkunId != null ||

@@ -27,44 +27,61 @@ class KelolaLabelScreen extends ConsumerWidget {
               final label = labelList[index];
               final isDibekukan = label.isDibekukan;
 
+              // Deteksi label default
+              final isDefault =
+                  label.id == 'label_utang' || label.id == 'label_piutang';
+
               return ListTile(
                 title: Text(
                   label.nama,
                   style: TextStyle(
                     decoration: isDibekukan ? TextDecoration.lineThrough : null,
                     color: isDibekukan ? Colors.grey : Colors.black,
+                    fontWeight: isDefault ? FontWeight.bold : FontWeight.normal,
                   ),
                 ),
-                subtitle: isDibekukan
+                subtitle: isDefault
                     ? const Text(
-                        'Dibekukan',
-                        style: TextStyle(color: Colors.red),
+                        'Label Default Sistem',
+                        style: TextStyle(color: Colors.blue, fontSize: 12),
                       )
-                    : null,
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (!isDibekukan)
-                      IconButton(
-                        icon: const Icon(Icons.edit, color: Colors.blue),
-                        onPressed: () =>
-                            _tampilFormFormLabel(context, ref, dataEdit: label),
+                    : (isDibekukan
+                          ? const Text(
+                              'Dibekukan',
+                              style: TextStyle(color: Colors.red),
+                            )
+                          : null),
+
+                // Hilangkan tombol trailing jika label adalah default
+                trailing: isDefault
+                    ? const SizedBox.shrink()
+                    : Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (!isDibekukan)
+                            IconButton(
+                              icon: const Icon(Icons.edit, color: Colors.blue),
+                              onPressed: () => _tampilFormFormLabel(
+                                context,
+                                ref,
+                                dataEdit: label,
+                              ),
+                            ),
+                          IconButton(
+                            icon: Icon(
+                              isDibekukan ? Icons.restore : Icons.delete,
+                              color: isDibekukan ? Colors.green : Colors.red,
+                            ),
+                            onPressed: () {
+                              if (isDibekukan) {
+                                _pulihkanLabel(context, ref, label);
+                              } else {
+                                _cekDanHapusAtauBekukan(context, ref, label);
+                              }
+                            },
+                          ),
+                        ],
                       ),
-                    IconButton(
-                      icon: Icon(
-                        isDibekukan ? Icons.restore : Icons.delete,
-                        color: isDibekukan ? Colors.green : Colors.red,
-                      ),
-                      onPressed: () {
-                        if (isDibekukan) {
-                          _pulihkanLabel(context, ref, label);
-                        } else {
-                          _cekDanHapusAtauBekukan(context, ref, label);
-                        }
-                      },
-                    ),
-                  ],
-                ),
               );
             },
           );

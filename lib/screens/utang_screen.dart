@@ -242,20 +242,7 @@ class _UtangScreenState extends ConsumerState<UtangScreen> {
         final item = data[index];
         final isUtang = item.tipe == TipeUtangPiutang.utang;
 
-        String namaAkun = 'Tidak diketahui';
-        if (item.akunId != null) {
-          try {
-            namaAkun = akunList.firstWhere((a) => a.id == item.akunId).nama;
-          } catch (_) {
-            namaAkun = 'Akun terhapus';
-          }
-        }
-
-        final tglBuat = item.waktu;
         final tglJatuhTempo = item.tenggatWaktu;
-
-        final formatTglBuat =
-            '${tglBuat.day.toString().padLeft(2, '0')} ${bulanMap[tglBuat.month]} ${tglBuat.year}';
         final formatJatuhTempo =
             '${tglJatuhTempo.day.toString().padLeft(2, '0')} ${bulanMap[tglJatuhTempo.month]} ${tglJatuhTempo.year}';
 
@@ -280,30 +267,16 @@ class _UtangScreenState extends ConsumerState<UtangScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (isUtang) ...[
+                    if (item.catatan.isNotEmpty) ...[
                       Text(
-                        'Dana ke $namaAkun',
+                        item.catatan,
                         style: const TextStyle(
-                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
                           color: Colors.black87,
                         ),
                       ),
-                      Text('Harus bayar ke ${item.pihakTerkait}'),
-                    ] else ...[
-                      Text(
-                        'Dana dari $namaAkun',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black87,
-                        ),
-                      ),
-                      Text('Harus dibayar oleh ${item.pihakTerkait}'),
+                      const SizedBox(height: 8),
                     ],
-
-                    const SizedBox(height: 6),
-                    Text(item.catatan, style: const TextStyle(fontSize: 14)),
-                    const SizedBox(height: 8),
-
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 8,
@@ -317,46 +290,22 @@ class _UtangScreenState extends ConsumerState<UtangScreen> {
                         ),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.calendar_today,
-                                size: 13,
-                                color: Colors.yellow[900],
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                'Dibuat: $formatTglBuat',
-                                style: TextStyle(
-                                  color: Colors.yellow[900],
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
+                          Icon(
+                            Icons.event_busy,
+                            size: 14,
+                            color: Colors.yellow[900],
                           ),
-                          const SizedBox(height: 4),
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.event_busy,
-                                size: 14,
-                                color: Colors.yellow[900],
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                'Jatuh tempo: $formatJatuhTempo',
-                                style: TextStyle(
-                                  color: Colors.yellow[900],
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
+                          const SizedBox(width: 4),
+                          Text(
+                            'Jatuh tempo: $formatJatuhTempo',
+                            style: TextStyle(
+                              color: Colors.yellow[900],
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ],
                       ),
@@ -383,22 +332,51 @@ class _UtangScreenState extends ConsumerState<UtangScreen> {
                           ),
                         );
                       } else if (value == 'hapus') {
-                        ref
-                            .read(utangPiutangControllerProvider.notifier)
-                            .hapusUtangPiutang(item.id);
+                        showDialog(
+                          context: context,
+                          builder: (ctx) => AlertDialog(
+                            title: const Text('Konfirmasi Hapus'),
+                            content: Text(
+                              'Apakah Anda yakin ingin menghapus data ${isUtang ? "utang" : "piutang"} ini?',
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(ctx),
+                                child: const Text('Batal'),
+                              ),
+                              ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.red,
+                                ),
+                                onPressed: () {
+                                  ref
+                                      .read(
+                                        utangPiutangControllerProvider.notifier,
+                                      )
+                                      .hapusUtangPiutang(item.id);
+                                  Navigator.pop(ctx);
+                                },
+                                child: const Text(
+                                  'Hapus',
+                                  style: TextStyle(color: Colors.white),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
                       }
                     },
                     itemBuilder: (context) => [
-                      const PopupMenuItem(value: 'edit', child: Text('Edit')),
+                      if (!item.isLunas)
+                        const PopupMenuItem(value: 'edit', child: Text('Edit')),
                       const PopupMenuItem(value: 'hapus', child: Text('Hapus')),
                     ],
                   ),
                 ],
               ),
               onTap: () {
-                if (!item.isLunas) {
-                  _tampilFormPelunasan(context, ref, item);
-                }
+                // Hapus kondisi if (!item.isLunas) agar bisa selalu diklik
+                _tampilFormPelunasan(context, ref, item);
               },
             ),
           ),
@@ -416,6 +394,36 @@ class _UtangScreenState extends ConsumerState<UtangScreen> {
     DateTime selectedDate = DateTime.now();
     final isUtang = item.tipe == TipeUtangPiutang.utang;
 
+    final akunList = ref.read(akunControllerProvider).value ?? [];
+    String namaAkunAwal = '-';
+    if (item.akunId != null) {
+      try {
+        namaAkunAwal = akunList.firstWhere((a) => a.id == item.akunId).nama;
+      } catch (_) {
+        namaAkunAwal = 'Akun terhapus';
+      }
+    }
+
+    const bulanMap = [
+      '',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'Mei',
+      'Jun',
+      'Jul',
+      'Agt',
+      'Sep',
+      'Okt',
+      'Nov',
+      'Des',
+    ];
+    final tglBuat =
+        '${item.waktu.day.toString().padLeft(2, '0')} ${bulanMap[item.waktu.month]} ${item.waktu.year}';
+    final tglJatuhTempo =
+        '${item.tenggatWaktu.day.toString().padLeft(2, '0')} ${bulanMap[item.tenggatWaktu.month]} ${item.tenggatWaktu.year}';
+
     showDialog(
       context: context,
       builder: (context) {
@@ -423,95 +431,229 @@ class _UtangScreenState extends ConsumerState<UtangScreen> {
           builder: (context, setState) {
             final akunState = ref.watch(akunControllerProvider);
             return AlertDialog(
-              title: Text(isUtang ? 'Pelunasan Utang' : 'Pelunasan Piutang'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Nominal: ${item.nominal.toIdr()}',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 16),
-                  akunState.maybeWhen(
-                    data: (akunList) => DropdownButtonFormField<String>(
-                      initialValue: selectedAkunId,
-                      hint: Text(
-                        isUtang ? 'Akun untuk Membayar' : 'Akun untuk Menerima',
+              // Sesuaikan judul jika sudah lunas
+              title: Text(
+                item.isLunas
+                    ? (isUtang ? 'Detail Utang' : 'Detail Piutang')
+                    : (isUtang ? 'Pelunasan Utang' : 'Pelunasan Piutang'),
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade50,
+                        border: Border.all(color: Colors.grey.shade300),
+                        borderRadius: BorderRadius.circular(8),
                       ),
-                      items: akunList
-                          .map(
-                            (a) => DropdownMenuItem(
-                              value: a.id,
-                              child: Text(a.nama),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            item.nominal.toIdr(),
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: isUtang ? Colors.green : Colors.red,
                             ),
-                          )
-                          .toList(),
-                      onChanged: (val) => setState(() => selectedAkunId = val),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            isUtang
+                                ? 'Dana masuk ke: $namaAkunAwal'
+                                : 'Dana keluar dari: $namaAkunAwal',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
+                            ),
+                          ),
+                          Text(
+                            isUtang
+                                ? 'Berutang kepada: ${item.pihakTerkait}'
+                                : 'Diutangkan kepada: ${item.pihakTerkait}',
+                            style: const TextStyle(fontSize: 13),
+                          ),
+                          if (item.catatan.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 4),
+                              child: Text(
+                                'Catatan: ${item.catatan}',
+                                style: const TextStyle(
+                                  fontStyle: FontStyle.italic,
+                                  fontSize: 13,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                            ),
+                          const Divider(),
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.calendar_today,
+                                size: 12,
+                                color: Colors.grey,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Dibuat: $tglBuat',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.event_busy,
+                                size: 12,
+                                color: Colors.orange.shade800,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Jatuh tempo: $tglJatuhTempo',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.orange.shade800,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
-                    orElse: () => const CircularProgressIndicator(),
-                  ),
-                  const SizedBox(height: 16),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: const Text('Tanggal Pelunasan'),
-                    subtitle: Text(selectedDate.toString().split(' ')[0]),
-                    trailing: const Icon(Icons.calendar_today),
-                    onTap: () async {
-                      final date = await showDatePicker(
-                        context: context,
-                        initialDate: selectedDate,
-                        firstDate: DateTime(2000),
-                        lastDate: DateTime(2100),
-                      );
-                      if (date != null) setState(() => selectedDate = date);
-                    },
-                  ),
-                ],
+
+                    // Sembunyikan form pelunasan jika sudah lunas
+                    if (!item.isLunas) ...[
+                      const SizedBox(height: 20),
+                      const Text(
+                        'Form Pelunasan',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 12),
+                      akunState.maybeWhen(
+                        data: (listAkun) => DropdownButtonFormField<String>(
+                          initialValue: selectedAkunId,
+                          decoration: const InputDecoration(
+                            border: OutlineInputBorder(),
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                          ),
+                          hint: Text(
+                            isUtang
+                                ? 'Akun untuk Membayar'
+                                : 'Akun untuk Menerima',
+                          ),
+                          items: listAkun
+                              .map(
+                                (a) => DropdownMenuItem(
+                                  value: a.id,
+                                  child: Text(a.nama),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: (val) =>
+                              setState(() => selectedAkunId = val),
+                        ),
+                        orElse: () => const CircularProgressIndicator(),
+                      ),
+                      const SizedBox(height: 16),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text(
+                          'Tanggal Pelunasan',
+                          style: TextStyle(fontSize: 14),
+                        ),
+                        subtitle: Text(
+                          '${selectedDate.day.toString().padLeft(2, '0')} ${bulanMap[selectedDate.month]} ${selectedDate.year}',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                          ),
+                        ),
+                        trailing: const Icon(
+                          Icons.calendar_month,
+                          color: Colors.blue,
+                        ),
+                        onTap: () async {
+                          final date = await showDatePicker(
+                            context: context,
+                            initialDate: selectedDate,
+                            firstDate: DateTime(2000),
+                            lastDate: DateTime(2100),
+                          );
+                          if (date != null) setState(() => selectedDate = date);
+                        },
+                      ),
+                    ],
+                  ],
+                ),
               ),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: const Text('Batal'),
+                  child: Text(item.isLunas ? 'Tutup' : 'Batal'),
                 ),
-                ElevatedButton(
-                  onPressed: () {
-                    if (selectedAkunId == null) return;
+                // Sembunyikan tombol "Lunas" jika sudah lunas
+                if (!item.isLunas)
+                  ElevatedButton(
+                    onPressed: () {
+                      if (selectedAkunId == null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Pilih akun pelunasan terlebih dahulu!',
+                            ),
+                          ),
+                        );
+                        return;
+                      }
 
-                    final updatedItem = UtangPiutangModel(
-                      id: item.id,
-                      tipe: item.tipe,
-                      nominal: item.nominal,
-                      pihakTerkait: item.pihakTerkait,
-                      akunId: item.akunId,
-                      waktu: item.waktu,
-                      tenggatWaktu: item.tenggatWaktu,
-                      catatan: item.catatan,
-                      isLunas: true,
-                    );
-                    ref
-                        .read(utangPiutangControllerProvider.notifier)
-                        .updateUtangPiutang(updatedItem);
+                      final updatedItem = UtangPiutangModel(
+                        id: item.id,
+                        tipe: item.tipe,
+                        nominal: item.nominal,
+                        pihakTerkait: item.pihakTerkait,
+                        akunId: item.akunId,
+                        waktu: item.waktu,
+                        tenggatWaktu: item.tenggatWaktu,
+                        catatan: item.catatan,
+                        isLunas: true,
+                      );
+                      ref
+                          .read(utangPiutangControllerProvider.notifier)
+                          .updateUtangPiutang(updatedItem);
 
-                    final transaksi = TransaksiModel(
-                      id: DateTime.now().millisecondsSinceEpoch.toString(),
-                      tipe: isUtang
-                          ? TipeTransaksi.pengeluaran
-                          : TipeTransaksi.pemasukan,
-                      nominal: item.nominal,
-                      akunSumberId: isUtang ? selectedAkunId : null,
-                      akunTujuanId: isUtang ? null : selectedAkunId,
-                      waktu: selectedDate,
-                      catatan:
-                          'Pelunasan ${isUtang ? "Utang ke" : "Piutang dari"} ${item.pihakTerkait}',
-                    );
-                    ref
-                        .read(transaksiControllerProvider.notifier)
-                        .tambahTransaksi(transaksi);
+                      final transaksi = TransaksiModel(
+                        id: DateTime.now().millisecondsSinceEpoch.toString(),
+                        tipe: isUtang
+                            ? TipeTransaksi.pengeluaran
+                            : TipeTransaksi.pemasukan,
+                        nominal: item.nominal,
+                        akunSumberId: isUtang ? selectedAkunId : null,
+                        akunTujuanId: isUtang ? null : selectedAkunId,
+                        labelId: isUtang ? 'label_utang' : 'label_piutang',
+                        waktu: selectedDate,
+                        catatan:
+                            'Pelunasan ${isUtang ? "Utang ke" : "Piutang dari"} ${item.pihakTerkait}',
+                      );
+                      ref
+                          .read(transaksiControllerProvider.notifier)
+                          .tambahTransaksi(transaksi);
 
-                    Navigator.pop(context);
-                  },
-                  child: const Text('Lunas'),
-                ),
+                      Navigator.pop(context);
+                    },
+                    child: const Text('Lunas'),
+                  ),
               ],
             );
           },
