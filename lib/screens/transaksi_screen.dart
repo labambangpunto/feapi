@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_3_expressive/material_3_expressive.dart';
 
 import '../controllers/transaksi_controller.dart';
 import '../controllers/akun_controller.dart';
@@ -236,7 +237,6 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
                         itemBuilder: (context, index) {
                           final TransaksiModel t = filteredList[index];
 
-                          // Tambahkan kalkulasi nominal final
                           final double totalNominal =
                               (t.nominal * t.kuantitas) +
                               (t.biayaTambahan ?? 0);
@@ -245,7 +245,6 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
                           String namaTujuan = getAkunName(t.akunTujuanId);
                           List<String> namaLabels = getLabelNames(t.labelId);
 
-                          // Menentukan ikon, warna, dan teks akun yang disederhanakan
                           IconData iconTipe;
                           Color colorTipe;
                           String textAkun;
@@ -279,8 +278,7 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
                                   child: Icon(iconTipe, color: colorTipe),
                                 ),
                                 title: Text(
-                                  totalNominal
-                                      .toIdr(), // Gunakan totalNominal di sini
+                                  totalNominal.toIdr(),
                                   style: TextStyle(
                                     fontSize: 18,
                                     color: colorTipe,
@@ -391,66 +389,53 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
           );
         },
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          showModalBottomSheet(
-            context: context,
-            builder: (context) => Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.arrow_upward, color: Colors.red),
-                  title: const Text('Pengeluaran'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const FormTransaksiScreen(
-                          tipeTransaksi: TipeTransaksi.pengeluaran,
-                        ),
-                      ),
-                    );
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(
-                    Icons.arrow_downward,
-                    color: Colors.green,
+      floatingActionButton: M3EFabMenu(
+        expandIcon: const Icon(Icons.add),
+        collapseIcon: const Icon(Icons.close),
+        items: [
+          M3EFabMenuItem(
+            icon: const Icon(Icons.arrow_upward, color: Colors.red),
+            label: 'Pengeluaran',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const FormTransaksiScreen(
+                    tipeTransaksi: TipeTransaksi.pengeluaran,
                   ),
-                  title: const Text('Pemasukan'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const FormTransaksiScreen(
-                          tipeTransaksi: TipeTransaksi.pemasukan,
-                        ),
-                      ),
-                    );
-                  },
                 ),
-                ListTile(
-                  leading: const Icon(Icons.swap_horiz, color: Colors.blue),
-                  title: const Text('Transfer Antarakun'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const FormTransaksiScreen(
-                          tipeTransaksi: TipeTransaksi.transfer,
-                        ),
-                      ),
-                    );
-                  },
+              );
+            },
+          ),
+          M3EFabMenuItem(
+            icon: const Icon(Icons.arrow_downward, color: Colors.green),
+            label: 'Pemasukan',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const FormTransaksiScreen(
+                    tipeTransaksi: TipeTransaksi.pemasukan,
+                  ),
                 ),
-              ],
-            ),
-          );
-        },
-        child: const Icon(Icons.add),
+              );
+            },
+          ),
+          M3EFabMenuItem(
+            icon: const Icon(Icons.swap_horiz, color: Colors.blue),
+            label: 'Transfer Antarakun',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const FormTransaksiScreen(
+                    tipeTransaksi: TipeTransaksi.transfer,
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
       ),
     );
   }
@@ -497,7 +482,7 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                totalNominal.toIdr(), // Gunakan totalNominal di sini
+                totalNominal.toIdr(),
                 style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
@@ -509,6 +494,13 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
               const SizedBox(height: 12),
 
               if (isPengeluaran) ...[
+                Text(
+                  t.catatan,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 16,
+                  ),
+                ),
                 Text('Kuantitas: ${t.kuantitas}'),
                 if (t.biayaTambahan != null && t.biayaTambahan! > 0)
                   Text('Biaya Tambahan: ${t.biayaTambahan!.toIdr()}'),
@@ -519,10 +511,24 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
                 ),
               ] else if (isPemasukan) ...[
                 Text(
+                  t.catatan,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 16,
+                  ),
+                ),
+                Text(
                   'Tujuan dana: $namaTujuan',
                   style: const TextStyle(color: Colors.black87),
                 ),
               ] else if (isTransfer) ...[
+                Text(
+                  t.catatan,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 16,
+                  ),
+                ),
                 if (t.biayaTambahan != null && t.biayaTambahan! > 0)
                   Text('Biaya Tambahan: ${t.biayaTambahan!.toIdr()}'),
                 const SizedBox(height: 4),

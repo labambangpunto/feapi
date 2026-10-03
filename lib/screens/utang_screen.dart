@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_3_expressive/material_3_expressive.dart';
 
 import '../controllers/utang_piutang_controller.dart';
 import '../models/utang_piutang_model.dart';
@@ -157,54 +158,39 @@ class _UtangScreenState extends ConsumerState<UtangScreen> {
             );
           },
         ),
-        floatingActionButton: FloatingActionButton(
-          onPressed: () {
-            showModalBottomSheet(
-              context: context,
-              builder: (context) => Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  ListTile(
-                    leading: const Icon(
-                      Icons.arrow_downward,
-                      color: Colors.red,
+        floatingActionButton: M3EFabMenu(
+          expandIcon: const Icon(Icons.add),
+          collapseIcon: const Icon(Icons.close),
+          items: [
+            M3EFabMenuItem(
+              icon: const Icon(Icons.arrow_downward, color: Colors.red),
+              label: 'Tambah Utang',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const FormUtangPiutangScreen(
+                      tipe: TipeUtangPiutang.utang,
                     ),
-                    title: const Text('Tambah Utang'),
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const FormUtangPiutangScreen(
-                            tipe: TipeUtangPiutang.utang,
-                          ),
-                        ),
-                      );
-                    },
                   ),
-                  ListTile(
-                    leading: const Icon(
-                      Icons.arrow_upward,
-                      color: Colors.green,
+                );
+              },
+            ),
+            M3EFabMenuItem(
+              icon: const Icon(Icons.arrow_upward, color: Colors.green),
+              label: 'Tambah Piutang',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const FormUtangPiutangScreen(
+                      tipe: TipeUtangPiutang.piutang,
                     ),
-                    title: const Text('Tambah Piutang'),
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const FormUtangPiutangScreen(
-                            tipe: TipeUtangPiutang.piutang,
-                          ),
-                        ),
-                      );
-                    },
                   ),
-                ],
-              ),
-            );
-          },
-          child: const Icon(Icons.add),
+                );
+              },
+            ),
+          ],
         ),
       ),
     );

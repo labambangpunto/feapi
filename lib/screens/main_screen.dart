@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:material_3_expressive/material_3_expressive.dart';
 
 import 'transaksi_screen.dart';
 import 'atur_screen.dart';
@@ -17,7 +18,7 @@ class _MainScreenState extends State<MainScreen> {
   static const List<Widget> _pages = <Widget>[
     HomeScreen(),
     TransaksiScreen(),
-    UtangScreen(), // Mengganti placeholder
+    UtangScreen(),
     AturScreen(),
   ];
 
@@ -31,22 +32,24 @@ class _MainScreenState extends State<MainScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: _pages.elementAt(_selectedIndex),
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        items: const <BottomNavigationBarItem>[
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(
+      bottomNavigationBar: M3ENavigationBar(
+        destinations: const [
+          M3ENavigationBarDestination(icon: Icon(Icons.home), label: 'Home'),
+          M3ENavigationBarDestination(
             icon: Icon(Icons.list_alt),
             label: 'Transaksi',
           ),
-          BottomNavigationBarItem(
+          M3ENavigationBarDestination(
             icon: Icon(Icons.account_balance_wallet),
             label: 'Utang',
           ),
-          BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Atur'),
+          M3ENavigationBarDestination(
+            icon: Icon(Icons.settings),
+            label: 'Atur',
+          ),
         ],
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
+        selectedIndex: _selectedIndex,
+        onDestinationSelected: _onItemTapped,
       ),
     );
   }
