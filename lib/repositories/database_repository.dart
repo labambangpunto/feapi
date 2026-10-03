@@ -7,9 +7,6 @@ import '../models/akun_model.dart';
 import '../models/label_model.dart';
 import '../models/utang_piutang_model.dart';
 
-// Import model label dan utang_piutang jika sudah dibuat
-
-// Provider untuk memudahkan injeksi dependensi di Controller layer
 final databaseRepositoryProvider = Provider<DatabaseRepository>((ref) {
   return DatabaseRepository();
 });
@@ -26,13 +23,13 @@ class DatabaseRepository {
     return await db.insert('transaksi', {
       'id': transaksi.id,
       'tipe': transaksi.tipe.name,
-      'nominal': transaksi.nominal,
-      'biayaTambahan': transaksi.biayaTambahan,
+      'nominal': transaksi.nominal.toInt(), // Konversi ke INTEGER
+      'biayaTambahan': transaksi.biayaTambahan?.toInt(), // Konversi ke INTEGER
       'kuantitas': transaksi.kuantitas,
       'akunSumberId': transaksi.akunSumberId,
       'akunTujuanId': transaksi.akunTujuanId,
       'labelId': transaksi.labelId,
-      'waktu': transaksi.waktu.toIso8601String(),
+      'waktu': transaksi.waktu.millisecondsSinceEpoch, // Konversi ke Epoch
       'catatan': transaksi.catatan,
     });
   }
@@ -48,13 +45,17 @@ class DatabaseRepository {
       return TransaksiModel(
         id: maps[i]['id'],
         tipe: TipeTransaksi.values.byName(maps[i]['tipe']),
-        nominal: maps[i]['nominal'],
-        biayaTambahan: maps[i]['biayaTambahan'],
+        // Casting aman dari INTEGER SQLite kembali ke double Dart
+        nominal: (maps[i]['nominal'] as num).toDouble(),
+        biayaTambahan: maps[i]['biayaTambahan'] != null
+            ? (maps[i]['biayaTambahan'] as num).toDouble()
+            : null,
         kuantitas: maps[i]['kuantitas'],
         akunSumberId: maps[i]['akunSumberId'],
         akunTujuanId: maps[i]['akunTujuanId'],
         labelId: maps[i]['labelId'],
-        waktu: DateTime.parse(maps[i]['waktu']),
+        // Parsing kembali dari Epoch ke DateTime
+        waktu: DateTime.fromMillisecondsSinceEpoch(maps[i]['waktu'] as int),
         catatan: maps[i]['catatan'],
       );
     });
@@ -66,13 +67,13 @@ class DatabaseRepository {
       'transaksi',
       {
         'tipe': transaksi.tipe.name,
-        'nominal': transaksi.nominal,
-        'biayaTambahan': transaksi.biayaTambahan,
+        'nominal': transaksi.nominal.toInt(),
+        'biayaTambahan': transaksi.biayaTambahan?.toInt(),
         'kuantitas': transaksi.kuantitas,
         'akunSumberId': transaksi.akunSumberId,
         'akunTujuanId': transaksi.akunTujuanId,
         'labelId': transaksi.labelId,
-        'waktu': transaksi.waktu.toIso8601String(),
+        'waktu': transaksi.waktu.millisecondsSinceEpoch,
         'catatan': transaksi.catatan,
       },
       where: 'id = ?',
@@ -131,11 +132,9 @@ class DatabaseRepository {
     final db = await _dbHelper.database;
     final List<Map<String, dynamic>> maps = await db.query('label');
 
-    // Cek keberadaan label default
     bool hasUtang = maps.any((m) => m['id'] == 'label_utang');
     bool hasPiutang = maps.any((m) => m['id'] == 'label_piutang');
 
-    // Sisipkan label default jika belum ada
     if (!hasUtang) {
       final labelUtang = LabelModel(
         id: 'label_utang',
@@ -153,7 +152,6 @@ class DatabaseRepository {
       await db.insert('label', labelPiutang.toMap());
     }
 
-    // Ambil ulang data jika terjadi penambahan
     final List<Map<String, dynamic>> finalMaps = (!hasUtang || !hasPiutang)
         ? await db.query('label')
         : maps;
@@ -177,6 +175,7 @@ class DatabaseRepository {
       whereArgs: [label.id],
     );
   }
+
   // ==============================
   // CRUD UTANG PIUTANG
   // ==============================
@@ -186,11 +185,11 @@ class DatabaseRepository {
     return await db.insert('utang_piutang', {
       'id': data.id,
       'tipe': data.tipe.name,
-      'nominal': data.nominal,
+      'nominal': data.nominal.toInt(),
       'pihakTerkait': data.pihakTerkait,
       'akunId': data.akunId,
-      'waktu': data.waktu.toIso8601String(),
-      'tenggatWaktu': data.tenggatWaktu.toIso8601String(),
+      'waktu': data.waktu.millisecondsSinceEpoch,
+      'tenggatWaktu': data.tenggatWaktu.millisecondsSinceEpoch,
       'catatan': data.catatan,
       'isLunas': data.isLunas ? 1 : 0,
     });
@@ -207,11 +206,13 @@ class DatabaseRepository {
       return UtangPiutangModel(
         id: maps[i]['id'],
         tipe: TipeUtangPiutang.values.byName(maps[i]['tipe']),
-        nominal: maps[i]['nominal'],
+        nominal: (maps[i]['nominal'] as num).toDouble(),
         pihakTerkait: maps[i]['pihakTerkait'],
         akunId: maps[i]['akunId'],
-        waktu: DateTime.parse(maps[i]['waktu']),
-        tenggatWaktu: DateTime.parse(maps[i]['tenggatWaktu']),
+        waktu: DateTime.fromMillisecondsSinceEpoch(maps[i]['waktu'] as int),
+        tenggatWaktu: DateTime.fromMillisecondsSinceEpoch(
+          maps[i]['tenggatWaktu'] as int,
+        ),
         catatan: maps[i]['catatan'],
         isLunas: maps[i]['isLunas'] == 1,
       );
@@ -224,11 +225,11 @@ class DatabaseRepository {
       'utang_piutang',
       {
         'tipe': data.tipe.name,
-        'nominal': data.nominal,
+        'nominal': data.nominal.toInt(),
         'pihakTerkait': data.pihakTerkait,
         'akunId': data.akunId,
-        'waktu': data.waktu.toIso8601String(),
-        'tenggatWaktu': data.tenggatWaktu.toIso8601String(),
+        'waktu': data.waktu.millisecondsSinceEpoch,
+        'tenggatWaktu': data.tenggatWaktu.millisecondsSinceEpoch,
         'catatan': data.catatan,
         'isLunas': data.isLunas ? 1 : 0,
       },
@@ -249,6 +250,7 @@ class DatabaseRepository {
   // ==============================
   // BUAT PROFIL YGY
   // ==============================
+
   Future<Map<String, dynamic>?> getProfil() async {
     final db = await _dbHelper.database;
     final result = await db.query('profil', where: 'id = 1');
