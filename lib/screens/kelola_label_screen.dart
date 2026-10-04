@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:material_3_expressive/material_3_expressive.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../controllers/label_controller.dart';
@@ -22,74 +23,93 @@ class KelolaLabelScreen extends ConsumerWidget {
             return const Center(child: Text('Belum ada label'));
           }
           return ListView.builder(
+            padding: const EdgeInsets.symmetric(vertical: 8),
             itemCount: labelList.length,
             itemBuilder: (context, index) {
               final label = labelList[index];
               final isDibekukan = label.isDibekukan;
-
-              // Deteksi label default
               final isDefault =
                   label.id == 'label_utang' || label.id == 'label_piutang';
 
-              return ListTile(
-                title: Text(
-                  label.nama,
-                  style: TextStyle(
-                    decoration: isDibekukan ? TextDecoration.lineThrough : null,
-                    color: isDibekukan ? Colors.grey : Colors.black,
-                    fontWeight: isDefault ? FontWeight.bold : FontWeight.normal,
+              return Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 4,
+                ),
+                child: M3ECard(
+                  variant: M3ECardVariant.elevated,
+                  child: ListTile(
+                    title: Text(
+                      label.nama,
+                      style: TextStyle(
+                        decoration: isDibekukan
+                            ? TextDecoration.lineThrough
+                            : null,
+                        color: isDibekukan ? Colors.grey : Colors.black,
+                        fontWeight: isDefault
+                            ? FontWeight.bold
+                            : FontWeight.normal,
+                      ),
+                    ),
+                    subtitle: isDefault
+                        ? const Text(
+                            'Label Default Sistem',
+                            style: TextStyle(color: Colors.blue, fontSize: 12),
+                          )
+                        : (isDibekukan
+                              ? const Text(
+                                  'Dibekukan',
+                                  style: TextStyle(color: Colors.red),
+                                )
+                              : null),
+                    trailing: isDefault
+                        ? const SizedBox.shrink()
+                        : Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (!isDibekukan)
+                                M3EIconButton(
+                                  icon: const Icon(
+                                    Icons.edit,
+                                    color: Colors.blue,
+                                  ),
+                                  onPressed: () => _tampilFormFormLabel(
+                                    context,
+                                    ref,
+                                    dataEdit: label,
+                                  ),
+                                ),
+                              M3EIconButton(
+                                icon: Icon(
+                                  isDibekukan ? Icons.restore : Icons.delete,
+                                  color: isDibekukan
+                                      ? Colors.green
+                                      : Colors.red,
+                                ),
+                                onPressed: () {
+                                  if (isDibekukan) {
+                                    _pulihkanLabel(context, ref, label);
+                                  } else {
+                                    _cekDanHapusAtauBekukan(
+                                      context,
+                                      ref,
+                                      label,
+                                    );
+                                  }
+                                },
+                              ),
+                            ],
+                          ),
                   ),
                 ),
-                subtitle: isDefault
-                    ? const Text(
-                        'Label Default Sistem',
-                        style: TextStyle(color: Colors.blue, fontSize: 12),
-                      )
-                    : (isDibekukan
-                          ? const Text(
-                              'Dibekukan',
-                              style: TextStyle(color: Colors.red),
-                            )
-                          : null),
-
-                // Hilangkan tombol trailing jika label adalah default
-                trailing: isDefault
-                    ? const SizedBox.shrink()
-                    : Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (!isDibekukan)
-                            IconButton(
-                              icon: const Icon(Icons.edit, color: Colors.blue),
-                              onPressed: () => _tampilFormFormLabel(
-                                context,
-                                ref,
-                                dataEdit: label,
-                              ),
-                            ),
-                          IconButton(
-                            icon: Icon(
-                              isDibekukan ? Icons.restore : Icons.delete,
-                              color: isDibekukan ? Colors.green : Colors.red,
-                            ),
-                            onPressed: () {
-                              if (isDibekukan) {
-                                _pulihkanLabel(context, ref, label);
-                              } else {
-                                _cekDanHapusAtauBekukan(context, ref, label);
-                              }
-                            },
-                          ),
-                        ],
-                      ),
               );
             },
           );
         },
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: M3EFab(
+        icon: const Icon(Icons.add),
         onPressed: () => _tampilFormFormLabel(context, ref),
-        child: const Icon(Icons.add),
       ),
     );
   }
@@ -116,23 +136,19 @@ class KelolaLabelScreen extends ConsumerWidget {
     WidgetRef ref,
     LabelModel label,
   ) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text(
-          'Label Sedang Digunakan',
-          style: TextStyle(color: Colors.orange),
-        ),
+    M3EDialog.show<void>(
+      context,
+      dialog: M3EDialog(
+        title: 'Label Sedang Digunakan',
         content: Text(
           'Label "${label.nama}" tidak bisa dihapus karena terikat pada transaksi.\n\nApakah Anda ingin membekukannya? (Label tidak akan muncul di form input baru)',
         ),
         actions: [
-          TextButton(
+          M3EButton.text(
             onPressed: () => Navigator.pop(context),
             child: const Text('Batal'),
           ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+          M3EButton.filled(
             onPressed: () {
               final labelDibekukan = label.copyWith(isDibekukan: true);
               ref
@@ -140,7 +156,7 @@ class KelolaLabelScreen extends ConsumerWidget {
                   .updateLabel(labelDibekukan);
               Navigator.pop(context);
             },
-            child: const Text('Bekukan', style: TextStyle(color: Colors.white)),
+            child: const Text('Bekukan'),
           ),
         ],
       ),
@@ -150,9 +166,7 @@ class KelolaLabelScreen extends ConsumerWidget {
   void _pulihkanLabel(BuildContext context, WidgetRef ref, LabelModel label) {
     final labelDipulihkan = label.copyWith(isDibekukan: false);
     ref.read(labelControllerProvider.notifier).updateLabel(labelDipulihkan);
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Label berhasil dipulihkan')));
+    M3ESnackbar.show(context, message: 'Label berhasil dipulihkan');
   }
 
   void _tampilFormFormLabel(
@@ -162,29 +176,26 @@ class KelolaLabelScreen extends ConsumerWidget {
   }) {
     final namaController = TextEditingController(text: dataEdit?.nama ?? '');
 
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(dataEdit == null ? 'Tambah Label' : 'Edit Label'),
-        content: TextField(
-          controller: namaController,
-          maxLength: 16, // Ubah dari 32 menjadi 16
-          decoration: const InputDecoration(labelText: 'Nama label'),
+    M3EDialog.show<void>(
+      context,
+      dialog: M3EDialog(
+        title: dataEdit == null ? 'Tambah Label' : 'Edit Label',
+        content: Material(
+          color: Colors.transparent,
+          child: M3ETextField(controller: namaController, label: 'Nama label'),
         ),
         actions: [
-          TextButton(
+          M3EButton.text(
             onPressed: () => Navigator.pop(context),
             child: const Text('Batal'),
           ),
-          ElevatedButton(
+          M3EButton.filled(
             onPressed: () {
-              // Terapkan auto-format pada input mentah
               final namaLabel = _autoFormatNama(namaController.text);
               if (namaLabel.isEmpty) return;
 
               final currentLabel =
                   ref.read(labelControllerProvider).value ?? [];
-
               final isDuplicate = currentLabel.any(
                 (l) =>
                     l.id != dataEdit?.id &&
@@ -192,8 +203,9 @@ class KelolaLabelScreen extends ConsumerWidget {
               );
 
               if (isDuplicate) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Nama label sudah digunakan')),
+                M3ESnackbar.show(
+                  context,
+                  message: 'Nama label sudah digunakan',
                 );
                 return;
               }
@@ -202,7 +214,7 @@ class KelolaLabelScreen extends ConsumerWidget {
                 id:
                     dataEdit?.id ??
                     DateTime.now().millisecondsSinceEpoch.toString(),
-                nama: namaLabel, // Gunakan nama yang telah diformat
+                nama: namaLabel,
                 isDibekukan: dataEdit?.isDibekukan ?? false,
               );
 
@@ -225,25 +237,24 @@ class KelolaLabelScreen extends ConsumerWidget {
     WidgetRef ref,
     LabelModel label,
   ) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Hapus Label', style: TextStyle(color: Colors.red)),
+    M3EDialog.show<void>(
+      context,
+      dialog: M3EDialog(
+        title: 'Hapus Label',
         content: Text(
           'Apakah Anda yakin ingin menghapus label "${label.nama}"?',
         ),
         actions: [
-          TextButton(
+          M3EButton.text(
             onPressed: () => Navigator.pop(context),
             child: const Text('Batal'),
           ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+          M3EButton.filled(
             onPressed: () {
               ref.read(labelControllerProvider.notifier).hapusLabel(label.id);
               Navigator.pop(context);
             },
-            child: const Text('Hapus', style: TextStyle(color: Colors.white)),
+            child: const Text('Hapus'),
           ),
         ],
       ),
@@ -251,13 +262,9 @@ class KelolaLabelScreen extends ConsumerWidget {
   }
 
   String _autoFormatNama(String input) {
-    // 4. Hapus karakter terlarang
     String res = input.replaceAll(RegExp(r'[\\/:*?"<>|~#%&{}$]'), '');
-    // 3. Ganti spasi ganda (atau lebih) menjadi spasi tunggal
     res = res.replaceAll(RegExp(r'\s{2,}'), ' ');
-    // 2. Hapus titik jika berada di paling awal nama
     res = res.replaceFirst(RegExp(r'^\.+'), '');
-    // 1. Hapus spasi di awal dan di akhir nama
     return res.trim();
   }
 }

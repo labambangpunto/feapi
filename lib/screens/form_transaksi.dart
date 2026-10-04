@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:material_3_expressive/material_3_expressive.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../controllers/akun_controller.dart';
@@ -33,7 +34,7 @@ class _FormTransaksiScreenState extends ConsumerState<FormTransaksiScreen> {
 
   String? _selectedAkunSumberId;
   String? _selectedAkunTujuanId;
-  List<String> _selectedLabelIds = []; // Tambahkan ini
+  List<String> _selectedLabelIds = [];
   DateTime _selectedDate = DateTime.now();
 
   @override
@@ -51,7 +52,6 @@ class _FormTransaksiScreenState extends ConsumerState<FormTransaksiScreen> {
       _selectedAkunSumberId = d.akunSumberId;
       _selectedAkunTujuanId = d.akunTujuanId;
 
-      // Pisahkan ID label dengan koma jika ada
       if (d.labelId != null && d.labelId!.isNotEmpty) {
         _selectedLabelIds = d.labelId!.split(',');
       }
@@ -78,39 +78,41 @@ class _FormTransaksiScreenState extends ConsumerState<FormTransaksiScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          TextField(
+          M3ETextField(
             controller: _nominalController,
             keyboardType: TextInputType.number,
             inputFormatters: [CurrencyFormatter()],
-            decoration: const InputDecoration(
-              labelText: 'Nominal (Rp)',
-              prefixText: 'Rp ',
-            ),
+            label: 'Nominal (Rp)',
+            prefixText: 'Rp ',
           ),
-          if (isPengeluaran || isTransfer)
-            TextField(
+          if (isPengeluaran || isTransfer) ...[
+            const SizedBox(height: 12),
+            M3ETextField(
               controller: _biayaTambahanController,
               keyboardType: TextInputType.number,
               inputFormatters: [CurrencyFormatter()],
-              decoration: const InputDecoration(
-                labelText: 'Biaya Tambahan (Opsional)',
-                prefixText: 'Rp ',
-              ),
+              label: 'Biaya Tambahan (Opsional)',
+              prefixText: 'Rp ',
             ),
-          if (isPengeluaran)
-            TextField(
+          ],
+          if (isPengeluaran) ...[
+            const SizedBox(height: 12),
+            M3ETextField(
               controller: _kuantitasController,
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'Kuantitas (Qty)'),
+              label: 'Kuantitas (Qty)',
             ),
+          ],
           const SizedBox(height: 16),
           akunState.maybeWhen(
             data: (akunList) => Column(
               children: [
                 if (isPengeluaran || isTransfer)
-                  DropdownButtonFormField<String>(
-                    initialValue: _selectedAkunSumberId,
-                    hint: const Text('Akun Sumber'),
+                  M3EDropdownMenu<String>(
+                    singleSelect: true,
+                    fieldStyle: const M3EDropdownFieldStyle(
+                      hintText: 'Akun Sumber',
+                    ),
                     items: [
                       ...akunList
                           .where(
@@ -118,23 +120,16 @@ class _FormTransaksiScreenState extends ConsumerState<FormTransaksiScreen> {
                                 !a.isDibekukan || a.id == _selectedAkunSumberId,
                           )
                           .map(
-                            (a) => DropdownMenuItem(
-                              value: a.id,
-                              child: Text(a.nama),
-                            ),
+                            (a) => M3EDropdownItem(label: a.nama, value: a.id),
                           ),
-                      const DropdownMenuItem(
+                      const M3EDropdownItem(
+                        label: '+ Tambahkan akun',
                         value: 'add_new',
-                        child: Text(
-                          '+ Tambahkan akun',
-                          style: TextStyle(
-                            color: Colors.blue,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
                       ),
                     ],
-                    onChanged: (val) {
+                    onSelectionChanged: (items) {
+                      final val = items.isEmpty ? null : items.first.value;
+
                       if (val == 'add_new') {
                         Navigator.push(
                           context,
@@ -142,23 +137,25 @@ class _FormTransaksiScreenState extends ConsumerState<FormTransaksiScreen> {
                             builder: (_) => const KelolaAkunScreen(),
                           ),
                         );
-                      } else {
-                        setState(() {
-                          _selectedAkunSumberId = val;
-                          // Reset akun tujuan jika sama dengan akun sumber
-                          if (widget.tipeTransaksi == TipeTransaksi.transfer &&
-                              _selectedAkunTujuanId == val) {
-                            _selectedAkunTujuanId = null;
-                          }
-                        });
+                        return;
                       }
+
+                      setState(() {
+                        _selectedAkunSumberId = val;
+                        if (widget.tipeTransaksi == TipeTransaksi.transfer &&
+                            _selectedAkunTujuanId == val) {
+                          _selectedAkunTujuanId = null;
+                        }
+                      });
                     },
                   ),
                 if (isTransfer) const SizedBox(height: 16),
                 if (isPemasukan || isTransfer)
-                  DropdownButtonFormField<String>(
-                    initialValue: _selectedAkunTujuanId,
-                    hint: const Text('Akun Tujuan'),
+                  M3EDropdownMenu<String>(
+                    singleSelect: true,
+                    fieldStyle: const M3EDropdownFieldStyle(
+                      hintText: 'Akun Tujuan',
+                    ),
                     items: [
                       ...akunList
                           .where(
@@ -166,23 +163,16 @@ class _FormTransaksiScreenState extends ConsumerState<FormTransaksiScreen> {
                                 !a.isDibekukan || a.id == _selectedAkunTujuanId,
                           )
                           .map(
-                            (a) => DropdownMenuItem(
-                              value: a.id,
-                              child: Text(a.nama),
-                            ),
+                            (a) => M3EDropdownItem(label: a.nama, value: a.id),
                           ),
-                      const DropdownMenuItem(
+                      const M3EDropdownItem(
+                        label: '+ Tambahkan akun',
                         value: 'add_new',
-                        child: Text(
-                          '+ Tambahkan akun',
-                          style: TextStyle(
-                            color: Colors.blue,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
                       ),
                     ],
-                    onChanged: (val) {
+                    onSelectionChanged: (items) {
+                      final val = items.isEmpty ? null : items.first.value;
+
                       if (val == 'add_new') {
                         Navigator.push(
                           context,
@@ -190,16 +180,17 @@ class _FormTransaksiScreenState extends ConsumerState<FormTransaksiScreen> {
                             builder: (_) => const KelolaAkunScreen(),
                           ),
                         );
-                      } else {
-                        setState(() {
-                          _selectedAkunTujuanId = val;
-                          // Reset akun sumber jika sama dengan akun tujuan
-                          if (widget.tipeTransaksi == TipeTransaksi.transfer &&
-                              _selectedAkunSumberId == val) {
-                            _selectedAkunSumberId = null;
-                          }
-                        });
+                        return;
                       }
+
+                      setState(() {
+                        _selectedAkunTujuanId = val;
+                        // Reset akun sumber jika sama dengan akun tujuan
+                        if (widget.tipeTransaksi == TipeTransaksi.transfer &&
+                            _selectedAkunSumberId == val) {
+                          _selectedAkunSumberId = null;
+                        }
+                      });
                     },
                   ),
               ],
@@ -210,30 +201,31 @@ class _FormTransaksiScreenState extends ConsumerState<FormTransaksiScreen> {
           labelState.maybeWhen(
             data: (labelList) => Wrap(
               spacing: 8,
+              runSpacing: 8,
               children: [
                 ...labelList
                     .where(
                       (l) => !l.isDibekukan || _selectedLabelIds.contains(l.id),
                     )
                     .map(
-                      // Gunakan FilterChip alih-alih ChoiceChip
-                      (l) => FilterChip(
-                        label: Text(l.nama),
+                      (l) => M3EChip(
+                        label: l.nama,
+                        type: M3EChipType.filter,
                         selected: _selectedLabelIds.contains(l.id),
-                        onSelected: (selected) {
+                        onPressed: () {
                           setState(() {
-                            if (selected) {
-                              _selectedLabelIds.add(l.id);
-                            } else {
+                            if (_selectedLabelIds.contains(l.id)) {
                               _selectedLabelIds.remove(l.id);
+                            } else {
+                              _selectedLabelIds.add(l.id);
                             }
                           });
                         },
                       ),
                     ),
-                ActionChip(
-                  label: const Text('+ Tambah'),
-                  avatar: const Icon(Icons.add, size: 16),
+                M3EChip(
+                  label: 'Tambah',
+                  leading: const Icon(Icons.add, size: 16),
                   onPressed: () {
                     Navigator.push(
                       context,
@@ -248,13 +240,14 @@ class _FormTransaksiScreenState extends ConsumerState<FormTransaksiScreen> {
             orElse: () => const CircularProgressIndicator(),
           ),
           const SizedBox(height: 16),
-          ListTile(
-            title: const Text('Tanggal & Waktu'),
-            subtitle: Text(_selectedDate.toString()),
+          M3EListItem(
+            headline: 'Tanggal & Waktu',
+            supportingText:
+                '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
             trailing: const Icon(Icons.calendar_today),
             onTap: () async {
-              final date = await showDatePicker(
-                context: context,
+              final date = await M3EDatePicker.show(
+                context,
                 initialDate: _selectedDate,
                 firstDate: DateTime(2000),
                 lastDate: DateTime(2100),
@@ -262,13 +255,13 @@ class _FormTransaksiScreenState extends ConsumerState<FormTransaksiScreen> {
               if (date != null) setState(() => _selectedDate = date);
             },
           ),
-          TextField(
+          const SizedBox(height: 12),
+          M3ETextField(
             controller: _catatanController,
-            maxLength: 128, // Tambahkan baris ini
-            decoration: const InputDecoration(labelText: 'Catatan / Deskripsi'),
+            label: 'Catatan / Deskripsi',
           ),
           const SizedBox(height: 24),
-          ElevatedButton(
+          M3EButton.filled(
             onPressed: _simpanTransaksi,
             child: const Text('Simpan'),
           ),
@@ -278,15 +271,10 @@ class _FormTransaksiScreenState extends ConsumerState<FormTransaksiScreen> {
   }
 
   String _autoFormatText(String input) {
-    // 5. Hapus karakter terlarang
     String res = input.replaceAll(RegExp(r'[\\/:*?"<>|~#%&{}$]'), '');
-    // 4. Hapus spasi ganda
     res = res.replaceAll(RegExp(r'\s{2,}'), ' ');
-    // 3. Hapus titik di awal teks
     res = res.replaceFirst(RegExp(r'^\.+'), '');
-    // 2. Hapus spasi di awal dan akhir
     res = res.trim();
-    // 1. Huruf pertama otomatis kapital
     if (res.isNotEmpty) {
       res = res[0].toUpperCase() + res.substring(1);
     }
@@ -300,7 +288,6 @@ class _FormTransaksiScreenState extends ConsumerState<FormTransaksiScreen> {
         (_selectedAkunTujuanId == null &&
             widget.tipeTransaksi == TipeTransaksi.transfer) ||
         _selectedLabelIds.isEmpty) {
-      // Ubah validasi label menjadi ini
       ScaffoldMessenger.of(context)
           .showSnackBar(const SnackBar(content: Text('Isi field wajib!')));
       return;
@@ -321,7 +308,6 @@ class _FormTransaksiScreenState extends ConsumerState<FormTransaksiScreen> {
         : null;
     final qty = int.parse(_kuantitasController.text);
 
-    // Terapkan auto-format pada catatan
     final catatanFormatted = _autoFormatText(_catatanController.text);
 
     final transaksi = TransaksiModel(
@@ -334,7 +320,7 @@ class _FormTransaksiScreenState extends ConsumerState<FormTransaksiScreen> {
       kuantitas: qty,
       akunSumberId: _selectedAkunSumberId,
       akunTujuanId: _selectedAkunTujuanId,
-      labelId: _selectedLabelIds.join(','), // Gabungkan ID dengan koma
+      labelId: _selectedLabelIds.join(','),
       waktu: _selectedDate,
       catatan: catatanFormatted,
     );

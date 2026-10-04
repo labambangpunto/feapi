@@ -1,18 +1,17 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:material_3_expressive/material_3_expressive.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../controllers/akun_controller.dart';
 import '../controllers/utang_piutang_controller.dart';
 import '../models/utang_piutang_model.dart';
 import '../utils/currency_formatter.dart';
-import '../controllers/transaksi_controller.dart';
-import '../models/transaksi_model.dart';
 import '../utils/currency_format.dart';
 import 'kelola_akun_screen.dart';
 
 class FormUtangPiutangScreen extends ConsumerStatefulWidget {
   final TipeUtangPiutang tipe;
-  final UtangPiutangModel? dataEdit; // Parameter untuk mode edit
+  final UtangPiutangModel? dataEdit;
 
   const FormUtangPiutangScreen({super.key, required this.tipe, this.dataEdit});
 
@@ -56,66 +55,60 @@ class _FormUtangPiutangScreenState
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          TextField(
+          M3ETextField(
             controller: _nominalController,
             keyboardType: TextInputType.number,
             inputFormatters: [CurrencyFormatter()],
-            decoration: const InputDecoration(
-              labelText: 'Nominal (Rp)',
-              prefixText: 'Rp ',
-            ),
+            label: 'Nominal (Rp)',
+            prefixText: 'Rp ',
           ),
-          TextField(
+          const SizedBox(height: 12),
+          M3ETextField(
             controller: _pihakController,
-            decoration: InputDecoration(
-              labelText: isUtang ? 'Pihak Pemberi Dana' : 'Pihak Penerima Dana',
-            ),
+            label: isUtang ? 'Pihak Pemberi Dana' : 'Pihak Penerima Dana',
           ),
           const SizedBox(height: 16),
           akunState.maybeWhen(
-            data: (akunList) => DropdownButtonFormField<String>(
-              initialValue: _selectedAkunId,
-              hint: Text(
-                isUtang ? 'Akun untuk Menerima' : 'Akun untuk Memberi',
+            data: (akunList) => M3EDropdownMenu<String>(
+              singleSelect: true,
+              fieldStyle: M3EDropdownFieldStyle(
+                hintText: isUtang
+                    ? 'Akun untuk Menerima'
+                    : 'Akun untuk Memberi',
               ),
               items: [
                 ...akunList
                     .where((a) => !a.isDibekukan || a.id == _selectedAkunId)
-                    .map((a) {
-                      return DropdownMenuItem(value: a.id, child: Text(a.nama));
-                    }),
-                const DropdownMenuItem(
+                    .map((a) => M3EDropdownItem(label: a.nama, value: a.id)),
+                const M3EDropdownItem(
+                  label: '+ Tambahkan akun',
                   value: 'add_new',
-                  child: Text(
-                    '+ Tambahkan akun',
-                    style: TextStyle(
-                      color: Colors.blue,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
                 ),
               ],
-              onChanged: (val) {
+              onSelectionChanged: (items) {
+                final val = items.isEmpty ? null : items.first.value;
+
                 if (val == 'add_new') {
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (_) => const KelolaAkunScreen()),
                   );
-                } else {
-                  setState(() => _selectedAkunId = val);
+                  return;
                 }
+
+                setState(() => _selectedAkunId = val);
               },
             ),
-            orElse: () => const CircularProgressIndicator(),
+            orElse: () => const M3EProgressIndicator.circular(),
           ),
           const SizedBox(height: 16),
-          ListTile(
-            title: const Text('Tanggal & Waktu'),
-            subtitle: Text(_waktu.toString().split('.')[0]),
+          M3EListItem(
+            headline: 'Tanggal & Waktu',
+            supportingText: '${_waktu.day}/${_waktu.month}/${_waktu.year}',
             trailing: const Icon(Icons.calendar_today),
             onTap: () async {
-              final date = await showDatePicker(
-                context: context,
+              final date = await M3EDatePicker.show(
+                context,
                 initialDate: _waktu,
                 firstDate: DateTime(2000),
                 lastDate: DateTime(2100),
@@ -123,13 +116,15 @@ class _FormUtangPiutangScreenState
               if (date != null) setState(() => _waktu = date);
             },
           ),
-          ListTile(
-            title: const Text('Tenggat Waktu'),
-            subtitle: Text(_tenggatWaktu.toString().split(' ')[0]),
+          const SizedBox(height: 8),
+          M3EListItem(
+            headline: 'Tenggat Waktu',
+            supportingText:
+                '${_tenggatWaktu.day}/${_tenggatWaktu.month}/${_tenggatWaktu.year}',
             trailing: const Icon(Icons.event_busy),
             onTap: () async {
-              final date = await showDatePicker(
-                context: context,
+              final date = await M3EDatePicker.show(
+                context,
                 initialDate: _tenggatWaktu,
                 firstDate: DateTime(2000),
                 lastDate: DateTime(2100),
@@ -137,13 +132,13 @@ class _FormUtangPiutangScreenState
               if (date != null) setState(() => _tenggatWaktu = date);
             },
           ),
-          TextField(
+          const SizedBox(height: 12),
+          M3ETextField(
             controller: _catatanController,
-            maxLength: 128, // Tambahkan baris ini
-            decoration: const InputDecoration(labelText: 'Catatan / Deskripsi'),
+            label: 'Catatan / Deskripsi',
           ),
           const SizedBox(height: 24),
-          ElevatedButton(onPressed: _simpanData, child: const Text('Simpan')),
+          M3EButton.filled(onPressed: _simpanData, child: const Text('Simpan')),
         ],
       ),
     );
@@ -161,7 +156,6 @@ class _FormUtangPiutangScreenState
   }
 
   void _simpanData() {
-    // Terapkan auto-format pada pihak terkait dan catatan
     final pihakFormatted = _autoFormatText(_pihakController.text);
     final catatanFormatted = _autoFormatText(_catatanController.text);
 
@@ -169,13 +163,11 @@ class _FormUtangPiutangScreenState
         pihakFormatted.isEmpty ||
         _selectedAkunId == null ||
         catatanFormatted.isEmpty) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Isi field wajib!')));
+      M3ESnackbar.show(context, message: 'Isi field wajib!');
       return;
     }
 
     final nominal = double.parse(_nominalController.text.replaceAll('.', ''));
-    final isUtang = widget.tipe == TipeUtangPiutang.utang;
 
     final data = UtangPiutangModel(
       id:
@@ -192,35 +184,13 @@ class _FormUtangPiutangScreenState
     );
 
     if (widget.dataEdit != null) {
-      // Mode Edit: Hanya update data utang/piutang (log transaksi tidak diubah otomatis)
       ref
           .read(utangPiutangControllerProvider.notifier)
           .updateUtangPiutang(data);
     } else {
-      // Mode Tambah Baru: Simpan data utang/piutang
       ref
           .read(utangPiutangControllerProvider.notifier)
           .tambahUtangPiutang(data);
-
-      // Otomatis buat log transaksi
-      final transaksiBaru = TransaksiModel(
-        // Tambahkan prefix 'tx_' agar ID tidak bentrok dengan ID utang jika di-generate di milidetik yang persis sama
-        id: 'tx_${DateTime.now().millisecondsSinceEpoch}',
-        tipe: isUtang ? TipeTransaksi.pemasukan : TipeTransaksi.pengeluaran,
-        nominal: nominal,
-        // Jika Utang (masuk), akun sumber kosong, akun tujuan terisi.
-        // Jika Piutang (keluar), akun sumber terisi, akun tujuan kosong.
-        akunSumberId: isUtang ? null : _selectedAkunId,
-        akunTujuanId: isUtang ? _selectedAkunId : null,
-        labelId: isUtang ? 'label_utang' : 'label_piutang',
-        waktu: _waktu,
-        catatan:
-            '${isUtang ? "Utang dari" : "Piutang ke"} $pihakFormatted - $catatanFormatted',
-      );
-
-      ref
-          .read(transaksiControllerProvider.notifier)
-          .tambahTransaksi(transaksiBaru);
     }
 
     Navigator.pop(context);

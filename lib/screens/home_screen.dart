@@ -1,8 +1,11 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:material_3_expressive/material_3_expressive.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
 
 import '../controllers/summary_provider.dart';
+import '../controllers/utang_piutang_controller.dart';
+import '../models/utang_piutang_model.dart';
 import '../utils/currency_format.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -11,9 +14,25 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final summary = ref.watch(summaryProvider);
+    final utangState = ref.watch(utangPiutangControllerProvider);
+
+    double totalUtangBelumLunas = 0;
+    double totalPiutangBelumLunas = 0;
+
+    if (utangState.hasValue) {
+      for (var item in utangState.value!) {
+        if (!item.isLunas) {
+          if (item.tipe == TipeUtangPiutang.utang) {
+            totalUtangBelumLunas += item.nominal;
+          } else {
+            totalPiutangBelumLunas += item.nominal;
+          }
+        }
+      }
+    }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Beranda')),
+      appBar: M3EAppBar.top(titleText: 'Beranda'),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -22,36 +41,127 @@ class HomeScreen extends ConsumerWidget {
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 24),
+          const Text(
+            'Arus Kas Transaksi',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 12),
           Row(
             children: [
               Expanded(
-                child: Card(
-                  color: Colors.green.shade100,
+                child: M3ECard(
+                  variant: M3ECardVariant.filled,
                   child: Padding(
                     padding: const EdgeInsets.all(16.0),
                     child: Column(
                       children: [
-                        const Text('Total Pemasukan'),
+                        const Text(
+                          'Pemasukan',
+                          style: TextStyle(
+                            color: Colors.green,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
                         Text(
                           summary.totalPemasukan.toIdr(),
-                          style: const TextStyle(fontWeight: FontWeight.bold),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
                         ),
                       ],
                     ),
                   ),
                 ),
               ),
+              const SizedBox(width: 8),
               Expanded(
-                child: Card(
-                  color: Colors.red.shade100,
+                child: M3ECard(
+                  variant: M3ECardVariant.filled,
                   child: Padding(
                     padding: const EdgeInsets.all(16.0),
                     child: Column(
                       children: [
-                        const Text('Total Pengeluaran'),
+                        const Text(
+                          'Pengeluaran',
+                          style: TextStyle(
+                            color: Colors.red,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
                         Text(
                           summary.totalPengeluaran.toIdr(),
-                          style: const TextStyle(fontWeight: FontWeight.bold),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          const Text(
+            'Tagihan Berjalan (Belum Lunas)',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: M3ECard(
+                  variant: M3ECardVariant.outlined,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      children: [
+                        const Text(
+                          'Utang Saya',
+                          style: TextStyle(
+                            color: Colors.orange,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          totalUtangBelumLunas.toIdr(),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: M3ECard(
+                  variant: M3ECardVariant.outlined,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      children: [
+                        const Text(
+                          'Piutang Saya',
+                          style: TextStyle(
+                            color: Colors.blue,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          totalPiutangBelumLunas.toIdr(),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
                         ),
                       ],
                     ),
@@ -70,7 +180,7 @@ class HomeScreen extends ConsumerWidget {
             height: 200,
             child:
                 (summary.totalPemasukan == 0 && summary.totalPengeluaran == 0)
-                ? const Center(child: Text('Belum ada data transaksi'))
+                ? const Center(child: Text('Belum ada data transaksi reguler'))
                 : PieChart(
                     PieChartData(
                       sectionsSpace: 2,
