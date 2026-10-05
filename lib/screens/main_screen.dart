@@ -1,5 +1,4 @@
 import 'package:material_ui/material_ui.dart';
-import 'package:material_3_expressive/material_3_expressive.dart';
 
 import 'transaksi_screen.dart';
 import 'atur_screen.dart';
@@ -32,21 +31,15 @@ class _MainScreenState extends State<MainScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: _pages.elementAt(_selectedIndex),
-      bottomNavigationBar: M3ENavigationBar(
+      bottomNavigationBar: NavigationBar(
         destinations: const [
-          M3ENavigationBarDestination(icon: Icon(Icons.home), label: 'Home'),
-          M3ENavigationBarDestination(
-            icon: Icon(Icons.list_alt),
-            label: 'Transaksi',
-          ),
-          M3ENavigationBarDestination(
+          NavigationDestination(icon: Icon(Icons.home), label: 'Home'),
+          NavigationDestination(icon: Icon(Icons.list_alt), label: 'Transaksi'),
+          NavigationDestination(
             icon: Icon(Icons.account_balance_wallet),
             label: 'Utang',
           ),
-          M3ENavigationBarDestination(
-            icon: Icon(Icons.settings),
-            label: 'Atur',
-          ),
+          NavigationDestination(icon: Icon(Icons.settings), label: 'Atur'),
         ],
         selectedIndex: _selectedIndex,
         onDestinationSelected: _onItemTapped,

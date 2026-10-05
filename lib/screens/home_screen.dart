@@ -1,5 +1,4 @@
 import 'package:material_ui/material_ui.dart';
-import 'package:material_3_expressive/material_3_expressive.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
 
@@ -32,7 +31,7 @@ class HomeScreen extends ConsumerWidget {
     }
 
     return Scaffold(
-      appBar: M3EAppBar.top(titleText: 'Beranda'),
+      appBar: AppBar(title: const Text('Beranda')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -49,8 +48,9 @@ class HomeScreen extends ConsumerWidget {
           Row(
             children: [
               Expanded(
-                child: M3ECard(
-                  variant: M3ECardVariant.filled,
+                child: Card(
+                  elevation: 0,
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
                   child: Padding(
                     padding: const EdgeInsets.all(16.0),
                     child: Column(
@@ -77,8 +77,9 @@ class HomeScreen extends ConsumerWidget {
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: M3ECard(
-                  variant: M3ECardVariant.filled,
+                child: Card(
+                  elevation: 0,
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
                   child: Padding(
                     padding: const EdgeInsets.all(16.0),
                     child: Column(
@@ -114,8 +115,15 @@ class HomeScreen extends ConsumerWidget {
           Row(
             children: [
               Expanded(
-                child: M3ECard(
-                  variant: M3ECardVariant.outlined,
+                child: Card(
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    side: BorderSide(
+                      color: Theme.of(context).colorScheme.outlineVariant,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  color: Colors.transparent,
                   child: Padding(
                     padding: const EdgeInsets.all(16.0),
                     child: Column(
@@ -142,8 +150,15 @@ class HomeScreen extends ConsumerWidget {
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: M3ECard(
-                  variant: M3ECardVariant.outlined,
+                child: Card(
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    side: BorderSide(
+                      color: Theme.of(context).colorScheme.outlineVariant,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  color: Colors.transparent,
                   child: Padding(
                     padding: const EdgeInsets.all(16.0),
                     child: Column(

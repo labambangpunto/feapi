@@ -1,5 +1,4 @@
 import 'package:material_ui/material_ui.dart';
-import 'package:material_3_expressive/material_3_expressive.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../controllers/akun_controller.dart';
@@ -35,8 +34,8 @@ class KelolaAkunScreen extends ConsumerWidget {
                   horizontal: 16,
                   vertical: 4,
                 ),
-                child: M3ECard(
-                  variant: M3ECardVariant.elevated,
+                child: Card(
+                  elevation: 2,
                   child: ListTile(
                     title: Text(
                       akun.nama,
@@ -58,12 +57,12 @@ class KelolaAkunScreen extends ConsumerWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         if (!isDibekukan)
-                          M3EIconButton(
+                          IconButton(
                             icon: const Icon(Icons.edit, color: Colors.blue),
                             onPressed: () =>
                                 _tampilFormEditAkun(context, ref, akun),
                           ),
-                        M3EIconButton(
+                        IconButton(
                           icon: Icon(
                             isDibekukan ? Icons.restore : Icons.delete,
                             color: isDibekukan ? Colors.green : Colors.red,
@@ -85,9 +84,9 @@ class KelolaAkunScreen extends ConsumerWidget {
           );
         },
       ),
-      floatingActionButton: M3EFab(
-        icon: const Icon(Icons.add),
+      floatingActionButton: FloatingActionButton(
         onPressed: () => _tampilFormTambahAkun(context, ref),
+        child: const Icon(Icons.add),
       ),
     );
   }
@@ -117,25 +116,25 @@ class KelolaAkunScreen extends ConsumerWidget {
     WidgetRef ref,
     AkunModel akun,
   ) {
-    M3EDialog.show<void>(
-      context,
-      dialog: M3EDialog(
-        title: 'Akun Sedang Digunakan',
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Akun Sedang Digunakan'),
         content: Text(
           'Akun "${akun.nama}" tidak bisa dihapus karena terikat pada transaksi atau utang/piutang.\n\nApakah Anda ingin membekukannya? (Akun tidak akan muncul di form input baru)',
         ),
         actions: [
-          M3EButton.text(
-            onPressed: () => Navigator.pop(context),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Batal'),
           ),
-          M3EButton.filled(
+          FilledButton(
             onPressed: () {
               final akunDibekukan = akun.copyWith(isDibekukan: true);
               ref
                   .read(akunControllerProvider.notifier)
                   .updateAkun(akunDibekukan);
-              Navigator.pop(context);
+              Navigator.pop(dialogContext);
             },
             child: const Text('Bekukan'),
           ),
@@ -147,35 +146,36 @@ class KelolaAkunScreen extends ConsumerWidget {
   void _pulihkanAkun(BuildContext context, WidgetRef ref, AkunModel akun) {
     final akunDipulihkan = akun.copyWith(isDibekukan: false);
     ref.read(akunControllerProvider.notifier).updateAkun(akunDipulihkan);
-    M3ESnackbar.show(context, message: 'Akun berhasil dipulihkan');
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Akun berhasil dipulihkan')));
   }
 
   void _tampilFormTambahAkun(BuildContext context, WidgetRef ref) {
     final namaController = TextEditingController();
-    M3EDialog.show<void>(
-      context,
-      dialog: StatefulBuilder(
-        builder: (context, setState) => M3EDialog(
-          title: 'Tambah Akun Baru',
-          content: Material(
-            color: Colors.transparent,
-            child: M3ETextField(
-              controller: namaController,
-              label: 'Nama akun',
-              onChanged: (val) => setState(() {}),
-            ),
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (contextState, setStateDialog) => AlertDialog(
+          title: const Text('Tambah Akun Baru'),
+          content: TextField(
+            controller: namaController,
+            decoration: const InputDecoration(labelText: 'Nama akun'),
+            onChanged: (val) => setStateDialog(() {}),
           ),
           actions: [
-            M3EButton.text(
-              onPressed: () => Navigator.pop(context),
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
               child: const Text('Batal'),
             ),
-            M3EButton.filled(
+            FilledButton(
               onPressed: (namaController.text.trim().isNotEmpty)
                   ? () {
                       final namaBaru = _autoFormatNama(namaController.text);
                       if (namaBaru.isEmpty) {
-                        M3ESnackbar.show(context, message: 'Nama tidak valid');
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Nama tidak valid')),
+                        );
                         return;
                       }
 
@@ -186,9 +186,10 @@ class KelolaAkunScreen extends ConsumerWidget {
                       );
 
                       if (isDuplicate) {
-                        M3ESnackbar.show(
-                          context,
-                          message: 'Nama akun sudah digunakan',
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Nama akun sudah digunakan'),
+                          ),
                         );
                         return;
                       }
@@ -201,7 +202,7 @@ class KelolaAkunScreen extends ConsumerWidget {
                       ref
                           .read(akunControllerProvider.notifier)
                           .tambahAkun(akun);
-                      Navigator.pop(context);
+                      Navigator.pop(dialogContext);
                     }
                   : null,
               child: const Text('Simpan'),
@@ -218,20 +219,20 @@ class KelolaAkunScreen extends ConsumerWidget {
     AkunModel akunLama,
   ) {
     final namaController = TextEditingController(text: akunLama.nama);
-    M3EDialog.show<void>(
-      context,
-      dialog: M3EDialog(
-        title: 'Edit Akun',
-        content: Material(
-          color: Colors.transparent,
-          child: M3ETextField(controller: namaController, label: 'Nama akun'),
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Edit Akun'),
+        content: TextField(
+          controller: namaController,
+          decoration: const InputDecoration(labelText: 'Nama akun'),
         ),
         actions: [
-          M3EButton.text(
-            onPressed: () => Navigator.pop(context),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Batal'),
           ),
-          M3EButton.filled(
+          FilledButton(
             onPressed: () {
               final namaEdit = _autoFormatNama(namaController.text);
               if (namaEdit.isEmpty) return;
@@ -244,13 +245,15 @@ class KelolaAkunScreen extends ConsumerWidget {
               );
 
               if (isDuplicate) {
-                M3ESnackbar.show(context, message: 'Nama akun sudah digunakan');
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Nama akun sudah digunakan')),
+                );
                 return;
               }
 
               final akunUpdate = akunLama.copyWith(nama: namaEdit);
               ref.read(akunControllerProvider.notifier).updateAkun(akunUpdate);
-              Navigator.pop(context);
+              Navigator.pop(dialogContext);
             },
             child: const Text('Simpan'),
           ),
@@ -266,52 +269,51 @@ class KelolaAkunScreen extends ConsumerWidget {
   ) {
     bool isChecked = false;
     final textController = TextEditingController();
-    M3EDialog.show<void>(
-      context,
-      dialog: StatefulBuilder(
-        builder: (context, setState) {
-          return M3EDialog(
-            title: 'Hapus Akun',
-            content: Material(
-              color: Colors.transparent,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Apakah Anda yakin ingin menghapus permanen akun "${akun.nama}"?',
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (contextState, setStateDialog) {
+          return AlertDialog(
+            title: const Text('Hapus Akun'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Apakah Anda yakin ingin menghapus permanen akun "${akun.nama}"?',
+                ),
+                const SizedBox(height: 16),
+                CheckboxListTile(
+                  title: const Text(
+                    'Saya paham akun ini akan dihapus permanen',
                   ),
-                  const SizedBox(height: 16),
-                  CheckboxListTile(
-                    title: const Text(
-                      'Saya paham akun ini akan dihapus permanen',
-                    ),
-                    value: isChecked,
-                    onChanged: (val) =>
-                        setState(() => isChecked = val ?? false),
-                    controlAffinity: ListTileControlAffinity.leading,
-                    contentPadding: EdgeInsets.zero,
+                  value: isChecked,
+                  onChanged: (val) =>
+                      setStateDialog(() => isChecked = val ?? false),
+                  controlAffinity: ListTileControlAffinity.leading,
+                  contentPadding: EdgeInsets.zero,
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: textController,
+                  decoration: const InputDecoration(
+                    labelText: 'Ketik "HAPUS" untuk konfirmasi',
                   ),
-                  const SizedBox(height: 8),
-                  M3ETextField(
-                    controller: textController,
-                    label: 'Ketik "HAPUS" untuk konfirmasi',
-                    onChanged: (val) => setState(() {}),
-                  ),
-                ],
-              ),
+                  onChanged: (val) => setStateDialog(() {}),
+                ),
+              ],
             ),
             actions: [
-              M3EButton.text(
-                onPressed: () => Navigator.pop(context),
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
                 child: const Text('Batal'),
               ),
-              M3EButton.filled(
+              FilledButton(
                 onPressed: (isChecked && textController.text == 'HAPUS')
                     ? () {
                         ref
                             .read(akunControllerProvider.notifier)
                             .hapusAkun(akun.id);
-                        Navigator.pop(context);
+                        Navigator.pop(dialogContext);
                       }
                     : null,
                 child: const Text('Hapus'),

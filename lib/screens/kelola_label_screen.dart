@@ -1,5 +1,4 @@
 import 'package:material_ui/material_ui.dart';
-import 'package:material_3_expressive/material_3_expressive.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../controllers/label_controller.dart';
@@ -36,8 +35,8 @@ class KelolaLabelScreen extends ConsumerWidget {
                   horizontal: 16,
                   vertical: 4,
                 ),
-                child: M3ECard(
-                  variant: M3ECardVariant.elevated,
+                child: Card(
+                  elevation: 2,
                   child: ListTile(
                     title: Text(
                       label.nama,
@@ -68,7 +67,7 @@ class KelolaLabelScreen extends ConsumerWidget {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               if (!isDibekukan)
-                                M3EIconButton(
+                                IconButton(
                                   icon: const Icon(
                                     Icons.edit,
                                     color: Colors.blue,
@@ -79,7 +78,7 @@ class KelolaLabelScreen extends ConsumerWidget {
                                     dataEdit: label,
                                   ),
                                 ),
-                              M3EIconButton(
+                              IconButton(
                                 icon: Icon(
                                   isDibekukan ? Icons.restore : Icons.delete,
                                   color: isDibekukan
@@ -107,9 +106,9 @@ class KelolaLabelScreen extends ConsumerWidget {
           );
         },
       ),
-      floatingActionButton: M3EFab(
-        icon: const Icon(Icons.add),
+      floatingActionButton: FloatingActionButton(
         onPressed: () => _tampilFormFormLabel(context, ref),
+        child: const Icon(Icons.add),
       ),
     );
   }
@@ -136,25 +135,25 @@ class KelolaLabelScreen extends ConsumerWidget {
     WidgetRef ref,
     LabelModel label,
   ) {
-    M3EDialog.show<void>(
-      context,
-      dialog: M3EDialog(
-        title: 'Label Sedang Digunakan',
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Label Sedang Digunakan'),
         content: Text(
           'Label "${label.nama}" tidak bisa dihapus karena terikat pada transaksi.\n\nApakah Anda ingin membekukannya? (Label tidak akan muncul di form input baru)',
         ),
         actions: [
-          M3EButton.text(
-            onPressed: () => Navigator.pop(context),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Batal'),
           ),
-          M3EButton.filled(
+          FilledButton(
             onPressed: () {
               final labelDibekukan = label.copyWith(isDibekukan: true);
               ref
                   .read(labelControllerProvider.notifier)
                   .updateLabel(labelDibekukan);
-              Navigator.pop(context);
+              Navigator.pop(dialogContext);
             },
             child: const Text('Bekukan'),
           ),
@@ -166,7 +165,9 @@ class KelolaLabelScreen extends ConsumerWidget {
   void _pulihkanLabel(BuildContext context, WidgetRef ref, LabelModel label) {
     final labelDipulihkan = label.copyWith(isDibekukan: false);
     ref.read(labelControllerProvider.notifier).updateLabel(labelDipulihkan);
-    M3ESnackbar.show(context, message: 'Label berhasil dipulihkan');
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Label berhasil dipulihkan')));
   }
 
   void _tampilFormFormLabel(
@@ -176,20 +177,20 @@ class KelolaLabelScreen extends ConsumerWidget {
   }) {
     final namaController = TextEditingController(text: dataEdit?.nama ?? '');
 
-    M3EDialog.show<void>(
-      context,
-      dialog: M3EDialog(
-        title: dataEdit == null ? 'Tambah Label' : 'Edit Label',
-        content: Material(
-          color: Colors.transparent,
-          child: M3ETextField(controller: namaController, label: 'Nama label'),
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(dataEdit == null ? 'Tambah Label' : 'Edit Label'),
+        content: TextField(
+          controller: namaController,
+          decoration: const InputDecoration(labelText: 'Nama label'),
         ),
         actions: [
-          M3EButton.text(
-            onPressed: () => Navigator.pop(context),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Batal'),
           ),
-          M3EButton.filled(
+          FilledButton(
             onPressed: () {
               final namaLabel = _autoFormatNama(namaController.text);
               if (namaLabel.isEmpty) return;
@@ -203,9 +204,8 @@ class KelolaLabelScreen extends ConsumerWidget {
               );
 
               if (isDuplicate) {
-                M3ESnackbar.show(
-                  context,
-                  message: 'Nama label sudah digunakan',
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Nama label sudah digunakan')),
                 );
                 return;
               }
@@ -223,7 +223,7 @@ class KelolaLabelScreen extends ConsumerWidget {
               } else {
                 ref.read(labelControllerProvider.notifier).tambahLabel(label);
               }
-              Navigator.pop(context);
+              Navigator.pop(dialogContext);
             },
             child: const Text('Simpan'),
           ),
@@ -237,22 +237,22 @@ class KelolaLabelScreen extends ConsumerWidget {
     WidgetRef ref,
     LabelModel label,
   ) {
-    M3EDialog.show<void>(
-      context,
-      dialog: M3EDialog(
-        title: 'Hapus Label',
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Hapus Label'),
         content: Text(
           'Apakah Anda yakin ingin menghapus label "${label.nama}"?',
         ),
         actions: [
-          M3EButton.text(
-            onPressed: () => Navigator.pop(context),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Batal'),
           ),
-          M3EButton.filled(
+          FilledButton(
             onPressed: () {
               ref.read(labelControllerProvider.notifier).hapusLabel(label.id);
-              Navigator.pop(context);
+              Navigator.pop(dialogContext);
             },
             child: const Text('Hapus'),
           ),

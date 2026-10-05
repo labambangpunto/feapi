@@ -1,5 +1,4 @@
 import 'package:material_ui/material_ui.dart';
-import 'package:material_3_expressive/material_3_expressive.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../controllers/akun_controller.dart';
@@ -55,39 +54,52 @@ class _FormUtangPiutangScreenState
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          M3ETextField(
+          TextField(
             controller: _nominalController,
             keyboardType: TextInputType.number,
             inputFormatters: [CurrencyFormatter()],
-            label: 'Nominal (Rp)',
-            prefixText: 'Rp ',
+            decoration: const InputDecoration(
+              labelText: 'Nominal (Rp)',
+              prefixText: 'Rp ',
+              border: OutlineInputBorder(),
+            ),
           ),
           const SizedBox(height: 12),
-          M3ETextField(
+          TextField(
             controller: _pihakController,
-            label: isUtang ? 'Pihak Pemberi Dana' : 'Pihak Penerima Dana',
+            decoration: InputDecoration(
+              labelText: isUtang ? 'Pihak Pemberi Dana' : 'Pihak Penerima Dana',
+              border: const OutlineInputBorder(),
+            ),
           ),
           const SizedBox(height: 16),
           akunState.maybeWhen(
-            data: (akunList) => M3EDropdownMenu<String>(
-              singleSelect: true,
-              fieldStyle: M3EDropdownFieldStyle(
-                hintText: isUtang
+            data: (akunList) => DropdownButtonFormField<String>(
+              initialValue: _selectedAkunId,
+              decoration: InputDecoration(
+                labelText: isUtang
                     ? 'Akun untuk Menerima'
                     : 'Akun untuk Memberi',
+                border: const OutlineInputBorder(),
               ),
               items: [
                 ...akunList
                     .where((a) => !a.isDibekukan || a.id == _selectedAkunId)
-                    .map((a) => M3EDropdownItem(label: a.nama, value: a.id)),
-                const M3EDropdownItem(
-                  label: '+ Tambahkan akun',
+                    .map(
+                      (a) => DropdownMenuItem(value: a.id, child: Text(a.nama)),
+                    ),
+                const DropdownMenuItem(
                   value: 'add_new',
+                  child: Text(
+                    '+ Tambahkan akun',
+                    style: TextStyle(
+                      color: Colors.blue,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ],
-              onSelectionChanged: (items) {
-                final val = items.isEmpty ? null : items.first.value;
-
+              onChanged: (val) {
                 if (val == 'add_new') {
                   Navigator.push(
                     context,
@@ -99,16 +111,20 @@ class _FormUtangPiutangScreenState
                 setState(() => _selectedAkunId = val);
               },
             ),
-            orElse: () => const M3EProgressIndicator.circular(),
+            orElse: () => const Center(child: CircularProgressIndicator()),
           ),
           const SizedBox(height: 16),
-          M3EListItem(
-            headline: 'Tanggal & Waktu',
-            supportingText: '${_waktu.day}/${_waktu.month}/${_waktu.year}',
+          ListTile(
+            title: const Text('Tanggal & Waktu'),
+            subtitle: Text('${_waktu.day}/${_waktu.month}/${_waktu.year}'),
             trailing: const Icon(Icons.calendar_today),
+            shape: RoundedRectangleBorder(
+              side: const BorderSide(color: Colors.grey),
+              borderRadius: BorderRadius.circular(4),
+            ),
             onTap: () async {
-              final date = await M3EDatePicker.show(
-                context,
+              final date = await showDatePicker(
+                context: context,
                 initialDate: _waktu,
                 firstDate: DateTime(2000),
                 lastDate: DateTime(2100),
@@ -116,15 +132,20 @@ class _FormUtangPiutangScreenState
               if (date != null) setState(() => _waktu = date);
             },
           ),
-          const SizedBox(height: 8),
-          M3EListItem(
-            headline: 'Tenggat Waktu',
-            supportingText:
-                '${_tenggatWaktu.day}/${_tenggatWaktu.month}/${_tenggatWaktu.year}',
+          const SizedBox(height: 12),
+          ListTile(
+            title: const Text('Tenggat Waktu'),
+            subtitle: Text(
+              '${_tenggatWaktu.day}/${_tenggatWaktu.month}/${_tenggatWaktu.year}',
+            ),
             trailing: const Icon(Icons.event_busy),
+            shape: RoundedRectangleBorder(
+              side: const BorderSide(color: Colors.grey),
+              borderRadius: BorderRadius.circular(4),
+            ),
             onTap: () async {
-              final date = await M3EDatePicker.show(
-                context,
+              final date = await showDatePicker(
+                context: context,
                 initialDate: _tenggatWaktu,
                 firstDate: DateTime(2000),
                 lastDate: DateTime(2100),
@@ -133,12 +154,15 @@ class _FormUtangPiutangScreenState
             },
           ),
           const SizedBox(height: 12),
-          M3ETextField(
+          TextField(
             controller: _catatanController,
-            label: 'Catatan / Deskripsi',
+            decoration: const InputDecoration(
+              labelText: 'Catatan / Deskripsi',
+              border: OutlineInputBorder(),
+            ),
           ),
           const SizedBox(height: 24),
-          M3EButton.filled(onPressed: _simpanData, child: const Text('Simpan')),
+          FilledButton(onPressed: _simpanData, child: const Text('Simpan')),
         ],
       ),
     );
@@ -163,7 +187,8 @@ class _FormUtangPiutangScreenState
         pihakFormatted.isEmpty ||
         _selectedAkunId == null ||
         catatanFormatted.isEmpty) {
-      M3ESnackbar.show(context, message: 'Isi field wajib!');
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Isi field wajib!')));
       return;
     }
 

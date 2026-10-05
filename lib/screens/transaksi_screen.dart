@@ -1,5 +1,4 @@
 import 'package:material_ui/material_ui.dart';
-import 'package:material_3_expressive/material_3_expressive.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../controllers/transaksi_controller.dart';
@@ -24,7 +23,6 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
   final ScrollController _scrollController = ScrollController();
   DateTime _selectedDate = DateTime.now();
 
-  // State baru untuk menampilkan transaksi harian vs bulanan
   bool _showFullMonth = false;
 
   bool _isFilterActive = false;
@@ -42,13 +40,13 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
     final labelList = ref.watch(labelControllerProvider).value ?? [];
 
     return Scaffold(
-      appBar: M3EAppBar.top(
-        titleText: 'Log Transaksi',
+      appBar: AppBar(
+        title: const Text('Log Transaksi'),
         actions: [
           if (_isFilterActive)
-            M3ETooltip(
+            Tooltip(
               message: 'Hapus Filter',
-              child: M3EIconButton(
+              child: IconButton(
                 icon: const Icon(Icons.filter_alt_off),
                 onPressed: () {
                   setState(() {
@@ -64,16 +62,16 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
               ),
             )
           else
-            M3ETooltip(
+            Tooltip(
               message: 'Cari / Filter',
-              child: M3EIconButton(
+              child: IconButton(
                 icon: const Icon(Icons.search),
                 onPressed: () => _tampilFormFilter(akunList, labelList),
               ),
             ),
-          M3ETooltip(
+          Tooltip(
             message: 'Jump to Date',
-            child: M3EIconButton(
+            child: IconButton(
               icon: const Icon(Icons.calendar_month),
               onPressed: () async {
                 final date = await showDatePicker(
@@ -85,7 +83,7 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
                 if (date != null) {
                   setState(() {
                     _selectedDate = date;
-                    _showFullMonth = false; // Kembali ke tampilan harian saat berganti tanggal
+                    _showFullMonth = false;
                   });
                 }
               },
@@ -121,7 +119,6 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
 
           if (!_isFilterActive) {
             if (!_showFullMonth) {
-              // Tampilkan HARI INI secara default
               filteredList = filteredList
                   .where(
                     (t) =>
@@ -131,7 +128,6 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
                   )
                   .toList();
             } else {
-              // Jika ditekan tombol load more, tampilkan BULAN INI
               filteredList = filteredList
                   .where(
                     (t) =>
@@ -141,7 +137,6 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
                   .toList();
             }
           } else {
-            // Pencarian Lanjutan dibatasi per bulan kalender aktif
             filteredList = filteredList
                 .where(
                   (t) =>
@@ -217,7 +212,6 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
               ? 'Riwayat bulan: $displayMonth'
               : 'Transaksi tanggal: $displayDate';
 
-          // Helper untuk mem-format heading tanggal menjadi "Minggu, 04 Okt 2026"
           String formatHeadingTanggal(DateTime dt) {
             const hariMap = [
               '',
@@ -278,7 +272,6 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
                             filteredList.length +
                             (!_isFilterActive && !_showFullMonth ? 1 : 0),
                         itemBuilder: (context, index) {
-                          // Jika data sudah habis dan tidak sedang filter/tampil bulan penuh, tampilkan tombol "Load More"
                           if (index == filteredList.length) {
                             return Padding(
                               padding: const EdgeInsets.all(24.0),
@@ -298,7 +291,7 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
                                     ),
                                     const SizedBox(height: 24),
                                   ],
-                                  M3EButton.outlined(
+                                  OutlinedButton(
                                     onPressed: () =>
                                         setState(() => _showFullMonth = true),
                                     child: const Text(
@@ -337,7 +330,6 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
                             textAkun = '$namaSumber ➔ $namaTujuan';
                           }
 
-                          // Logika deteksi heading pemisah antar hari
                           bool showHeader = false;
                           if (index == 0) {
                             showHeader = true;
@@ -350,140 +342,131 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
                             }
                           }
 
-                          // Blok widget M3ECard
                           final cardWidget = Padding(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 12,
                               vertical: 6,
                             ),
-                            child: M3ECard(
-                              variant: M3ECardVariant.elevated,
-                              onPressed: () => _tampilSummaryTransaksi(
-                                context,
-                                t,
-                                namaSumber,
-                                namaTujuan,
-                                namaLabels,
-                              ),
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 8,
+                            child: Card(
+                              elevation: 2,
+                              clipBehavior: Clip.antiAlias,
+                              child: InkWell(
+                                onTap: () => _tampilSummaryTransaksi(
+                                  // Ganti onPressed menjadi onTap
+                                  context,
+                                  t,
+                                  namaSumber,
+                                  namaTujuan,
+                                  namaLabels,
                                 ),
-                                child: ListTile(
-                                  leading: CircleAvatar(
-                                    backgroundColor: colorTipe.withValues(
-                                      alpha: 0.15,
-                                    ),
-                                    child: Icon(iconTipe, color: colorTipe),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 8,
                                   ),
-                                  title: Text(
-                                    totalNominal.toIdr(),
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      color: colorTipe,
-                                      fontWeight: FontWeight.bold,
+                                  child: ListTile(
+                                    leading: CircleAvatar(
+                                      backgroundColor: colorTipe.withValues(
+                                        alpha: 0.15,
+                                      ),
+                                      child: Icon(iconTipe, color: colorTipe),
                                     ),
-                                  ),
-                                  subtitle: Padding(
-                                    padding: const EdgeInsets.only(top: 4),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          t.catatan,
-                                          style: const TextStyle(
-                                            fontSize: 14,
-                                            color: Colors.black87,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          textAkun,
-                                          style: const TextStyle(
-                                            fontSize: 12,
-                                            color: Colors.grey,
-                                          ),
-                                        ),
-                                      ],
+                                    title: Text(
+                                      totalNominal.toIdr(),
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        color: colorTipe,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
-                                  ),
-                                  trailing: M3EMenu(
-                                    anchorBuilder: (context, open) =>
-                                        M3EIconButton(
-                                          icon: const Icon(Icons.more_vert),
-                                          onPressed: open,
-                                        ),
-                                    children: [
-                                      M3EMenuGroup.entries(
-                                        entries: [
-                                          M3EMenuEntry(
-                                            label: 'Edit',
-                                            onPressed: () {
-                                              Navigator.push(
-                                                context,
-                                                MaterialPageRoute(
-                                                  builder: (_) =>
-                                                      FormTransaksiScreen(
-                                                        tipeTransaksi: t.tipe,
-                                                        dataEdit: t,
-                                                      ),
-                                                ),
-                                              );
-                                            },
+                                    subtitle: Padding(
+                                      padding: const EdgeInsets.only(top: 4),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            t.catatan,
+                                            style: const TextStyle(
+                                              fontSize: 14,
+                                              color: Colors.black87,
+                                              fontWeight: FontWeight.w500,
+                                            ),
                                           ),
-                                          M3EMenuEntry(
-                                            label: 'Hapus',
-                                            onPressed: () {
-                                              M3EDialog.show<void>(
-                                                context,
-                                                dialog: M3EDialog(
-                                                  title: 'Konfirmasi Hapus',
-                                                  content: const Text(
-                                                    'Apakah Anda yakin ingin menghapus transaksi ini?',
-                                                  ),
-                                                  actions: [
-                                                    M3EButton.text(
-                                                      onPressed: () =>
-                                                          Navigator.pop(
-                                                            context,
-                                                          ),
-                                                      child: const Text(
-                                                        'Batal',
-                                                      ),
-                                                    ),
-                                                    M3EButton.filled(
-                                                      onPressed: () {
-                                                        ref
-                                                            .read(
-                                                              transaksiControllerProvider
-                                                                  .notifier,
-                                                            )
-                                                            .hapusTransaksi(
-                                                              t.id,
-                                                            );
-                                                        Navigator.pop(context);
-                                                      },
-                                                      child: const Text(
-                                                        'Hapus',
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              );
-                                            },
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            textAkun,
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.grey,
+                                            ),
                                           ),
                                         ],
                                       ),
-                                    ],
+                                    ),
+                                    trailing: PopupMenuButton<String>(
+                                      icon: const Icon(Icons.more_vert),
+                                      onSelected: (value) {
+                                        if (value == 'edit') {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (_) =>
+                                                  FormTransaksiScreen(
+                                                    tipeTransaksi: t.tipe,
+                                                    dataEdit: t,
+                                                  ),
+                                            ),
+                                          );
+                                        } else if (value == 'hapus') {
+                                          showDialog<void>(
+                                            context: context,
+                                            builder: (_) => AlertDialog(
+                                              title: const Text(
+                                                'Konfirmasi Hapus',
+                                              ),
+                                              content: const Text(
+                                                'Apakah Anda yakin ingin menghapus transaksi ini?',
+                                              ),
+                                              actions: [
+                                                TextButton(
+                                                  onPressed: () =>
+                                                      Navigator.pop(context),
+                                                  child: const Text('Batal'),
+                                                ),
+                                                FilledButton(
+                                                  onPressed: () {
+                                                    ref
+                                                        .read(
+                                                          transaksiControllerProvider
+                                                              .notifier,
+                                                        )
+                                                        .hapusTransaksi(t.id);
+                                                    Navigator.pop(context);
+                                                  },
+                                                  child: const Text('Hapus'),
+                                                ),
+                                              ],
+                                            ),
+                                          );
+                                        }
+                                      },
+                                      itemBuilder: (context) => [
+                                        const PopupMenuItem(
+                                          value: 'edit',
+                                          child: Text('Edit'),
+                                        ),
+                                        const PopupMenuItem(
+                                          value: 'hapus',
+                                          child: Text('Hapus'),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ),
                             ),
                           );
 
-                          // Jika hari berubah, sisipkan heading tanggal di atas card
                           if (showHeader) {
                             return Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -517,53 +500,73 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
           );
         },
       ),
-      floatingActionButton: M3EFabMenu(
-        expandIcon: const Icon(Icons.add),
-        collapseIcon: const Icon(Icons.close),
-        items: [
-          M3EFabMenuItem(
-            icon: const Icon(Icons.arrow_upward, color: Colors.red),
-            label: 'Pengeluaran',
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const FormTransaksiScreen(
-                    tipeTransaksi: TipeTransaksi.pengeluaran,
-                  ),
+      floatingActionButton: FloatingActionButton(
+        child: const Icon(Icons.add),
+        onPressed: () {
+          showModalBottomSheet(
+            context: context,
+            builder: (BuildContext ctx) {
+              return SafeArea(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ListTile(
+                      leading: const Icon(
+                        Icons.arrow_upward,
+                        color: Colors.red,
+                      ),
+                      title: const Text('Pengeluaran'),
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const FormTransaksiScreen(
+                              tipeTransaksi: TipeTransaksi.pengeluaran,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                    ListTile(
+                      leading: const Icon(
+                        Icons.arrow_downward,
+                        color: Colors.green,
+                      ),
+                      title: const Text('Pemasukan'),
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const FormTransaksiScreen(
+                              tipeTransaksi: TipeTransaksi.pemasukan,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.swap_horiz, color: Colors.blue),
+                      title: const Text('Transfer Antarakun'),
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const FormTransaksiScreen(
+                              tipeTransaksi: TipeTransaksi.transfer,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
                 ),
               );
             },
-          ),
-          M3EFabMenuItem(
-            icon: const Icon(Icons.arrow_downward, color: Colors.green),
-            label: 'Pemasukan',
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const FormTransaksiScreen(
-                    tipeTransaksi: TipeTransaksi.pemasukan,
-                  ),
-                ),
-              );
-            },
-          ),
-          M3EFabMenuItem(
-            icon: const Icon(Icons.swap_horiz, color: Colors.blue),
-            label: 'Transfer Antarakun',
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const FormTransaksiScreen(
-                    tipeTransaksi: TipeTransaksi.transfer,
-                  ),
-                ),
-              );
-            },
-          ),
-        ],
+          );
+        },
       ),
     );
   }
@@ -599,120 +602,117 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
     final isPemasukan = t.tipe == TipeTransaksi.pemasukan;
     final isTransfer = t.tipe == TipeTransaksi.transfer;
 
-    M3EDialog.show<void>(
-      context,
-      dialog: M3EDialog(
-        title: 'Detail Transaksi',
-        content: Material(
-          color: Colors.transparent,
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  totalNominal.toIdr(),
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: isPemasukan
-                        ? Colors.green
-                        : (isPengeluaran ? Colors.red : Colors.blue),
-                  ),
+    showDialog<void>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Detail Transaksi'),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                totalNominal.toIdr(),
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: isPemasukan
+                      ? Colors.green
+                      : (isPengeluaran ? Colors.red : Colors.blue),
                 ),
-                const SizedBox(height: 12),
-                Text(
-                  t.catatan,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 16,
-                  ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                t.catatan,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 16,
                 ),
-                const SizedBox(height: 12),
+              ),
+              const SizedBox(height: 12),
 
-                if (isPengeluaran) ...[
-                  Text('Kuantitas: ${t.kuantitas}'),
-                  if (t.biayaTambahan != null && t.biayaTambahan! > 0)
-                    Text('Biaya Tambahan: ${t.biayaTambahan!.toIdr()}'),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Sumber dana: $namaSumber',
-                    style: const TextStyle(color: Colors.black87),
-                  ),
-                ] else if (isPemasukan) ...[
-                  Text(
-                    'Tujuan dana: $namaTujuan',
-                    style: const TextStyle(color: Colors.black87),
-                  ),
-                ] else if (isTransfer) ...[
-                  if (t.biayaTambahan != null && t.biayaTambahan! > 0)
-                    Text('Biaya Tambahan: ${t.biayaTambahan!.toIdr()}'),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Dari: $namaSumber',
-                    style: const TextStyle(color: Colors.black87),
-                  ),
-                  Text(
-                    'Ke: $namaTujuan',
-                    style: const TextStyle(color: Colors.black87),
-                  ),
-                ],
-
-                const SizedBox(height: 12),
-                const Divider(),
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.calendar_today,
-                      size: 14,
-                      color: Colors.grey,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      tglStr,
-                      style: const TextStyle(color: Colors.grey, fontSize: 13),
-                    ),
-                  ],
+              if (isPengeluaran) ...[
+                Text('Kuantitas: ${t.kuantitas}'),
+                if (t.biayaTambahan != null && t.biayaTambahan! > 0)
+                  Text('Biaya Tambahan: ${t.biayaTambahan!.toIdr()}'),
+                const SizedBox(height: 4),
+                Text(
+                  'Sumber dana: $namaSumber',
+                  style: const TextStyle(color: Colors.black87),
                 ),
-                if (namaLabels.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 4,
-                    children: namaLabels
-                        .map(
-                          (nl) => Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.grey.shade200,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(
-                                  Icons.label_outline,
-                                  size: 12,
-                                  color: Colors.grey,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(nl, style: const TextStyle(fontSize: 12)),
-                              ],
-                            ),
-                          ),
-                        )
-                        .toList(),
-                  ),
-                ],
+              ] else if (isPemasukan) ...[
+                Text(
+                  'Tujuan dana: $namaTujuan',
+                  style: const TextStyle(color: Colors.black87),
+                ),
+              ] else if (isTransfer) ...[
+                if (t.biayaTambahan != null && t.biayaTambahan! > 0)
+                  Text('Biaya Tambahan: ${t.biayaTambahan!.toIdr()}'),
+                const SizedBox(height: 4),
+                Text(
+                  'Dari: $namaSumber',
+                  style: const TextStyle(color: Colors.black87),
+                ),
+                Text(
+                  'Ke: $namaTujuan',
+                  style: const TextStyle(color: Colors.black87),
+                ),
               ],
-            ),
+
+              const SizedBox(height: 12),
+              const Divider(),
+              Row(
+                children: [
+                  const Icon(
+                    Icons.calendar_today,
+                    size: 14,
+                    color: Colors.grey,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    tglStr,
+                    style: const TextStyle(color: Colors.grey, fontSize: 13),
+                  ),
+                ],
+              ),
+              if (namaLabels.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  children: namaLabels
+                      .map(
+                        (nl) => Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade200,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.label_outline,
+                                size: 12,
+                                color: Colors.grey,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(nl, style: const TextStyle(fontSize: 12)),
+                            ],
+                          ),
+                        ),
+                      )
+                      .toList(),
+                ),
+              ],
+            ],
           ),
         ),
         actions: [
-          M3EButton.text(
+          TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Tutup'),
           ),
@@ -872,7 +872,7 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
                       Row(
                         children: [
                           Expanded(
-                            child: M3EButton.outlined(
+                            child: OutlinedButton(
                               onPressed: () {
                                 Navigator.pop(context);
                                 setState(() {
@@ -890,7 +890,7 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
                           ),
                           const SizedBox(width: 16),
                           Expanded(
-                            child: M3EButton.filled(
+                            child: FilledButton(
                               onPressed: () {
                                 Navigator.pop(context);
                                 setState(() {

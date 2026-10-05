@@ -1,8 +1,6 @@
 import 'dart:convert';
 
-// Ganti impor flutter/material menjadi material_ui dan M3E
 import 'package:material_ui/material_ui.dart';
-import 'package:material_3_expressive/material_3_expressive.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:image/image.dart' as img;
@@ -70,10 +68,10 @@ class _AturScreenState extends ConsumerState<AturScreen> {
       return res;
     }
 
-    await M3EDialog.show<void>(
-      context,
-      dialog: M3EDialog(
-        title: 'Edit Profil',
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Edit Profil'),
         content: StatefulBuilder(
           builder: (context, setStateDialog) {
             return Column(
@@ -127,11 +125,11 @@ class _AturScreenState extends ConsumerState<AturScreen> {
           },
         ),
         actions: [
-          M3EButton.text(
+          TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Batal'),
           ),
-          M3EButton.filled(
+          FilledButton(
             onPressed: () async {
               final namaFormatted = autoFormatNama(namaController.text);
               await ref
@@ -139,8 +137,9 @@ class _AturScreenState extends ConsumerState<AturScreen> {
                   .saveProfil(namaFormatted, base64Image);
               ref.invalidate(profilProvider);
 
-              // Ganti if (context.mounted) menjadi if (mounted)
-              if (mounted) Navigator.pop(context);
+              if (dialogContext.mounted) {
+                Navigator.pop(dialogContext);
+              }
             },
             child: const Text('Simpan'),
           ),
@@ -156,7 +155,7 @@ class _AturScreenState extends ConsumerState<AturScreen> {
     final profilAsync = ref.watch(profilProvider);
 
     return Scaffold(
-      appBar: M3EAppBar.top(titleText: 'Pengaturan'),
+      appBar: AppBar(title: const Text('Pengaturan')),
       body: ListView(
         children: [
           profilAsync.when(
@@ -236,11 +235,10 @@ class _AturScreenState extends ConsumerState<AturScreen> {
           ),
           const Divider(),
 
-          // MENGGUNAKAN M3ESWITCH UNTUK TOGGLE GELAP/TERANG
           ListTile(
             leading: const Icon(Icons.dark_mode),
             title: const Text('Mode Gelap'),
-            trailing: M3ESwitch(
+            trailing: Switch(
               value: isDark,
               onChanged: (value) {
                 ref.read(themeProvider.notifier).toggleTheme(value);
@@ -311,16 +309,19 @@ class _AturScreenState extends ConsumerState<AturScreen> {
 
                 if (context.mounted) {
                   Navigator.pop(context);
-                  M3ESnackbar.show(
-                    context,
-                    message: 'Backup ke Google Drive berhasil',
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Backup ke Google Drive berhasil'),
+                    ),
                   );
                 }
               } catch (e) {
                 await _checkDriveSession();
                 if (context.mounted) {
                   Navigator.pop(context);
-                  M3ESnackbar.show(context, message: 'Gagal backup: $e');
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text('Gagal backup: $e')));
                 }
               }
             },
@@ -366,16 +367,19 @@ class _AturScreenState extends ConsumerState<AturScreen> {
 
                 if (context.mounted) {
                   Navigator.pop(context);
-                  M3ESnackbar.show(
-                    context,
-                    message: 'Restore dari Google Drive berhasil',
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Restore dari Google Drive berhasil'),
+                    ),
                   );
                 }
               } catch (e) {
                 await _checkDriveSession();
                 if (context.mounted) {
                   Navigator.pop(context);
-                  M3ESnackbar.show(context, message: 'Gagal restore: $e');
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text('Gagal restore: $e')));
                 }
               }
             },
@@ -385,34 +389,37 @@ class _AturScreenState extends ConsumerState<AturScreen> {
             title: const Text('Logout Google Drive'),
             onTap: () async {
               if (!_isDriveSignedIn) {
-                M3ESnackbar.show(
-                  context,
-                  message: 'Tidak ada sesi untuk logout',
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Tidak ada sesi untuk logout')),
                 );
                 return;
               }
 
-              M3EDialog.show<void>(
-                context,
-                dialog: M3EDialog(
-                  title: 'Konfirmasi Logout',
+              showDialog<void>(
+                context: context,
+                builder: (dialogContext) => AlertDialog(
+                  title: const Text('Konfirmasi Logout'),
                   content: const Text(
                     'Apakah Anda yakin ingin memutuskan akses dari Google Drive?',
                   ),
                   actions: [
-                    M3EButton.text(
+                    TextButton(
                       onPressed: () => Navigator.pop(context),
                       child: const Text('Batal'),
                     ),
-                    M3EButton.filled(
+                    FilledButton(
                       onPressed: () async {
-                        Navigator.pop(context); // Tutup dialog
+                        Navigator.pop(dialogContext); // Tutup dialogContext
+
                         await GoogleDriveService().logout();
                         await _checkDriveSession();
+
+                        // context di bawah ini sekarang aman merujuk pada State layar utama
                         if (context.mounted) {
-                          M3ESnackbar.show(
-                            context,
-                            message: 'Sesi Google Drive diakhiri',
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Sesi Google Drive diakhiri'),
+                            ),
                           );
                         }
                       },
@@ -448,11 +455,15 @@ class _AturScreenState extends ConsumerState<AturScreen> {
                   );
                   await backupService.simpanBackupKeFolder(password);
                   if (context.mounted) {
-                    M3ESnackbar.show(context, message: 'Berhasil tersimpan');
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Berhasil tersimpan')),
+                    );
                   }
                 } catch (e) {
                   if (context.mounted) {
-                    M3ESnackbar.show(context, message: 'Gagal menyimpan: $e');
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Gagal menyimpan: $e')),
+                    );
                   }
                 }
               }
@@ -498,17 +509,20 @@ class _AturScreenState extends ConsumerState<AturScreen> {
                   ref.invalidate(profilProvider);
 
                   if (context.mounted) {
-                    M3ESnackbar.show(
-                      context,
-                      message: 'Data berhasil dipulihkan.',
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Data berhasil dipulihkan.'),
+                      ),
                     );
                   }
                 } catch (e) {
                   if (context.mounted) {
-                    M3ESnackbar.show(
-                      context,
-                      message:
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
                           'Gagal memulihkan: Password salah atau file korup',
+                        ),
+                      ),
                     );
                   }
                 }
@@ -536,11 +550,15 @@ class _AturScreenState extends ConsumerState<AturScreen> {
                 final path = await backupService.simpanCsvKeFolder();
 
                 if (context.mounted && path != null) {
-                  M3ESnackbar.show(context, message: 'CSV tersimpan');
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('CSV tersimpan')),
+                  );
                 }
               } catch (e) {
                 if (context.mounted) {
-                  M3ESnackbar.show(context, message: 'Gagal menyimpan: $e');
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Gagal menyimpan: $e')),
+                  );
                 }
               }
             },
@@ -597,50 +615,46 @@ class _AturScreenState extends ConsumerState<AturScreen> {
     bool step1Checked = false;
     final textController = TextEditingController();
 
-    M3EDialog.show<void>(
-      context,
-      dialog: M3EDialog(
-        title: 'DANGER ZONE',
-        // Tambahkan widget Material di sini
-        content: Material(
-          color: Colors.transparent,
-          child: StatefulBuilder(
-            builder: (context, setStateDialog) {
-              return Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text(
-                    'Tindakan ini akan menghapus permanen seluruh transaksi, utang, akun, dan label. Lanjutkan?',
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('DANGER ZONE'),
+        content: StatefulBuilder(
+          builder: (context, setStateDialog) {
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Tindakan ini akan menghapus permanen seluruh transaksi, utang, akun, dan label. Lanjutkan?',
+                ),
+                const SizedBox(height: 16),
+                CheckboxListTile(
+                  title: const Text('Saya paham risiko ini'),
+                  value: step1Checked,
+                  onChanged: (val) =>
+                      setStateDialog(() => step1Checked = val ?? false),
+                  controlAffinity: ListTileControlAffinity.leading,
+                  contentPadding: EdgeInsets.zero,
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: textController,
+                  decoration: const InputDecoration(
+                    labelText: 'Ketik "RESET" untuk konfirmasi',
+                    border: OutlineInputBorder(),
                   ),
-                  const SizedBox(height: 16),
-                  CheckboxListTile(
-                    title: const Text('Saya paham risiko ini'),
-                    value: step1Checked,
-                    onChanged: (val) =>
-                        setStateDialog(() => step1Checked = val ?? false),
-                    controlAffinity: ListTileControlAffinity.leading,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: textController,
-                    decoration: const InputDecoration(
-                      labelText: 'Ketik "RESET" untuk konfirmasi',
-                      border: OutlineInputBorder(),
-                    ),
-                    onChanged: (val) => setStateDialog(() {}),
-                  ),
-                ],
-              );
-            },
-          ),
+                  onChanged: (val) => setStateDialog(() {}),
+                ),
+              ],
+            );
+          },
         ),
         actions: [
-          M3EButton.text(
+          TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Batal'),
           ),
-          M3EButton.filled(
+          FilledButton(
             onPressed: () async {
               if (step1Checked && textController.text == 'RESET') {
                 await ref.read(databaseRepositoryProvider).resetDatabase();
@@ -651,18 +665,26 @@ class _AturScreenState extends ConsumerState<AturScreen> {
                 ref.invalidate(utangPiutangControllerProvider);
                 ref.invalidate(profilProvider);
 
+                if (dialogContext.mounted) {
+                  Navigator.pop(dialogContext); // Tutup dialognya
+                }
+
                 if (context.mounted) {
-                  Navigator.pop(context);
-                  M3ESnackbar.show(
-                    context,
-                    message: 'Database berhasil direset.',
+                  // Munculkan snackbar pada konteks layar utama
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Database berhasil direset.')),
                   );
                 }
               } else {
-                M3ESnackbar.show(
-                  context,
-                  message: 'Pastikan kotak dicentang dan mengetik RESET',
-                );
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'Pastikan kotak dicentang dan mengetik RESET',
+                      ),
+                    ),
+                  );
+                }
               }
             },
             child: const Text('Hapus Semua'),
@@ -675,7 +697,6 @@ class _AturScreenState extends ConsumerState<AturScreen> {
   Future<String?> _tampilDialogPassword(BuildContext context, String judul) {
     final passController = TextEditingController();
 
-    // showDialog dipanggil dengan await untuk M3EDialog
     return showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
@@ -693,12 +714,14 @@ class _AturScreenState extends ConsumerState<AturScreen> {
             onPressed: () => Navigator.pop(context),
             child: const Text('Batal'),
           ),
-          ElevatedButton(
+          FilledButton(
             onPressed: () {
               if (passController.text.length >= 6) {
                 Navigator.pop(context, passController.text);
               } else {
-                M3ESnackbar.show(context, message: 'Password terlalu pendek');
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Password terlalu pendek')),
+                );
               }
             },
             child: const Text('Lanjut'),
