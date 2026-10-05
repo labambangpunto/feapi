@@ -175,11 +175,13 @@ class _UtangScreenState extends ConsumerState<UtangScreen>
       floatingActionButton: FloatingActionButton(
         child: const Icon(Icons.add),
         onPressed: () {
-          showModalBottomSheet(
+          showDialog<void>(
             context: context,
-            builder: (BuildContext ctx) {
-              return SafeArea(
-                child: Column(
+            builder: (BuildContext dialogContext) {
+              return AlertDialog(
+                title: const Text('Tambah Data'),
+                contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                content: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     ListTile(
@@ -189,7 +191,7 @@ class _UtangScreenState extends ConsumerState<UtangScreen>
                       ),
                       title: const Text('Tambah Utang'),
                       onTap: () {
-                        Navigator.pop(ctx);
+                        Navigator.pop(dialogContext);
                         Navigator.push(
                           context,
                           MaterialPageRoute(
@@ -207,7 +209,7 @@ class _UtangScreenState extends ConsumerState<UtangScreen>
                       ),
                       title: const Text('Tambah Piutang'),
                       onTap: () {
-                        Navigator.pop(ctx);
+                        Navigator.pop(dialogContext);
                         Navigator.push(
                           context,
                           MaterialPageRoute(
@@ -680,173 +682,142 @@ class _UtangScreenState extends ConsumerState<UtangScreen>
       text: _filterMaxNominal != null ? _filterMaxNominal!.toRibuan() : '',
     );
 
-    showModalBottomSheet(
+    showDialog<void>(
       context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (context) {
+      builder: (dialogContext) {
         return StatefulBuilder(
-          builder: (context, setStateSheet) {
-            return Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).viewInsets.bottom,
-                left: 16,
-                right: 16,
-                top: 24,
+          builder: (contextState, setStateDialog) {
+            return AlertDialog(
+              title: const Text(
+                'Filter Utang & Piutang',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
-              child: Material(
-                color: Colors.transparent,
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Filter Utang & Piutang',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    DropdownButtonFormField<bool?>(
+                      initialValue: tempStatusLunas,
+                      decoration: const InputDecoration(
+                        labelText: 'Status Pelunasan',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: const [
+                        DropdownMenuItem(
+                          value: null,
+                          child: Text('Semua Status'),
                         ),
-                      ),
-                      const SizedBox(height: 16),
-                      DropdownButtonFormField<bool?>(
-                        initialValue: tempStatusLunas,
-                        decoration: const InputDecoration(
-                          labelText: 'Status Pelunasan',
-                          border: OutlineInputBorder(),
+                        DropdownMenuItem(value: true, child: Text('Lunas')),
+                        DropdownMenuItem(
+                          value: false,
+                          child: Text('Belum Lunas'),
                         ),
-                        items: const [
-                          DropdownMenuItem(
-                            value: null,
-                            child: Text('Semua Status'),
-                          ),
-                          DropdownMenuItem(value: true, child: Text('Lunas')),
-                          DropdownMenuItem(
-                            value: false,
-                            child: Text('Belum Lunas'),
-                          ),
-                        ],
-                        onChanged: (val) =>
-                            setStateSheet(() => tempStatusLunas = val),
+                      ],
+                      onChanged: (val) =>
+                          setStateDialog(() => tempStatusLunas = val),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: kataCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'Pihak Terkait atau Catatan',
+                        prefixIcon: Icon(Icons.search),
+                        border: OutlineInputBorder(),
                       ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: kataCtrl,
-                        decoration: const InputDecoration(
-                          labelText: 'Pihak Terkait atau Catatan',
-                          prefixIcon: Icon(Icons.search),
-                          border: OutlineInputBorder(),
+                      onChanged: (val) => tempKataKunci = val,
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      initialValue: tempAkunId,
+                      decoration: const InputDecoration(
+                        labelText: 'Pilih Akun Terkait',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: [
+                        const DropdownMenuItem(
+                          value: null,
+                          child: Text('Semua Akun'),
                         ),
-                        onChanged: (val) => tempKataKunci = val,
-                      ),
-                      const SizedBox(height: 12),
-                      DropdownButtonFormField<String>(
-                        initialValue: tempAkunId,
-                        decoration: const InputDecoration(
-                          labelText: 'Pilih Akun Terkait',
-                          border: OutlineInputBorder(),
+                        ...akunList.map(
+                          (a) => DropdownMenuItem(
+                            value: a.id,
+                            child: Text(a.nama),
+                          ),
                         ),
-                        items: [
-                          const DropdownMenuItem(
-                            value: null,
-                            child: Text('Semua Akun'),
-                          ),
-                          ...akunList.map(
-                            (a) => DropdownMenuItem(
-                              value: a.id,
-                              child: Text(a.nama),
+                      ],
+                      onChanged: (val) =>
+                          setStateDialog(() => tempAkunId = val),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: minCtrl,
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [CurrencyFormatter()],
+                            decoration: const InputDecoration(
+                              labelText: 'Nominal Min (Rp)',
+                              border: OutlineInputBorder(),
                             ),
                           ),
-                        ],
-                        onChanged: (val) =>
-                            setStateSheet(() => tempAkunId = val),
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextField(
-                              controller: minCtrl,
-                              keyboardType: TextInputType.number,
-                              inputFormatters: [CurrencyFormatter()],
-                              decoration: const InputDecoration(
-                                labelText: 'Nominal Min (Rp)',
-                                border: OutlineInputBorder(),
-                              ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: TextField(
+                            controller: maxCtrl,
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [CurrencyFormatter()],
+                            decoration: const InputDecoration(
+                              labelText: 'Nominal Max (Rp)',
+                              border: OutlineInputBorder(),
                             ),
                           ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: TextField(
-                              controller: maxCtrl,
-                              keyboardType: TextInputType.number,
-                              inputFormatters: [CurrencyFormatter()],
-                              decoration: const InputDecoration(
-                                labelText: 'Nominal Max (Rp)',
-                                border: OutlineInputBorder(),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton(
-                              onPressed: () {
-                                Navigator.pop(context);
-                                setState(() {
-                                  _isFilterActive = false;
-                                  _filterKataKunci = '';
-                                  _filterAkunId = null;
-                                  _filterStatusLunas = null;
-                                  _filterMinNominal = null;
-                                  _filterMaxNominal = null;
-                                });
-                              },
-                              child: const Text('Reset'),
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: FilledButton(
-                              onPressed: () {
-                                Navigator.pop(context);
-                                setState(() {
-                                  _filterKataKunci = tempKataKunci.trim();
-                                  _filterAkunId = tempAkunId;
-                                  _filterStatusLunas = tempStatusLunas;
-                                  _filterMinNominal = minCtrl.text.isNotEmpty
-                                      ? double.parse(
-                                          minCtrl.text.replaceAll('.', ''),
-                                        )
-                                      : null;
-                                  _filterMaxNominal = maxCtrl.text.isNotEmpty
-                                      ? double.parse(
-                                          maxCtrl.text.replaceAll('.', ''),
-                                        )
-                                      : null;
-                                  _isFilterActive =
-                                      _filterKataKunci.isNotEmpty ||
-                                      _filterAkunId != null ||
-                                      _filterStatusLunas != null ||
-                                      _filterMinNominal != null ||
-                                      _filterMaxNominal != null;
-                                });
-                              },
-                              child: const Text('Terapkan Filter'),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                    ],
-                  ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(dialogContext);
+                    setState(() {
+                      _isFilterActive = false;
+                      _filterKataKunci = '';
+                      _filterAkunId = null;
+                      _filterStatusLunas = null;
+                      _filterMinNominal = null;
+                      _filterMaxNominal = null;
+                    });
+                  },
+                  child: const Text('Reset'),
+                ),
+                FilledButton(
+                  onPressed: () {
+                    Navigator.pop(dialogContext);
+                    setState(() {
+                      _filterKataKunci = tempKataKunci.trim();
+                      _filterAkunId = tempAkunId;
+                      _filterStatusLunas = tempStatusLunas;
+                      _filterMinNominal = minCtrl.text.isNotEmpty
+                          ? double.parse(minCtrl.text.replaceAll('.', ''))
+                          : null;
+                      _filterMaxNominal = maxCtrl.text.isNotEmpty
+                          ? double.parse(maxCtrl.text.replaceAll('.', ''))
+                          : null;
+                      _isFilterActive =
+                          _filterKataKunci.isNotEmpty ||
+                          _filterAkunId != null ||
+                          _filterStatusLunas != null ||
+                          _filterMinNominal != null ||
+                          _filterMaxNominal != null;
+                    });
+                  },
+                  child: const Text('Terapkan Filter'),
+                ),
+              ],
             );
           },
         );

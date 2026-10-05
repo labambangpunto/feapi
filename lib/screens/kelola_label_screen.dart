@@ -27,8 +27,6 @@ class KelolaLabelScreen extends ConsumerWidget {
             itemBuilder: (context, index) {
               final label = labelList[index];
               final isDibekukan = label.isDibekukan;
-              final isDefault =
-                  label.id == 'label_utang' || label.id == 'label_piutang';
 
               return Padding(
                 padding: const EdgeInsets.symmetric(
@@ -45,60 +43,42 @@ class KelolaLabelScreen extends ConsumerWidget {
                             ? TextDecoration.lineThrough
                             : null,
                         color: isDibekukan ? Colors.grey : Colors.black,
-                        fontWeight: isDefault
-                            ? FontWeight.bold
-                            : FontWeight.normal,
+                        fontWeight: FontWeight.normal,
                       ),
                     ),
-                    subtitle: isDefault
+                    subtitle: isDibekukan
                         ? const Text(
-                            'Label Default Sistem',
-                            style: TextStyle(color: Colors.blue, fontSize: 12),
+                            'Dibekukan',
+                            style: TextStyle(color: Colors.red),
                           )
-                        : (isDibekukan
-                              ? const Text(
-                                  'Dibekukan',
-                                  style: TextStyle(color: Colors.red),
-                                )
-                              : null),
-                    trailing: isDefault
-                        ? const SizedBox.shrink()
-                        : Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (!isDibekukan)
-                                IconButton(
-                                  icon: const Icon(
-                                    Icons.edit,
-                                    color: Colors.blue,
-                                  ),
-                                  onPressed: () => _tampilFormFormLabel(
-                                    context,
-                                    ref,
-                                    dataEdit: label,
-                                  ),
-                                ),
-                              IconButton(
-                                icon: Icon(
-                                  isDibekukan ? Icons.restore : Icons.delete,
-                                  color: isDibekukan
-                                      ? Colors.green
-                                      : Colors.red,
-                                ),
-                                onPressed: () {
-                                  if (isDibekukan) {
-                                    _pulihkanLabel(context, ref, label);
-                                  } else {
-                                    _cekDanHapusAtauBekukan(
-                                      context,
-                                      ref,
-                                      label,
-                                    );
-                                  }
-                                },
-                              ),
-                            ],
+                        : null,
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (!isDibekukan)
+                          IconButton(
+                            icon: const Icon(Icons.edit, color: Colors.blue),
+                            onPressed: () => _tampilFormFormLabel(
+                              context,
+                              ref,
+                              dataEdit: label,
+                            ),
                           ),
+                        IconButton(
+                          icon: Icon(
+                            isDibekukan ? Icons.restore : Icons.delete,
+                            color: isDibekukan ? Colors.green : Colors.red,
+                          ),
+                          onPressed: () {
+                            if (isDibekukan) {
+                              _pulihkanLabel(context, ref, label);
+                            } else {
+                              _cekDanHapusAtauBekukan(context, ref, label);
+                            }
+                          },
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               );
