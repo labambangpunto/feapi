@@ -12,9 +12,9 @@ import '../controllers/utang_piutang_controller.dart';
 import '../controllers/theme_provider.dart';
 import '../repositories/database_repository.dart';
 import '../services/backup_service.dart';
-import '../services/google_drive_service.dart';
 import 'kelola_akun_screen.dart';
 import 'kelola_label_screen.dart';
+import 'pencadangan_screen.dart';
 
 final profilProvider = FutureProvider<Map<String, dynamic>?>((ref) async {
   return await ref.read(databaseRepositoryProvider).getProfil();
@@ -28,21 +28,6 @@ class AturScreen extends ConsumerStatefulWidget {
 }
 
 class _AturScreenState extends ConsumerState<AturScreen> {
-  bool _isDriveSignedIn = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _checkDriveSession();
-  }
-
-  Future<void> _checkDriveSession() async {
-    final signedIn = await GoogleDriveService().hasSession();
-    if (mounted) {
-      setState(() => _isDriveSignedIn = signedIn);
-    }
-  }
-
   Future<void> _editProfil(Map<String, dynamic>? currentProfil) async {
     final namaController = TextEditingController(
       text: currentProfil?['nama'] ?? '',
@@ -158,6 +143,7 @@ class _AturScreenState extends ConsumerState<AturScreen> {
       appBar: AppBar(title: const Text('Pengaturan')),
       body: ListView(
         children: [
+          // 1. Profil
           profilAsync.when(
             data: (profil) => Padding(
               padding: const EdgeInsets.all(16.0),
@@ -211,6 +197,20 @@ class _AturScreenState extends ConsumerState<AturScreen> {
           ),
           const Divider(),
 
+          // 2. Mode Gelap
+          ListTile(
+            leading: const Icon(Icons.dark_mode),
+            title: const Text('Mode Gelap'),
+            trailing: Switch(
+              value: isDark,
+              onChanged: (value) {
+                ref.read(themeProvider.notifier).toggleTheme(value);
+              },
+            ),
+          ),
+          const Divider(),
+
+          // 3. Kelola Akun
           ListTile(
             leading: const Icon(Icons.account_balance_wallet),
             title: const Text('Kelola Akun'),
@@ -222,6 +222,8 @@ class _AturScreenState extends ConsumerState<AturScreen> {
               );
             },
           ),
+
+          // 4. Kelola Label
           ListTile(
             leading: const Icon(Icons.label),
             title: const Text('Kelola Label'),
@@ -235,302 +237,21 @@ class _AturScreenState extends ConsumerState<AturScreen> {
           ),
           const Divider(),
 
+          // 5. Pencadangan
           ListTile(
-            leading: const Icon(Icons.dark_mode),
-            title: const Text('Mode Gelap'),
-            trailing: Switch(
-              value: isDark,
-              onChanged: (value) {
-                ref.read(themeProvider.notifier).toggleTheme(value);
-              },
-            ),
+            leading: const Icon(Icons.backup, color: Colors.blue),
+            title: const Text('Pencadangan'),
+            subtitle: const Text('Backup Cloud & Lokal'),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const PencadanganScreen()),
+              );
+            },
           ),
-
           const Divider(),
-          Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 16.0,
-              vertical: 8.0,
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Sinkronisasi Cloud',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.blue,
-                  ),
-                ),
-                if (!_isDriveSignedIn)
-                  const Text(
-                    'Tidak ada sesi aktif',
-                    style: TextStyle(
-                      color: Colors.red,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-              ],
-            ),
-          ),
 
-          ListTile(
-            leading: const Icon(Icons.cloud_upload, color: Colors.blue),
-            title: const Text('Backup ke Google Drive'),
-            subtitle: const Text('Timpa data terenkripsi di cloud'),
-            onTap: () async {
-              final password = await _tampilDialogPassword(
-                context,
-                'Buat Password Backup Drive',
-              );
-              if (password == null) return;
-
-              if (!context.mounted) return;
-
-              showDialog(
-                context: context,
-                barrierDismissible: false,
-                builder: (_) =>
-                    const Center(child: CircularProgressIndicator()),
-              );
-              try {
-                final backupService = BackupService(
-                  ref.read(databaseRepositoryProvider),
-                );
-                final driveService = GoogleDriveService();
-
-                final encryptedData = await backupService.generateEncryptedJson(
-                  password,
-                );
-                await driveService.backupDatabase(encryptedData);
-
-                await _checkDriveSession();
-
-                if (context.mounted) {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Backup ke Google Drive berhasil'),
-                    ),
-                  );
-                }
-              } catch (e) {
-                await _checkDriveSession();
-                if (context.mounted) {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(SnackBar(content: Text('Gagal backup: $e')));
-                }
-              }
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.cloud_download, color: Colors.blue),
-            title: const Text('Restore dari Google Drive'),
-            subtitle: const Text('Timpa data lokal dengan data cloud'),
-            onTap: () async {
-              final password = await _tampilDialogPassword(
-                context,
-                'Masukkan Password Restore Drive',
-              );
-              if (password == null) return;
-
-              if (!context.mounted) return;
-
-              showDialog(
-                context: context,
-                barrierDismissible: false,
-                builder: (_) =>
-                    const Center(child: CircularProgressIndicator()),
-              );
-              try {
-                final backupService = BackupService(
-                  ref.read(databaseRepositoryProvider),
-                );
-                final driveService = GoogleDriveService();
-
-                final encryptedData = await driveService.restoreDatabase();
-                await backupService.restoreFromEncryptedString(
-                  encryptedData,
-                  password,
-                );
-
-                ref.invalidate(akunControllerProvider);
-                ref.invalidate(labelControllerProvider);
-                ref.invalidate(transaksiControllerProvider);
-                ref.invalidate(utangPiutangControllerProvider);
-                ref.invalidate(profilProvider);
-
-                await _checkDriveSession();
-
-                if (context.mounted) {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Restore dari Google Drive berhasil'),
-                    ),
-                  );
-                }
-              } catch (e) {
-                await _checkDriveSession();
-                if (context.mounted) {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(SnackBar(content: Text('Gagal restore: $e')));
-                }
-              }
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.logout, color: Colors.grey),
-            title: const Text('Logout Google Drive'),
-            onTap: () async {
-              if (!_isDriveSignedIn) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Tidak ada sesi untuk logout')),
-                );
-                return;
-              }
-
-              showDialog<void>(
-                context: context,
-                builder: (dialogContext) => AlertDialog(
-                  title: const Text('Konfirmasi Logout'),
-                  content: const Text(
-                    'Apakah Anda yakin ingin memutuskan akses dari Google Drive?',
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('Batal'),
-                    ),
-                    FilledButton(
-                      onPressed: () async {
-                        Navigator.pop(dialogContext); // Tutup dialogContext
-
-                        await GoogleDriveService().logout();
-                        await _checkDriveSession();
-
-                        // context di bawah ini sekarang aman merujuk pada State layar utama
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Sesi Google Drive diakhiri'),
-                            ),
-                          );
-                        }
-                      },
-                      child: const Text('Logout'),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-
-          const Divider(),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-            child: Text(
-              'Backup Data Lokal (.enc)',
-              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue),
-            ),
-          ),
-          ListTile(
-            leading: const Icon(Icons.save_alt),
-            title: const Text('Backup lokal'),
-            subtitle: const Text('Simpan berkas .enc di perangkat'),
-            onTap: () async {
-              final password = await _tampilDialogPassword(
-                context,
-                'Buat Password Backup',
-              );
-              if (password != null) {
-                try {
-                  final backupService = BackupService(
-                    ref.read(databaseRepositoryProvider),
-                  );
-                  await backupService.simpanBackupKeFolder(password);
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Berhasil tersimpan')),
-                    );
-                  }
-                } catch (e) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Gagal menyimpan: $e')),
-                    );
-                  }
-                }
-              }
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.share),
-            title: const Text('Bagikan Backup'),
-            subtitle: const Text('Bagikan berkas .enc'),
-            onTap: () async {
-              final password = await _tampilDialogPassword(
-                context,
-                'Buat Password Backup',
-              );
-              if (password != null) {
-                final backupService = BackupService(
-                  ref.read(databaseRepositoryProvider),
-                );
-                await backupService.bagikanBackupLangsung(password);
-              }
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.settings_backup_restore),
-            title: const Text('Restore Lokal'),
-            subtitle: const Text('Cari berkas .enc'),
-            onTap: () async {
-              final password = await _tampilDialogPassword(
-                context,
-                'Masukkan Password Backup',
-              );
-              if (password != null) {
-                try {
-                  final backupService = BackupService(
-                    ref.read(databaseRepositoryProvider),
-                  );
-                  await backupService.restoreJsonLokal(password);
-
-                  ref.invalidate(akunControllerProvider);
-                  ref.invalidate(labelControllerProvider);
-                  ref.invalidate(transaksiControllerProvider);
-                  ref.invalidate(utangPiutangControllerProvider);
-                  ref.invalidate(profilProvider);
-
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Data berhasil dipulihkan.'),
-                      ),
-                    );
-                  }
-                } catch (e) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          'Gagal memulihkan: Password salah atau file korup',
-                        ),
-                      ),
-                    );
-                  }
-                }
-              }
-            },
-          ),
-
-          const Divider(),
+          // 6 & 7. Ekspor CSV
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
             child: Text(
@@ -575,9 +296,11 @@ class _AturScreenState extends ConsumerState<AturScreen> {
             },
           ),
           const Divider(),
+
+          // 8. Tentang Aplikasi
           ListTile(
             leading: const Icon(Icons.info),
-            title: const Text('About App'),
+            title: const Text('Tentang Aplikasi'),
             onTap: () {
               showAboutDialog(
                 context: context,
@@ -598,6 +321,8 @@ class _AturScreenState extends ConsumerState<AturScreen> {
             },
           ),
           const Divider(),
+
+          // 9. Reset Seluruh Database
           ListTile(
             leading: const Icon(Icons.warning, color: Colors.red),
             title: const Text(
@@ -670,7 +395,6 @@ class _AturScreenState extends ConsumerState<AturScreen> {
                 }
 
                 if (context.mounted) {
-                  // Munculkan snackbar pada konteks layar utama
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Database berhasil direset.')),
                   );
@@ -688,43 +412,6 @@ class _AturScreenState extends ConsumerState<AturScreen> {
               }
             },
             child: const Text('Hapus Semua'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<String?> _tampilDialogPassword(BuildContext context, String judul) {
-    final passController = TextEditingController();
-
-    return showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(judul),
-        content: TextField(
-          controller: passController,
-          obscureText: true,
-          decoration: const InputDecoration(
-            labelText: 'Password Enkripsi',
-            helperText: 'Minimal 6 karakter untuk keamanan AES',
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Batal'),
-          ),
-          FilledButton(
-            onPressed: () {
-              if (passController.text.length >= 6) {
-                Navigator.pop(context, passController.text);
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Password terlalu pendek')),
-                );
-              }
-            },
-            child: const Text('Lanjut'),
           ),
         ],
       ),

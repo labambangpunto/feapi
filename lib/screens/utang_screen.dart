@@ -179,7 +179,6 @@ class _UtangScreenState extends ConsumerState<UtangScreen>
             context: context,
             builder: (BuildContext dialogContext) {
               return AlertDialog(
-                title: const Text('Tambah Data'),
                 contentPadding: const EdgeInsets.symmetric(vertical: 8),
                 content: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -297,24 +296,12 @@ class _UtangScreenState extends ConsumerState<UtangScreen>
                         if (item.catatan.isNotEmpty) ...[
                           Text(
                             item.catatan,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              color: Colors.black87,
-                            ),
+                            style: const TextStyle(fontSize: 14),
                           ),
                           const SizedBox(height: 8),
                         ],
                         Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 6,
-                          ),
                           decoration: BoxDecoration(
-                            color: Colors.yellow[50],
-                            border: Border.all(
-                              color: Colors.yellow[700]!,
-                              width: 1.5,
-                            ),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Row(
@@ -329,7 +316,6 @@ class _UtangScreenState extends ConsumerState<UtangScreen>
                               Text(
                                 'Jatuh tempo: $formatJatuhTempo',
                                 style: TextStyle(
-                                  color: Colors.yellow[900],
                                   fontSize: 13,
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -467,14 +453,9 @@ class _UtangScreenState extends ConsumerState<UtangScreen>
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
+                    SizedBox(
                       width: double.infinity,
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade50,
-                        border: Border.all(color: Colors.grey.shade300),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
+
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -510,7 +491,6 @@ class _UtangScreenState extends ConsumerState<UtangScreen>
                                 style: const TextStyle(
                                   fontStyle: FontStyle.italic,
                                   fontSize: 13,
-                                  color: Colors.black87,
                                 ),
                               ),
                             ),
@@ -545,7 +525,7 @@ class _UtangScreenState extends ConsumerState<UtangScreen>
                                 'Jatuh tempo: $tglJatuhTempo',
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: Colors.orange.shade800,
+
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -555,12 +535,12 @@ class _UtangScreenState extends ConsumerState<UtangScreen>
                       ),
                     ),
                     if (!item.isLunas) ...[
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 30),
                       const Text(
                         'Form Pelunasan',
                         style: TextStyle(fontWeight: FontWeight.bold),
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 11),
                       akunState.maybeWhen(
                         data: (listAkun) => DropdownButtonFormField<String>(
                           initialValue: selectedAkunId,
@@ -589,7 +569,7 @@ class _UtangScreenState extends ConsumerState<UtangScreen>
                         ),
                         orElse: () => const CircularProgressIndicator(),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 1),
                       ListTile(
                         contentPadding: EdgeInsets.zero,
                         title: const Text(
@@ -598,15 +578,9 @@ class _UtangScreenState extends ConsumerState<UtangScreen>
                         ),
                         subtitle: Text(
                           '${selectedDate.day.toString().padLeft(2, '0')} ${bulanMap[selectedDate.month]} ${selectedDate.year}',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black,
-                          ),
+                          style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
-                        trailing: const Icon(
-                          Icons.calendar_month,
-                          color: Colors.blue,
-                        ),
+                        trailing: const Icon(Icons.calendar_month),
                         onTap: () async {
                           final date = await showDatePicker(
                             context: context,
@@ -634,9 +608,7 @@ class _UtangScreenState extends ConsumerState<UtangScreen>
                       if (selectedAkunId == null) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text(
-                              'Pilih akun pelunasan terlebih dahulu!',
-                            ),
+                            content: Text('Pilih akun pelunasan!'),
                           ),
                         );
                         return;
@@ -688,10 +660,6 @@ class _UtangScreenState extends ConsumerState<UtangScreen>
         return StatefulBuilder(
           builder: (contextState, setStateDialog) {
             return AlertDialog(
-              title: const Text(
-                'Filter Utang & Piutang',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -792,7 +760,7 @@ class _UtangScreenState extends ConsumerState<UtangScreen>
                       _filterMaxNominal = null;
                     });
                   },
-                  child: const Text('Reset'),
+                  child: const Text('Batal'),
                 ),
                 FilledButton(
                   onPressed: () {
@@ -815,7 +783,7 @@ class _UtangScreenState extends ConsumerState<UtangScreen>
                           _filterMaxNominal != null;
                     });
                   },
-                  child: const Text('Terapkan Filter'),
+                  child: const Text('Cari'),
                 ),
               ],
             );

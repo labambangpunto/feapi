@@ -388,7 +388,7 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
                                             t.catatan,
                                             style: const TextStyle(
                                               fontSize: 14,
-                                              color: Colors.black87,
+
                                               fontWeight: FontWeight.w500,
                                             ),
                                           ),
@@ -397,7 +397,6 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
                                             textAkun,
                                             style: const TextStyle(
                                               fontSize: 12,
-                                              color: Colors.grey,
                                             ),
                                           ),
                                         ],
@@ -507,7 +506,6 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
             context: context,
             builder: (BuildContext dialogContext) {
               return AlertDialog(
-                title: const Text('Tambah Transaksi'),
                 contentPadding: const EdgeInsets.symmetric(vertical: 8),
                 content: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -638,10 +636,7 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
                 if (t.biayaTambahan != null && t.biayaTambahan! > 0)
                   Text('Biaya Tambahan: ${t.biayaTambahan!.toIdr()}'),
                 const SizedBox(height: 4),
-                Text(
-                  'Sumber dana: $namaSumber',
-                  style: const TextStyle(color: Colors.black87),
-                ),
+                Text('Sumber dana: $namaSumber'),
               ] else if (isPemasukan) ...[
                 Text(
                   'Tujuan dana: $namaTujuan',
@@ -665,16 +660,9 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
               const Divider(),
               Row(
                 children: [
-                  const Icon(
-                    Icons.calendar_today,
-                    size: 14,
-                    color: Colors.grey,
-                  ),
+                  const Icon(Icons.calendar_today, size: 16),
                   const SizedBox(width: 6),
-                  Text(
-                    tglStr,
-                    style: const TextStyle(color: Colors.grey, fontSize: 13),
-                  ),
+                  Text(tglStr, style: const TextStyle(fontSize: 16)),
                 ],
               ),
               if (namaLabels.isNotEmpty) ...[
@@ -690,8 +678,11 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.grey.shade200,
                             borderRadius: BorderRadius.circular(4),
+                            border: Border.all(
+                              color: Colors.grey, // warna border
+                              width: 1, // ketebalan border
+                            ),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
@@ -743,10 +734,6 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
         return StatefulBuilder(
           builder: (contextState, setStateDialog) {
             return AlertDialog(
-              title: const Text(
-                'Filter Transaksi Tingkat Lanjut',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -873,7 +860,7 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
                       _filterTipe = null;
                     });
                   },
-                  child: const Text('Reset'),
+                  child: const Text('Batal'),
                 ),
                 FilledButton(
                   onPressed: () {
@@ -900,7 +887,7 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
                           _filterTipe != null;
                     });
                   },
-                  child: const Text('Cari Data'),
+                  child: const Text('Cari'),
                 ),
               ],
             );
