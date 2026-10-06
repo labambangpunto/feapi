@@ -73,10 +73,10 @@ class DatabaseHelper {
       waktu $intType,
       catatan $textType,
       FOREIGN KEY (akunSumberId) REFERENCES akun (id) ON DELETE SET NULL,
-      FOREIGN KEY (akunTujuanId) REFERENCES akun (id) ON DELETE SET NULL,
-      FOREIGN KEY (labelId) REFERENCES label (id) ON DELETE SET NULL
+      FOREIGN KEY (akunTujuanId) REFERENCES akun (id) ON DELETE SET NULL
     )
     ''');
+    // Baris FOREIGN KEY (labelId) REFERENCES label (id) ON DELETE SET NULL telah dihapus
 
     await db.execute('''
     CREATE TABLE utang_piutang (

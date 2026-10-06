@@ -19,17 +19,25 @@ class DatabaseRepository {
   // ==============================
 
   Future<int> insertTransaksi(TransaksiModel transaksi) async {
+    if (transaksi.labelId != null && transaksi.labelId!.isNotEmpty) {
+      if (transaksi.labelId!.split(',').length > 10) {
+        throw Exception(
+          'Maksimal hanya 10 label yang dapat digunakan bersamaan.',
+        );
+      }
+    }
+
     final db = await _dbHelper.database;
     return await db.insert('transaksi', {
       'id': transaksi.id,
       'tipe': transaksi.tipe.name,
-      'nominal': transaksi.nominal.toInt(), // Konversi ke INTEGER
-      'biayaTambahan': transaksi.biayaTambahan?.toInt(), // Konversi ke INTEGER
+      'nominal': transaksi.nominal.toInt(),
+      'biayaTambahan': transaksi.biayaTambahan?.toInt(),
       'kuantitas': transaksi.kuantitas,
       'akunSumberId': transaksi.akunSumberId,
       'akunTujuanId': transaksi.akunTujuanId,
       'labelId': transaksi.labelId,
-      'waktu': transaksi.waktu.millisecondsSinceEpoch, // Konversi ke Epoch
+      'waktu': transaksi.waktu.millisecondsSinceEpoch,
       'catatan': transaksi.catatan,
     });
   }
@@ -62,6 +70,14 @@ class DatabaseRepository {
   }
 
   Future<int> updateTransaksi(TransaksiModel transaksi) async {
+    if (transaksi.labelId != null && transaksi.labelId!.isNotEmpty) {
+      if (transaksi.labelId!.split(',').length > 10) {
+        throw Exception(
+          'Maksimal hanya 10 label yang dapat digunakan bersamaan.',
+        );
+      }
+    }
+
     final db = await _dbHelper.database;
     return await db.update(
       'transaksi',

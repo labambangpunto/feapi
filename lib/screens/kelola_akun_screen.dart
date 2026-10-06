@@ -38,12 +38,11 @@ class KelolaAkunScreen extends ConsumerWidget {
                   elevation: 2,
                   child: ListTile(
                     title: Text(
-                      akun.nama,
+                      '${index + 1}. ${akun.nama}',
                       style: TextStyle(
                         decoration: isDibekukan
                             ? TextDecoration.lineThrough
                             : null,
-                        color: isDibekukan ? Colors.grey : Colors.black,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -144,11 +143,38 @@ class KelolaAkunScreen extends ConsumerWidget {
   }
 
   void _pulihkanAkun(BuildContext context, WidgetRef ref, AkunModel akun) {
-    final akunDipulihkan = akun.copyWith(isDibekukan: false);
-    ref.read(akunControllerProvider.notifier).updateAkun(akunDipulihkan);
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Akun berhasil dipulihkan')));
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Pulihkan Akun'),
+        content: Text(
+          'Apakah Anda yakin ingin memulihkan akun "${akun.nama}"? Akun ini akan kembali muncul di form transaksi.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Batal'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final akunDipulihkan = akun.copyWith(isDibekukan: false);
+              ref
+                  .read(akunControllerProvider.notifier)
+                  .updateAkun(akunDipulihkan);
+
+              Navigator.pop(dialogContext); // Tutup dialog
+
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Akun berhasil dipulihkan')),
+                );
+              }
+            },
+            child: const Text('Pulihkan'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _tampilFormTambahAkun(BuildContext context, WidgetRef ref) {

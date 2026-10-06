@@ -237,7 +237,17 @@ class _FormTransaksiScreenState extends ConsumerState<FormTransaksiScreen> {
                         onSelected: (selected) {
                           setState(() {
                             if (selected) {
-                              _selectedLabelIds.add(l.id);
+                              if (_selectedLabelIds.length >= 10) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Maksimal hanya 10 label yang dapat digunakan.',
+                                    ),
+                                  ),
+                                );
+                              } else {
+                                _selectedLabelIds.add(l.id);
+                              }
                             } else {
                               _selectedLabelIds.remove(l.id);
                             }

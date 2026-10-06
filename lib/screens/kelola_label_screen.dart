@@ -37,12 +37,12 @@ class KelolaLabelScreen extends ConsumerWidget {
                   elevation: 2,
                   child: ListTile(
                     title: Text(
-                      label.nama,
+                      '${index + 1}. ${label.nama}',
                       style: TextStyle(
                         decoration: isDibekukan
                             ? TextDecoration.lineThrough
                             : null,
-                        color: isDibekukan ? Colors.grey : Colors.black,
+
                         fontWeight: FontWeight.normal,
                       ),
                     ),
@@ -99,9 +99,13 @@ class KelolaLabelScreen extends ConsumerWidget {
     LabelModel label,
   ) {
     final transaksiList = ref.read(transaksiControllerProvider).value ?? [];
-    final isDigunakanDiTransaksi = transaksiList.any(
-      (t) => t.labelId == label.id,
-    );
+
+    // PERBAIKAN LOGIKA PENGECEKAN LABEL MULTIPLE
+    final isDigunakanDiTransaksi = transaksiList.any((t) {
+      if (t.labelId == null || t.labelId!.isEmpty) return false;
+      final labels = t.labelId!.split(',');
+      return labels.contains(label.id);
+    });
 
     if (isDigunakanDiTransaksi) {
       _tampilDialogBekukanLabel(context, ref, label);
@@ -143,11 +147,38 @@ class KelolaLabelScreen extends ConsumerWidget {
   }
 
   void _pulihkanLabel(BuildContext context, WidgetRef ref, LabelModel label) {
-    final labelDipulihkan = label.copyWith(isDibekukan: false);
-    ref.read(labelControllerProvider.notifier).updateLabel(labelDipulihkan);
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Label berhasil dipulihkan')));
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Pulihkan Label'),
+        content: Text(
+          'Apakah Anda yakin ingin memulihkan label "${label.nama}"? Label ini akan kembali muncul di form transaksi.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Batal'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final labelDipulihkan = label.copyWith(isDibekukan: false);
+              ref
+                  .read(labelControllerProvider.notifier)
+                  .updateLabel(labelDipulihkan);
+
+              Navigator.pop(dialogContext); // Tutup dialog
+
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Label berhasil dipulihkan')),
+                );
+              }
+            },
+            child: const Text('Pulihkan'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _tampilFormFormLabel(

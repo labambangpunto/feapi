@@ -638,22 +638,13 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
                 const SizedBox(height: 4),
                 Text('Sumber dana: $namaSumber'),
               ] else if (isPemasukan) ...[
-                Text(
-                  'Tujuan dana: $namaTujuan',
-                  style: const TextStyle(color: Colors.black87),
-                ),
+                Text('Tujuan dana: $namaTujuan'),
               ] else if (isTransfer) ...[
                 if (t.biayaTambahan != null && t.biayaTambahan! > 0)
                   Text('Biaya Tambahan: ${t.biayaTambahan!.toIdr()}'),
                 const SizedBox(height: 4),
-                Text(
-                  'Dari: $namaSumber',
-                  style: const TextStyle(color: Colors.black87),
-                ),
-                Text(
-                  'Ke: $namaTujuan',
-                  style: const TextStyle(color: Colors.black87),
-                ),
+                Text('Dari: $namaSumber'),
+                Text('Ke: $namaTujuan'),
               ],
 
               const SizedBox(height: 12),

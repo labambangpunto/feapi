@@ -235,7 +235,6 @@ class _AturScreenState extends ConsumerState<AturScreen> {
               );
             },
           ),
-          const Divider(),
 
           // 5. Pencadangan
           ListTile(
@@ -326,7 +325,7 @@ class _AturScreenState extends ConsumerState<AturScreen> {
           ListTile(
             leading: const Icon(Icons.warning, color: Colors.red),
             title: const Text(
-              'Reset Seluruh Database',
+              'RESET SELURUH DATABASE',
               style: TextStyle(color: Colors.red),
             ),
             onTap: () => _tampilDialogReset(context, ref),
@@ -411,7 +410,7 @@ class _AturScreenState extends ConsumerState<AturScreen> {
                 }
               }
             },
-            child: const Text('Hapus Semua'),
+            child: const Text('HAPUS SEMUA'),
           ),
         ],
       ),
