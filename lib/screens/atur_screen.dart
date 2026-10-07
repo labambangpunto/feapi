@@ -363,8 +363,10 @@ class _AturScreenState extends ConsumerState<AturScreen> {
                 const SizedBox(height: 8),
                 TextField(
                   controller: textController,
+                  maxLength: 20,
                   decoration: const InputDecoration(
                     labelText: 'Ketik "RESET" untuk konfirmasi',
+                    counterText: '',
                     border: OutlineInputBorder(),
                   ),
                   onChanged: (val) => setStateDialog(() {}),

@@ -294,9 +294,7 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
                                   OutlinedButton(
                                     onPressed: () =>
                                         setState(() => _showFullMonth = true),
-                                    child: const Text(
-                                      'Tampilkan Transaksi Bulan Ini',
-                                    ),
+                                    child: const Text('Transaksi Bulan Ini'),
                                   ),
                                 ],
                               ),
@@ -755,6 +753,7 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
                     const SizedBox(height: 12),
                     TextField(
                       controller: catatanCtrl,
+                      maxLength: 64,
                       decoration: const InputDecoration(
                         labelText: 'Catatan',
                         prefixIcon: Icon(Icons.search),
@@ -814,8 +813,10 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
                             controller: minCtrl,
                             keyboardType: TextInputType.number,
                             inputFormatters: [CurrencyFormatter()],
+                            maxLength: 11,
                             decoration: const InputDecoration(
                               labelText: 'Min (Rp)',
+                              counterText: '',
                               border: OutlineInputBorder(),
                             ),
                           ),
@@ -826,8 +827,10 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
                             controller: maxCtrl,
                             keyboardType: TextInputType.number,
                             inputFormatters: [CurrencyFormatter()],
+                            maxLength: 11,
                             decoration: const InputDecoration(
                               labelText: 'Max (Rp)',
+                              counterText: '',
                               border: OutlineInputBorder(),
                             ),
                           ),

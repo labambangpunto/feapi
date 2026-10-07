@@ -687,6 +687,7 @@ class _UtangScreenState extends ConsumerState<UtangScreen>
                     const SizedBox(height: 12),
                     TextField(
                       controller: kataCtrl,
+                      maxLength: 64,
                       decoration: const InputDecoration(
                         labelText: 'Pihak Terkait atau Catatan',
                         prefixIcon: Icon(Icons.search),
@@ -724,8 +725,10 @@ class _UtangScreenState extends ConsumerState<UtangScreen>
                             controller: minCtrl,
                             keyboardType: TextInputType.number,
                             inputFormatters: [CurrencyFormatter()],
+                            maxLength: 11,
                             decoration: const InputDecoration(
-                              labelText: 'Nominal Min (Rp)',
+                              labelText: 'Min (Rp)',
+                              counterText: '',
                               border: OutlineInputBorder(),
                             ),
                           ),
@@ -736,8 +739,10 @@ class _UtangScreenState extends ConsumerState<UtangScreen>
                             controller: maxCtrl,
                             keyboardType: TextInputType.number,
                             inputFormatters: [CurrencyFormatter()],
+                            maxLength: 11,
                             decoration: const InputDecoration(
-                              labelText: 'Nominal Max (Rp)',
+                              labelText: 'Max (Rp)',
+                              counterText: '',
                               border: OutlineInputBorder(),
                             ),
                           ),

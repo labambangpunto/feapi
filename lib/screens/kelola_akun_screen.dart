@@ -186,6 +186,7 @@ class KelolaAkunScreen extends ConsumerWidget {
           title: const Text('Tambah Akun Baru'),
           content: TextField(
             controller: namaController,
+            maxLength: 16,
             decoration: const InputDecoration(labelText: 'Nama akun'),
             onChanged: (val) => setStateDialog(() {}),
           ),
@@ -251,6 +252,7 @@ class KelolaAkunScreen extends ConsumerWidget {
         title: const Text('Edit Akun'),
         content: TextField(
           controller: namaController,
+          maxLength: 16,
           decoration: const InputDecoration(labelText: 'Nama akun'),
         ),
         actions: [
@@ -321,8 +323,10 @@ class KelolaAkunScreen extends ConsumerWidget {
                 const SizedBox(height: 8),
                 TextField(
                   controller: textController,
+                  maxLength: 20,
                   decoration: const InputDecoration(
                     labelText: 'Ketik "HAPUS" untuk konfirmasi',
+                    counterText: '',
                   ),
                   onChanged: (val) => setStateDialog(() {}),
                 ),

@@ -81,9 +81,11 @@ class _FormTransaksiScreenState extends ConsumerState<FormTransaksiScreen> {
             controller: _nominalController,
             keyboardType: TextInputType.number,
             inputFormatters: [CurrencyFormatter()],
+            maxLength: 11,
             decoration: const InputDecoration(
               labelText: 'Nominal (Rp)',
               prefixText: 'Rp ',
+              counterText: '',
               border: OutlineInputBorder(),
             ),
           ),
@@ -93,9 +95,11 @@ class _FormTransaksiScreenState extends ConsumerState<FormTransaksiScreen> {
               controller: _biayaTambahanController,
               keyboardType: TextInputType.number,
               inputFormatters: [CurrencyFormatter()],
+              maxLength: 11,
               decoration: const InputDecoration(
                 labelText: 'Biaya Tambahan (Opsional)',
                 prefixText: 'Rp ',
+                counterText: '',
                 border: OutlineInputBorder(),
               ),
             ),
@@ -295,6 +299,7 @@ class _FormTransaksiScreenState extends ConsumerState<FormTransaksiScreen> {
           const SizedBox(height: 12),
           TextField(
             controller: _catatanController,
+            maxLength: 64,
             decoration: const InputDecoration(
               labelText: 'Catatan / Deskripsi',
               border: OutlineInputBorder(),

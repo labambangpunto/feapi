@@ -43,8 +43,10 @@ class _PencadanganScreenState extends ConsumerState<PencadanganScreen> {
         content: TextField(
           controller: passController,
           obscureText: true,
+          maxLength: 32,
           decoration: const InputDecoration(
             labelText: 'Password Enkripsi',
+            counterText: '',
             helperText: 'Minimal 6 karakter untuk keamanan AES',
             border: OutlineInputBorder(),
           ),

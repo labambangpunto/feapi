@@ -194,6 +194,7 @@ class KelolaLabelScreen extends ConsumerWidget {
         title: Text(dataEdit == null ? 'Tambah Label' : 'Edit Label'),
         content: TextField(
           controller: namaController,
+          maxLength: 16,
           decoration: const InputDecoration(labelText: 'Nama label'),
         ),
         actions: [

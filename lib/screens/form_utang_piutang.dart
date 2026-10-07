@@ -58,17 +58,21 @@ class _FormUtangPiutangScreenState
             controller: _nominalController,
             keyboardType: TextInputType.number,
             inputFormatters: [CurrencyFormatter()],
+            maxLength: 11,
             decoration: const InputDecoration(
               labelText: 'Nominal (Rp)',
               prefixText: 'Rp ',
+              counterText: '',
               border: OutlineInputBorder(),
             ),
           ),
           const SizedBox(height: 12),
           TextField(
             controller: _pihakController,
+            maxLength: 30,
             decoration: InputDecoration(
               labelText: isUtang ? 'Pihak Pemberi Dana' : 'Pihak Penerima Dana',
+              counterText: '',
               border: const OutlineInputBorder(),
             ),
           ),
@@ -156,6 +160,7 @@ class _FormUtangPiutangScreenState
           const SizedBox(height: 12),
           TextField(
             controller: _catatanController,
+            maxLength: 64,
             decoration: const InputDecoration(
               labelText: 'Catatan / Deskripsi',
               border: OutlineInputBorder(),
