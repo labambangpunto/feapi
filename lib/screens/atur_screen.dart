@@ -15,6 +15,7 @@ import '../services/backup_service.dart';
 import 'kelola_akun_screen.dart';
 import 'kelola_label_screen.dart';
 import 'pencadangan_screen.dart';
+import 'pembukuan_screen.dart';
 
 final profilProvider = FutureProvider<Map<String, dynamic>?>((ref) async {
   return await ref.read(databaseRepositoryProvider).getProfil();
@@ -232,6 +233,19 @@ class _AturScreenState extends ConsumerState<AturScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const KelolaLabelScreen()),
+              );
+            },
+          ),
+
+          // MENU BARU: Pembukuan Bulanan
+          ListTile(
+            leading: const Icon(Icons.lock_clock, color: Colors.indigo),
+            title: const Text('Pembukuan Bulanan'),
+            subtitle: const Text('Kunci/buka transaksi bulanan'),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const PembukuanScreen()),
               );
             },
           ),

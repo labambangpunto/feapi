@@ -9,7 +9,7 @@ import '../models/akun_model.dart';
 import '../models/label_model.dart';
 import '../utils/currency_format.dart';
 import '../utils/currency_formatter.dart';
-
+import '../controllers/pembukuan_controller.dart';
 import 'form_transaksi.dart';
 
 class TransaksiScreen extends ConsumerStatefulWidget {
@@ -38,7 +38,7 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
     final transaksiState = ref.watch(transaksiControllerProvider);
     final akunList = ref.watch(akunControllerProvider).value ?? [];
     final labelList = ref.watch(labelControllerProvider).value ?? [];
-
+    final pembukuanState = ref.watch(pembukuanControllerProvider);
     return Scaffold(
       appBar: AppBar(
         title: const Text('Log Transaksi'),
@@ -95,6 +95,13 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => Center(child: Text('Error: $err')),
         data: (transaksiList) {
+          bool isBulanTerkunci(DateTime dt) {
+            final pList = pembukuanState.value ?? [];
+            return pList.any(
+              (p) => p.tahun == dt.year && p.bulan == dt.month && p.isTerkunci,
+            );
+          }
+
           String getAkunName(String? id) {
             if (id == null) return '-';
             try {
@@ -340,6 +347,8 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
                             }
                           }
 
+                          final bool isTerkunci = isBulanTerkunci(t.waktu);
+
                           final cardWidget = Padding(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 12,
@@ -348,9 +357,10 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
                             child: Card(
                               elevation: 2,
                               clipBehavior: Clip.antiAlias,
+                              // Gunakan isTerkunci alih-alih t.isDibukukan
+                              color: isTerkunci ? Colors.grey.shade100 : null,
                               child: InkWell(
                                 onTap: () => _tampilSummaryTransaksi(
-                                  // Ganti onPressed menjadi onTap
                                   context,
                                   t,
                                   namaSumber,
@@ -368,13 +378,28 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
                                       ),
                                       child: Icon(iconTipe, color: colorTipe),
                                     ),
-                                    title: Text(
-                                      totalNominal.toIdr(),
-                                      style: TextStyle(
-                                        fontSize: 18,
-                                        color: colorTipe,
-                                        fontWeight: FontWeight.bold,
-                                      ),
+                                    title: Row(
+                                      children: [
+                                        Text(
+                                          totalNominal.toIdr(),
+                                          style: TextStyle(
+                                            fontSize: 18,
+                                            color: isTerkunci
+                                                ? Colors.grey
+                                                : colorTipe,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        // Indikator visual
+                                        if (isTerkunci) ...[
+                                          const SizedBox(width: 8),
+                                          const Icon(
+                                            Icons.lock,
+                                            size: 16,
+                                            color: Colors.grey,
+                                          ),
+                                        ],
+                                      ],
                                     ),
                                     subtitle: Padding(
                                       padding: const EdgeInsets.only(top: 4),
@@ -386,7 +411,6 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
                                             t.catatan,
                                             style: const TextStyle(
                                               fontSize: 14,
-
                                               fontWeight: FontWeight.w500,
                                             ),
                                           ),
@@ -400,64 +424,76 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
                                         ],
                                       ),
                                     ),
-                                    trailing: PopupMenuButton<String>(
-                                      icon: const Icon(Icons.more_vert),
-                                      onSelected: (value) {
-                                        if (value == 'edit') {
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (_) =>
-                                                  FormTransaksiScreen(
-                                                    tipeTransaksi: t.tipe,
-                                                    dataEdit: t,
+                                    trailing: isTerkunci
+                                        ? null // Jika terkunci, tidak ada menu titik tiga
+                                        : PopupMenuButton<String>(
+                                            icon: const Icon(Icons.more_vert),
+                                            onSelected: (value) async {
+                                              if (value == 'edit') {
+                                                Navigator.push(
+                                                  context,
+                                                  MaterialPageRoute(
+                                                    builder: (_) =>
+                                                        FormTransaksiScreen(
+                                                          tipeTransaksi: t.tipe,
+                                                          dataEdit: t,
+                                                        ),
                                                   ),
-                                            ),
-                                          );
-                                        } else if (value == 'hapus') {
-                                          showDialog<void>(
-                                            context: context,
-                                            builder: (_) => AlertDialog(
-                                              title: const Text(
-                                                'Konfirmasi Hapus',
+                                                );
+                                              } else if (value == 'hapus') {
+                                                showDialog<void>(
+                                                  context: context,
+                                                  builder: (_) => AlertDialog(
+                                                    title: const Text(
+                                                      'Konfirmasi Hapus',
+                                                    ),
+                                                    content: const Text(
+                                                      'Apakah Anda yakin ingin menghapus transaksi ini?',
+                                                    ),
+                                                    actions: [
+                                                      TextButton(
+                                                        onPressed: () =>
+                                                            Navigator.pop(
+                                                              context,
+                                                            ),
+                                                        child: const Text(
+                                                          'Batal',
+                                                        ),
+                                                      ),
+                                                      FilledButton(
+                                                        onPressed: () {
+                                                          ref
+                                                              .read(
+                                                                transaksiControllerProvider
+                                                                    .notifier,
+                                                              )
+                                                              .hapusTransaksi(
+                                                                t.id,
+                                                              );
+                                                          Navigator.pop(
+                                                            context,
+                                                          );
+                                                        },
+                                                        child: const Text(
+                                                          'Hapus',
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                );
+                                              }
+                                            },
+                                            itemBuilder: (context) => [
+                                              const PopupMenuItem(
+                                                value: 'edit',
+                                                child: Text('Edit'),
                                               ),
-                                              content: const Text(
-                                                'Apakah Anda yakin ingin menghapus transaksi ini?',
+                                              const PopupMenuItem(
+                                                value: 'hapus',
+                                                child: Text('Hapus'),
                                               ),
-                                              actions: [
-                                                TextButton(
-                                                  onPressed: () =>
-                                                      Navigator.pop(context),
-                                                  child: const Text('Batal'),
-                                                ),
-                                                FilledButton(
-                                                  onPressed: () {
-                                                    ref
-                                                        .read(
-                                                          transaksiControllerProvider
-                                                              .notifier,
-                                                        )
-                                                        .hapusTransaksi(t.id);
-                                                    Navigator.pop(context);
-                                                  },
-                                                  child: const Text('Hapus'),
-                                                ),
-                                              ],
-                                            ),
-                                          );
-                                        }
-                                      },
-                                      itemBuilder: (context) => [
-                                        const PopupMenuItem(
-                                          value: 'edit',
-                                          child: Text('Edit'),
-                                        ),
-                                        const PopupMenuItem(
-                                          value: 'hapus',
-                                          child: Text('Hapus'),
-                                        ),
-                                      ],
-                                    ),
+                                            ],
+                                          ),
                                   ),
                                 ),
                               ),

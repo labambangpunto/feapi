@@ -76,7 +76,6 @@ class DatabaseHelper {
       FOREIGN KEY (akunTujuanId) REFERENCES akun (id) ON DELETE SET NULL
     )
     ''');
-    // Baris FOREIGN KEY (labelId) REFERENCES label (id) ON DELETE SET NULL telah dihapus
 
     await db.execute('''
     CREATE TABLE utang_piutang (
@@ -101,8 +100,16 @@ class DatabaseHelper {
     )
     ''');
 
-    // PEMBUATAN INDEKS YANG DIREVISI
-    // Menghapus indeks transaksi(tipe) dan menambahkan transaksi(labelId)
+    // TABEL BARU METADATA PEMBUKUAN
+    await db.execute('''
+    CREATE TABLE pembukuan (
+      id $idType,
+      tahun $intType,
+      bulan $intType,
+      isTerkunci INTEGER DEFAULT 0
+    )
+    ''');
+
     await db.execute('CREATE INDEX idx_transaksi_waktu ON transaksi(waktu)');
     await db.execute(
       'CREATE INDEX idx_transaksi_akun_sumber ON transaksi(akunSumberId)',
@@ -112,7 +119,6 @@ class DatabaseHelper {
     );
     await db.execute('CREATE INDEX idx_transaksi_label ON transaksi(labelId)');
 
-    // Menghapus indeks utang_piutang(isLunas)
     await db.execute('CREATE INDEX idx_up_waktu ON utang_piutang(waktu)');
     await db.execute('CREATE INDEX idx_up_akun ON utang_piutang(akunId)');
   }
@@ -131,6 +137,7 @@ class DatabaseHelper {
       await txn.delete('utang_piutang');
       await txn.delete('akun');
       await txn.delete('label');
+      await txn.delete('pembukuan'); // Hapus juga data dari tabel pembukuan
     });
   }
 }

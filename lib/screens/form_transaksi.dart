@@ -7,6 +7,7 @@ import '../controllers/transaksi_controller.dart';
 import '../models/transaksi_model.dart';
 import '../utils/currency_formatter.dart';
 import '../utils/currency_format.dart';
+import '../controllers/pembukuan_controller.dart';
 import 'kelola_akun_screen.dart';
 import 'kelola_label_screen.dart';
 
@@ -293,7 +294,29 @@ class _FormTransaksiScreenState extends ConsumerState<FormTransaksiScreen> {
                 firstDate: DateTime(2000),
                 lastDate: DateTime(2100),
               );
-              if (date != null) setState(() => _selectedDate = date);
+
+              if (date != null) {
+                final pList = ref.read(pembukuanControllerProvider).value ?? [];
+                final isTerkunci = pList.any(
+                  (p) =>
+                      p.tahun == date.year &&
+                      p.bulan == date.month &&
+                      p.isTerkunci,
+                );
+
+                if (isTerkunci) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Peringatan: Bulan pada tanggal ini sudah dibukukan/dikunci.',
+                        ),
+                      ),
+                    );
+                  }
+                }
+                setState(() => _selectedDate = date);
+              }
             },
           ),
           const SizedBox(height: 12),
@@ -327,6 +350,26 @@ class _FormTransaksiScreenState extends ConsumerState<FormTransaksiScreen> {
   }
 
   void _simpanTransaksi() {
+    // Validasi Metadata Pembukuan sebelum melangkah lebih jauh
+    final pList = ref.read(pembukuanControllerProvider).value ?? [];
+    final isTerkunci = pList.any(
+      (p) =>
+          p.tahun == _selectedDate.year &&
+          p.bulan == _selectedDate.month &&
+          p.isTerkunci,
+    );
+
+    if (isTerkunci) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Simpan ditolak! Tanggal transaksi berada pada bulan yang telah dibukukan. Buka kunci bulan di Pengaturan terlebih dahulu.',
+          ),
+        ),
+      );
+      return;
+    }
+
     if (_nominalController.text.isEmpty ||
         (_selectedAkunSumberId == null &&
             widget.tipeTransaksi != TipeTransaksi.pemasukan) ||
@@ -355,6 +398,7 @@ class _FormTransaksiScreenState extends ConsumerState<FormTransaksiScreen> {
 
     final catatanFormatted = _autoFormatText(_catatanController.text);
 
+    // HAPUS param isDibukukan, hanya passing yang didukung model saat ini
     final transaksi = TransaksiModel(
       id:
           widget.dataEdit?.id ??

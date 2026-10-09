@@ -6,6 +6,7 @@ import '../models/transaksi_model.dart';
 import '../models/akun_model.dart';
 import '../models/label_model.dart';
 import '../models/utang_piutang_model.dart';
+import '../models/pembukuan_model.dart';
 
 final databaseRepositoryProvider = Provider<DatabaseRepository>((ref) {
   return DatabaseRepository();
@@ -53,7 +54,6 @@ class DatabaseRepository {
       return TransaksiModel(
         id: maps[i]['id'],
         tipe: TipeTransaksi.values.byName(maps[i]['tipe']),
-        // Casting aman dari INTEGER SQLite kembali ke double Dart
         nominal: (maps[i]['nominal'] as num).toDouble(),
         biayaTambahan: maps[i]['biayaTambahan'] != null
             ? (maps[i]['biayaTambahan'] as num).toDouble()
@@ -62,7 +62,6 @@ class DatabaseRepository {
         akunSumberId: maps[i]['akunSumberId'],
         akunTujuanId: maps[i]['akunTujuanId'],
         labelId: maps[i]['labelId'],
-        // Parsing kembali dari Epoch ke DateTime
         waktu: DateTime.fromMillisecondsSinceEpoch(maps[i]['waktu'] as int),
         catatan: maps[i]['catatan'],
       );
@@ -100,6 +99,37 @@ class DatabaseRepository {
   Future<int> deleteTransaksi(String id) async {
     final db = await _dbHelper.database;
     return await db.delete('transaksi', where: 'id = ?', whereArgs: [id]);
+  }
+
+  // ==============================
+  // CRUD PEMBUKUAN (TUTUP BUKU)
+  // ==============================
+
+  Future<int> insertPembukuan(PembukuanModel data) async {
+    final db = await _dbHelper.database;
+    return await db.insert('pembukuan', data.toMap());
+  }
+
+  Future<List<PembukuanModel>> getSemuaPembukuan() async {
+    final db = await _dbHelper.database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'pembukuan',
+      orderBy: 'tahun DESC, bulan DESC',
+    );
+
+    return List.generate(maps.length, (i) {
+      return PembukuanModel.fromMap(maps[i]);
+    });
+  }
+
+  Future<int> updatePembukuan(PembukuanModel data) async {
+    final db = await _dbHelper.database;
+    return await db.update(
+      'pembukuan',
+      data.toMap(),
+      where: 'id = ?',
+      whereArgs: [data.id],
+    );
   }
 
   // ==============================
