@@ -26,20 +26,56 @@ class _FormUtangPiutangScreenState
   final _catatanController = TextEditingController();
 
   String? _selectedAkunId;
-  DateTime _waktu = DateTime.now();
-  DateTime _tenggatWaktu = DateTime.now().add(const Duration(days: 30));
+  late DateTime _waktu;
+  late DateTime _tenggatWaktu;
+
+  // Hapus keyword 'final' agar variabel bisa diatur ulang dengan aman jika diperlukan,
+  // atau cukup atur logika inisialisasinya agar hanya berjalan satu arah.
+  late DateTime _initialWaktu;
+  late DateTime _initialTenggatWaktu;
 
   @override
   void initState() {
     super.initState();
+
     if (widget.dataEdit != null) {
+      // Logika saat mode Edit
       final d = widget.dataEdit!;
       _nominalController.text = widget.dataEdit!.nominal.toRibuan();
       _pihakController.text = d.pihakTerkait;
       _catatanController.text = d.catatan;
       _selectedAkunId = d.akunId;
+
       _waktu = d.waktu;
       _tenggatWaktu = d.tenggatWaktu;
+      _initialWaktu = d.waktu;
+      _initialTenggatWaktu = d.tenggatWaktu;
+    } else {
+      // Logika saat mode Tambah Baru
+      final now = DateTime.now();
+      _waktu = now;
+      _tenggatWaktu = now.add(const Duration(days: 30));
+      _initialWaktu = now;
+      _initialTenggatWaktu = now.add(const Duration(days: 30));
+    }
+  }
+
+  bool _hasChanges() {
+    if (widget.dataEdit == null) {
+      return _nominalController.text.isNotEmpty ||
+          _pihakController.text.isNotEmpty ||
+          _catatanController.text.isNotEmpty ||
+          _selectedAkunId != null ||
+          _waktu != _initialWaktu ||
+          _tenggatWaktu != _initialTenggatWaktu;
+    } else {
+      final d = widget.dataEdit!;
+      return _nominalController.text != d.nominal.toRibuan() ||
+          _pihakController.text != d.pihakTerkait ||
+          _catatanController.text != d.catatan ||
+          _selectedAkunId != d.akunId ||
+          _waktu != d.waktu ||
+          _tenggatWaktu != d.tenggatWaktu;
     }
   }
 
@@ -48,127 +84,181 @@ class _FormUtangPiutangScreenState
     final akunState = ref.watch(akunControllerProvider);
 
     final isUtang = widget.tipe == TipeUtangPiutang.utang;
-
-    return Scaffold(
-      appBar: AppBar(title: Text(isUtang ? 'Tambah Utang' : 'Tambah Piutang')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          TextField(
-            controller: _nominalController,
-            keyboardType: TextInputType.number,
-            inputFormatters: [CurrencyFormatter()],
-            maxLength: 11,
-            decoration: const InputDecoration(
-              labelText: 'Nominal (Rp)',
-              prefixText: 'Rp ',
-              counterText: '',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _pihakController,
-            maxLength: 30,
-            decoration: InputDecoration(
-              labelText: isUtang ? 'Pihak Pemberi Dana' : 'Pihak Penerima Dana',
-              counterText: '',
-              border: const OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 16),
-          akunState.maybeWhen(
-            data: (akunList) => DropdownButtonFormField<String>(
-              initialValue: _selectedAkunId,
-              decoration: InputDecoration(
-                labelText: isUtang
-                    ? 'Akun untuk Menerima'
-                    : 'Akun untuk Memberi',
-                border: const OutlineInputBorder(),
-              ),
-              items: [
-                ...akunList
-                    .where((a) => !a.isDibekukan || a.id == _selectedAkunId)
-                    .map(
-                      (a) => DropdownMenuItem(value: a.id, child: Text(a.nama)),
-                    ),
-                const DropdownMenuItem(
-                  value: 'add_new',
-                  child: Text(
-                    '+ Tambahkan akun',
-                    style: TextStyle(
-                      color: Colors.blue,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        if (_hasChanges()) {
+          final confirm = await showDialog<bool>(
+            context: context,
+            builder: (dialogContext) => AlertDialog(
+              title: const Text('Batalkan perubahan?'),
+              content: const Text('Data yang sudah diisi tidak akan disimpan.'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext, false),
+                  child: const Text('Tidak'),
+                ),
+                FilledButton(
+                  style: FilledButton.styleFrom(backgroundColor: Colors.red),
+                  onPressed: () => Navigator.pop(dialogContext, true),
+                  child: const Text('Ya, Batalkan'),
                 ),
               ],
-              onChanged: (val) {
-                if (val == 'add_new') {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const KelolaAkunScreen()),
-                  );
-                  return;
-                }
+            ),
+          );
+          if (confirm == true && context.mounted) {
+            Navigator.pop(context);
+          }
+        } else {
+          Navigator.pop(context);
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(isUtang ? 'Tambah Utang' : 'Tambah Piutang'),
+        ),
+        body: SafeArea(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 600),
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  TextField(
+                    controller: _nominalController,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [CurrencyFormatter()],
+                    maxLength: 11,
+                    decoration: const InputDecoration(
+                      labelText: 'Nominal (Rp)',
+                      prefixText: 'Rp ',
+                      counterText: '',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _pihakController,
+                    maxLength: 30,
+                    decoration: InputDecoration(
+                      labelText: isUtang
+                          ? 'Pihak Pemberi Dana'
+                          : 'Pihak Penerima Dana',
+                      counterText: '',
+                      border: const OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  akunState.maybeWhen(
+                    data: (akunList) => DropdownButtonFormField<String>(
+                      initialValue: _selectedAkunId,
+                      decoration: InputDecoration(
+                        labelText: isUtang
+                            ? 'Akun untuk Menerima'
+                            : 'Akun untuk Memberi',
+                        border: const OutlineInputBorder(),
+                      ),
+                      items: [
+                        ...akunList
+                            .where(
+                              (a) => !a.isDibekukan || a.id == _selectedAkunId,
+                            )
+                            .map(
+                              (a) => DropdownMenuItem(
+                                value: a.id,
+                                child: Text(a.nama),
+                              ),
+                            ),
+                        const DropdownMenuItem(
+                          value: 'add_new',
+                          child: Text(
+                            '+ Tambahkan akun',
+                            style: TextStyle(
+                              color: Colors.blue,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                      onChanged: (val) {
+                        if (val == 'add_new') {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const KelolaAkunScreen(),
+                            ),
+                          );
+                          return;
+                        }
 
-                setState(() => _selectedAkunId = val);
-              },
+                        setState(() => _selectedAkunId = val);
+                      },
+                    ),
+                    orElse: () =>
+                        const Center(child: CircularProgressIndicator()),
+                  ),
+                  const SizedBox(height: 16),
+                  ListTile(
+                    title: const Text('Tanggal & Waktu'),
+                    subtitle: Text(
+                      '${_waktu.day}/${_waktu.month}/${_waktu.year}',
+                    ),
+                    trailing: const Icon(Icons.calendar_today),
+                    shape: RoundedRectangleBorder(
+                      side: const BorderSide(color: Colors.grey),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    onTap: () async {
+                      final date = await showDatePicker(
+                        context: context,
+                        initialDate: _waktu,
+                        firstDate: DateTime(2000),
+                        lastDate: DateTime(2100),
+                      );
+                      if (date != null) setState(() => _waktu = date);
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  ListTile(
+                    title: const Text('Tenggat Waktu'),
+                    subtitle: Text(
+                      '${_tenggatWaktu.day}/${_tenggatWaktu.month}/${_tenggatWaktu.year}',
+                    ),
+                    trailing: const Icon(Icons.event_busy),
+                    shape: RoundedRectangleBorder(
+                      side: const BorderSide(color: Colors.grey),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    onTap: () async {
+                      final date = await showDatePicker(
+                        context: context,
+                        initialDate: _tenggatWaktu,
+                        firstDate: DateTime(2000),
+                        lastDate: DateTime(2100),
+                      );
+                      if (date != null) setState(() => _tenggatWaktu = date);
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _catatanController,
+                    maxLength: 64,
+                    decoration: const InputDecoration(
+                      labelText: 'Catatan / Deskripsi',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  FilledButton(
+                    onPressed: _simpanData,
+                    child: const Text('Simpan'),
+                  ),
+                ],
+              ),
             ),
-            orElse: () => const Center(child: CircularProgressIndicator()),
           ),
-          const SizedBox(height: 16),
-          ListTile(
-            title: const Text('Tanggal & Waktu'),
-            subtitle: Text('${_waktu.day}/${_waktu.month}/${_waktu.year}'),
-            trailing: const Icon(Icons.calendar_today),
-            shape: RoundedRectangleBorder(
-              side: const BorderSide(color: Colors.grey),
-              borderRadius: BorderRadius.circular(4),
-            ),
-            onTap: () async {
-              final date = await showDatePicker(
-                context: context,
-                initialDate: _waktu,
-                firstDate: DateTime(2000),
-                lastDate: DateTime(2100),
-              );
-              if (date != null) setState(() => _waktu = date);
-            },
-          ),
-          const SizedBox(height: 12),
-          ListTile(
-            title: const Text('Tenggat Waktu'),
-            subtitle: Text(
-              '${_tenggatWaktu.day}/${_tenggatWaktu.month}/${_tenggatWaktu.year}',
-            ),
-            trailing: const Icon(Icons.event_busy),
-            shape: RoundedRectangleBorder(
-              side: const BorderSide(color: Colors.grey),
-              borderRadius: BorderRadius.circular(4),
-            ),
-            onTap: () async {
-              final date = await showDatePicker(
-                context: context,
-                initialDate: _tenggatWaktu,
-                firstDate: DateTime(2000),
-                lastDate: DateTime(2100),
-              );
-              if (date != null) setState(() => _tenggatWaktu = date);
-            },
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _catatanController,
-            maxLength: 64,
-            decoration: const InputDecoration(
-              labelText: 'Catatan / Deskripsi',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 24),
-          FilledButton(onPressed: _simpanData, child: const Text('Simpan')),
-        ],
+        ),
       ),
     );
   }

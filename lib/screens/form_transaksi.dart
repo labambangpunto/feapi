@@ -60,6 +60,29 @@ class _FormTransaksiScreenState extends ConsumerState<FormTransaksiScreen> {
     }
   }
 
+  bool _hasChanges() {
+    if (widget.dataEdit == null) {
+      return _nominalController.text.isNotEmpty ||
+          _biayaTambahanController.text.isNotEmpty ||
+          _kuantitasController.text != '1' ||
+          _catatanController.text.isNotEmpty ||
+          _selectedAkunSumberId != null ||
+          _selectedAkunTujuanId != null ||
+          _selectedLabelIds.isNotEmpty;
+    } else {
+      final d = widget.dataEdit!;
+      return _nominalController.text != d.nominal.toRibuan() ||
+          _biayaTambahanController.text !=
+              (d.biayaTambahan?.toRibuan() ?? '') ||
+          _kuantitasController.text != d.kuantitas.toString() ||
+          _catatanController.text != d.catatan ||
+          _selectedAkunSumberId != d.akunSumberId ||
+          _selectedAkunTujuanId != d.akunTujuanId ||
+          _selectedLabelIds.join(',') != (d.labelId ?? '') ||
+          _selectedDate != d.waktu;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final akunState = ref.watch(akunControllerProvider);
@@ -73,267 +96,313 @@ class _FormTransaksiScreenState extends ConsumerState<FormTransaksiScreen> {
         ? 'Form Pengeluaran'
         : (isPemasukan ? 'Form Pemasukan' : 'Form Transfer');
 
-    return Scaffold(
-      appBar: AppBar(title: Text(title)),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          TextField(
-            controller: _nominalController,
-            keyboardType: TextInputType.number,
-            inputFormatters: [CurrencyFormatter()],
-            maxLength: 11,
-            decoration: const InputDecoration(
-              labelText: 'Nominal (Rp)',
-              prefixText: 'Rp ',
-              counterText: '',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          if (isPengeluaran || isTransfer) ...[
-            const SizedBox(height: 12),
-            TextField(
-              controller: _biayaTambahanController,
-              keyboardType: TextInputType.number,
-              inputFormatters: [CurrencyFormatter()],
-              maxLength: 11,
-              decoration: const InputDecoration(
-                labelText: 'Biaya Tambahan (Opsional)',
-                prefixText: 'Rp ',
-                counterText: '',
-                border: OutlineInputBorder(),
-              ),
-            ),
-          ],
-          if (isPengeluaran) ...[
-            const SizedBox(height: 12),
-            TextField(
-              controller: _kuantitasController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Kuantitas (Qty)',
-                border: OutlineInputBorder(),
-              ),
-            ),
-          ],
-          const SizedBox(height: 16),
-          akunState.maybeWhen(
-            data: (akunList) => Column(
-              children: [
-                if (isPengeluaran || isTransfer)
-                  DropdownButtonFormField<String>(
-                    initialValue: _selectedAkunSumberId,
-                    decoration: const InputDecoration(
-                      labelText: 'Akun Sumber',
-                      border: OutlineInputBorder(),
-                    ),
-                    items: [
-                      ...akunList
-                          .where(
-                            (a) =>
-                                !a.isDibekukan || a.id == _selectedAkunSumberId,
-                          )
-                          .map(
-                            (a) => DropdownMenuItem(
-                              value: a.id,
-                              child: Text(a.nama),
-                            ),
-                          ),
-                      const DropdownMenuItem(
-                        value: 'add_new',
-                        child: Text(
-                          '+ Tambahkan akun',
-                          style: TextStyle(
-                            color: Colors.blue,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
-                    onChanged: (val) {
-                      if (val == 'add_new') {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const KelolaAkunScreen(),
-                          ),
-                        );
-                        return;
-                      }
-
-                      setState(() {
-                        _selectedAkunSumberId = val;
-                        if (widget.tipeTransaksi == TipeTransaksi.transfer &&
-                            _selectedAkunTujuanId == val) {
-                          _selectedAkunTujuanId = null;
-                        }
-                      });
-                    },
-                  ),
-                if (isTransfer) const SizedBox(height: 16),
-                if (isPemasukan || isTransfer)
-                  DropdownButtonFormField<String>(
-                    initialValue: _selectedAkunTujuanId,
-                    decoration: const InputDecoration(
-                      labelText: 'Akun Tujuan',
-                      border: OutlineInputBorder(),
-                    ),
-                    items: [
-                      ...akunList
-                          .where(
-                            (a) =>
-                                !a.isDibekukan || a.id == _selectedAkunTujuanId,
-                          )
-                          .map(
-                            (a) => DropdownMenuItem(
-                              value: a.id,
-                              child: Text(a.nama),
-                            ),
-                          ),
-                      const DropdownMenuItem(
-                        value: 'add_new',
-                        child: Text(
-                          '+ Tambahkan akun',
-                          style: TextStyle(
-                            color: Colors.blue,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
-                    onChanged: (val) {
-                      if (val == 'add_new') {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const KelolaAkunScreen(),
-                          ),
-                        );
-                        return;
-                      }
-
-                      setState(() {
-                        _selectedAkunTujuanId = val;
-                        if (widget.tipeTransaksi == TipeTransaksi.transfer &&
-                            _selectedAkunSumberId == val) {
-                          _selectedAkunSumberId = null;
-                        }
-                      });
-                    },
-                  ),
-              ],
-            ),
-            orElse: () => const CircularProgressIndicator(),
-          ),
-          const SizedBox(height: 16),
-          labelState.maybeWhen(
-            data: (labelList) => Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                ...labelList
-                    .where(
-                      (l) => !l.isDibekukan || _selectedLabelIds.contains(l.id),
-                    )
-                    .map(
-                      (l) => FilterChip(
-                        label: Text(l.nama),
-                        selected: _selectedLabelIds.contains(l.id),
-                        onSelected: (selected) {
-                          setState(() {
-                            if (selected) {
-                              if (_selectedLabelIds.length >= 10) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      'Maksimal hanya 10 label yang dapat digunakan.',
-                                    ),
-                                  ),
-                                );
-                              } else {
-                                _selectedLabelIds.add(l.id);
-                              }
-                            } else {
-                              _selectedLabelIds.remove(l.id);
-                            }
-                          });
-                        },
-                      ),
-                    ),
-                ActionChip(
-                  label: const Text('Tambah'),
-                  avatar: const Icon(Icons.add, size: 16),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const KelolaLabelScreen(),
-                      ),
-                    );
-                  },
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        if (_hasChanges()) {
+          final confirm = await showDialog<bool>(
+            context: context,
+            builder: (dialogContext) => AlertDialog(
+              title: const Text('Batalkan perubahan?'),
+              content: const Text('Data yang sudah diisi tidak akan disimpan.'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext, false),
+                  child: const Text('Tidak'),
+                ),
+                FilledButton(
+                  style: FilledButton.styleFrom(backgroundColor: Colors.red),
+                  onPressed: () => Navigator.pop(dialogContext, true),
+                  child: const Text('Ya, Batalkan'),
                 ),
               ],
             ),
-            orElse: () => const CircularProgressIndicator(),
-          ),
-          const SizedBox(height: 16),
-          ListTile(
-            title: const Text('Tanggal & Waktu'),
-            subtitle: Text(
-              '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
-            ),
-            trailing: const Icon(Icons.calendar_today),
-            shape: RoundedRectangleBorder(
-              side: const BorderSide(color: Colors.grey),
-              borderRadius: BorderRadius.circular(4),
-            ),
-            onTap: () async {
-              final date = await showDatePicker(
-                context: context,
-                initialDate: _selectedDate,
-                firstDate: DateTime(2000),
-                lastDate: DateTime(2100),
-              );
-
-              if (date != null) {
-                final pList = ref.read(pembukuanControllerProvider).value ?? [];
-                final isTerkunci = pList.any(
-                  (p) =>
-                      p.tahun == date.year &&
-                      p.bulan == date.month &&
-                      p.isTerkunci,
-                );
-
-                if (isTerkunci) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          'Peringatan: Bulan pada tanggal ini sudah dibukukan/dikunci.',
-                        ),
+          );
+          if (confirm == true && context.mounted) {
+            Navigator.pop(context);
+          }
+        } else {
+          Navigator.pop(context);
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(title: Text(title)),
+        body: SafeArea(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 600),
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  TextField(
+                    controller: _nominalController,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [CurrencyFormatter()],
+                    maxLength: 11,
+                    decoration: const InputDecoration(
+                      labelText: 'Nominal (Rp)',
+                      prefixText: 'Rp ',
+                      counterText: '',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  if (isPengeluaran || isTransfer) ...[
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _biayaTambahanController,
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [CurrencyFormatter()],
+                      maxLength: 11,
+                      decoration: const InputDecoration(
+                        labelText: 'Biaya Tambahan (Opsional)',
+                        prefixText: 'Rp ',
+                        counterText: '',
+                        border: OutlineInputBorder(),
                       ),
-                    );
-                  }
-                }
-                setState(() => _selectedDate = date);
-              }
-            },
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _catatanController,
-            maxLength: 64,
-            decoration: const InputDecoration(
-              labelText: 'Catatan / Deskripsi',
-              border: OutlineInputBorder(),
+                    ),
+                  ],
+                  if (isPengeluaran) ...[
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _kuantitasController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: 'Kuantitas (Qty)',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 16),
+                  akunState.maybeWhen(
+                    data: (akunList) => Column(
+                      children: [
+                        if (isPengeluaran || isTransfer)
+                          DropdownButtonFormField<String>(
+                            initialValue: _selectedAkunSumberId,
+                            decoration: const InputDecoration(
+                              labelText: 'Akun Sumber',
+                              border: OutlineInputBorder(),
+                            ),
+                            items: [
+                              ...akunList
+                                  .where(
+                                    (a) =>
+                                        !a.isDibekukan ||
+                                        a.id == _selectedAkunSumberId,
+                                  )
+                                  .map(
+                                    (a) => DropdownMenuItem(
+                                      value: a.id,
+                                      child: Text(a.nama),
+                                    ),
+                                  ),
+                              const DropdownMenuItem(
+                                value: 'add_new',
+                                child: Text(
+                                  '+ Tambahkan akun',
+                                  style: TextStyle(
+                                    color: Colors.blue,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                            onChanged: (val) {
+                              if (val == 'add_new') {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const KelolaAkunScreen(),
+                                  ),
+                                );
+                                return;
+                              }
+
+                              setState(() {
+                                _selectedAkunSumberId = val;
+                                if (widget.tipeTransaksi ==
+                                        TipeTransaksi.transfer &&
+                                    _selectedAkunTujuanId == val) {
+                                  _selectedAkunTujuanId = null;
+                                }
+                              });
+                            },
+                          ),
+                        if (isTransfer) const SizedBox(height: 16),
+                        if (isPemasukan || isTransfer)
+                          DropdownButtonFormField<String>(
+                            initialValue: _selectedAkunTujuanId,
+                            decoration: const InputDecoration(
+                              labelText: 'Akun Tujuan',
+                              border: OutlineInputBorder(),
+                            ),
+                            items: [
+                              ...akunList
+                                  .where(
+                                    (a) =>
+                                        !a.isDibekukan ||
+                                        a.id == _selectedAkunTujuanId,
+                                  )
+                                  .map(
+                                    (a) => DropdownMenuItem(
+                                      value: a.id,
+                                      child: Text(a.nama),
+                                    ),
+                                  ),
+                              const DropdownMenuItem(
+                                value: 'add_new',
+                                child: Text(
+                                  '+ Tambahkan akun',
+                                  style: TextStyle(
+                                    color: Colors.blue,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                            onChanged: (val) {
+                              if (val == 'add_new') {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const KelolaAkunScreen(),
+                                  ),
+                                );
+                                return;
+                              }
+
+                              setState(() {
+                                _selectedAkunTujuanId = val;
+                                if (widget.tipeTransaksi ==
+                                        TipeTransaksi.transfer &&
+                                    _selectedAkunSumberId == val) {
+                                  _selectedAkunSumberId = null;
+                                }
+                              });
+                            },
+                          ),
+                      ],
+                    ),
+                    orElse: () => const CircularProgressIndicator(),
+                  ),
+                  const SizedBox(height: 16),
+                  labelState.maybeWhen(
+                    data: (labelList) => Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        ...labelList
+                            .where(
+                              (l) =>
+                                  !l.isDibekukan ||
+                                  _selectedLabelIds.contains(l.id),
+                            )
+                            .map(
+                              (l) => FilterChip(
+                                label: Text(l.nama),
+                                selected: _selectedLabelIds.contains(l.id),
+                                onSelected: (selected) {
+                                  setState(() {
+                                    if (selected) {
+                                      if (_selectedLabelIds.length >= 10) {
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                              const SnackBar(
+                                                content: Text(
+                                                  'Maksimal hanya 10 label yang dapat digunakan.',
+                                                ),
+                                              ),
+                                            );
+                                      } else {
+                                        _selectedLabelIds.add(l.id);
+                                      }
+                                    } else {
+                                      _selectedLabelIds.remove(l.id);
+                                    }
+                                  });
+                                },
+                              ),
+                            ),
+                        ActionChip(
+                          label: const Text('Tambah'),
+                          avatar: const Icon(Icons.add, size: 16),
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const KelolaLabelScreen(),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                    orElse: () => const CircularProgressIndicator(),
+                  ),
+                  const SizedBox(height: 16),
+                  ListTile(
+                    title: const Text('Tanggal & Waktu'),
+                    subtitle: Text(
+                      '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
+                    ),
+                    trailing: const Icon(Icons.calendar_today),
+                    shape: RoundedRectangleBorder(
+                      side: const BorderSide(color: Colors.grey),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    onTap: () async {
+                      final date = await showDatePicker(
+                        context: context,
+                        initialDate: _selectedDate,
+                        firstDate: DateTime(2000),
+                        lastDate: DateTime(2100),
+                      );
+
+                      if (date != null) {
+                        final pList =
+                            ref.read(pembukuanControllerProvider).value ?? [];
+                        final isTerkunci = pList.any(
+                          (p) =>
+                              p.tahun == date.year &&
+                              p.bulan == date.month &&
+                              p.isTerkunci,
+                        );
+
+                        if (isTerkunci) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Peringatan: Bulan pada tanggal ini sudah dibukukan/dikunci.',
+                                ),
+                              ),
+                            );
+                          }
+                        }
+                        setState(() => _selectedDate = date);
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _catatanController,
+                    maxLength: 64,
+                    decoration: const InputDecoration(
+                      labelText: 'Catatan / Deskripsi',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  FilledButton(
+                    onPressed: _simpanTransaksi,
+                    child: const Text('Simpan'),
+                  ),
+                ],
+              ),
             ),
           ),
-          const SizedBox(height: 24),
-          FilledButton(
-            onPressed: _simpanTransaksi,
-            child: const Text('Simpan'),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -350,7 +419,6 @@ class _FormTransaksiScreenState extends ConsumerState<FormTransaksiScreen> {
   }
 
   void _simpanTransaksi() {
-    // Validasi Metadata Pembukuan sebelum melangkah lebih jauh
     final pList = ref.read(pembukuanControllerProvider).value ?? [];
     final isTerkunci = pList.any(
       (p) =>
@@ -398,7 +466,6 @@ class _FormTransaksiScreenState extends ConsumerState<FormTransaksiScreen> {
 
     final catatanFormatted = _autoFormatText(_catatanController.text);
 
-    // HAPUS param isDibukukan, hanya passing yang didukung model saat ini
     final transaksi = TransaksiModel(
       id:
           widget.dataEdit?.id ??

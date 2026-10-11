@@ -273,259 +273,236 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
                     ? const Center(
                         child: Text('Tidak ada transaksi yang cocok'),
                       )
-                    : ListView.builder(
-                        controller: _scrollController,
-                        itemCount:
-                            filteredList.length +
-                            (!_isFilterActive && !_showFullMonth ? 1 : 0),
-                        itemBuilder: (context, index) {
-                          if (index == filteredList.length) {
-                            return Padding(
-                              padding: const EdgeInsets.all(24.0),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  if (filteredList.isEmpty) ...[
-                                    const Icon(
-                                      Icons.receipt_long,
-                                      size: 48,
-                                      color: Colors.grey,
+                    : LayoutBuilder(
+                        builder: (context, constraints) {
+                          // Deteksi lebar layar untuk mengatur jumlah kolom grid
+                          final isDesktop = constraints.maxWidth > 600;
+                          final crossAxisCount = isDesktop ? 4 : 1;
+
+                          // Kelompokkan data per tanggal agar header tanggal dapat memisahkan setiap grup (full-width)
+                          final Map<String, List<TransaksiModel>>
+                          groupedTransactions = {};
+                          for (var t in filteredList) {
+                            final dateKey =
+                                '${t.waktu.year}-${t.waktu.month}-${t.waktu.day}';
+                            groupedTransactions
+                                .putIfAbsent(dateKey, () => [])
+                                .add(t);
+                          }
+
+                          return CustomScrollView(
+                            controller: _scrollController,
+                            slivers: [
+                              for (final entry
+                                  in groupedTransactions.entries) ...[
+                                // Header Tanggal (Full-Width)
+                                SliverToBoxAdapter(
+                                  child: Padding(
+                                    padding: const EdgeInsets.fromLTRB(
+                                      16,
+                                      16,
+                                      16,
+                                      4,
                                     ),
-                                    const SizedBox(height: 12),
-                                    const Text(
-                                      'Tidak ada transaksi di tanggal ini.',
-                                      style: TextStyle(color: Colors.grey),
-                                    ),
-                                    const SizedBox(height: 24),
-                                  ],
-                                  OutlinedButton(
-                                    onPressed: () =>
-                                        setState(() => _showFullMonth = true),
-                                    child: const Text('Transaksi Bulan Ini'),
-                                  ),
-                                ],
-                              ),
-                            );
-                          }
-
-                          final TransaksiModel t = filteredList[index];
-
-                          final double totalNominal =
-                              (t.nominal * t.kuantitas) +
-                              (t.biayaTambahan ?? 0);
-                          String namaSumber = getAkunName(t.akunSumberId);
-                          String namaTujuan = getAkunName(t.akunTujuanId);
-                          List<String> namaLabels = getLabelNames(t.labelId);
-
-                          IconData iconTipe;
-                          Color colorTipe;
-                          String textAkun;
-
-                          if (t.tipe == TipeTransaksi.pemasukan) {
-                            iconTipe = Icons.arrow_downward;
-                            colorTipe = Colors.green;
-                            textAkun = 'Ke $namaTujuan';
-                          } else if (t.tipe == TipeTransaksi.pengeluaran) {
-                            iconTipe = Icons.arrow_upward;
-                            colorTipe = Colors.red;
-                            textAkun = 'Dari $namaSumber';
-                          } else {
-                            iconTipe = Icons.swap_horiz;
-                            colorTipe = Colors.blue;
-                            textAkun = '$namaSumber ➔ $namaTujuan';
-                          }
-
-                          bool showHeader = false;
-                          if (index == 0) {
-                            showHeader = true;
-                          } else {
-                            final prevT = filteredList[index - 1];
-                            if (t.waktu.year != prevT.waktu.year ||
-                                t.waktu.month != prevT.waktu.month ||
-                                t.waktu.day != prevT.waktu.day) {
-                              showHeader = true;
-                            }
-                          }
-
-                          final bool isTerkunci = isBulanTerkunci(t.waktu);
-
-                          final cardWidget = Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 6,
-                            ),
-                            child: Card(
-                              elevation: 2,
-                              clipBehavior: Clip.antiAlias,
-                              // Gunakan isTerkunci alih-alih t.isDibukukan
-                              color: isTerkunci ? Colors.grey.shade100 : null,
-                              child: InkWell(
-                                onTap: () => _tampilSummaryTransaksi(
-                                  context,
-                                  t,
-                                  namaSumber,
-                                  namaTujuan,
-                                  namaLabels,
-                                ),
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 8,
-                                  ),
-                                  child: ListTile(
-                                    leading: CircleAvatar(
-                                      backgroundColor: colorTipe.withValues(
-                                        alpha: 0.15,
+                                    child: Text(
+                                      formatHeadingTanggal(
+                                        entry.value.first.waktu,
                                       ),
-                                      child: Icon(iconTipe, color: colorTipe),
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                        color: Colors.blueGrey.shade600,
+                                      ),
                                     ),
-                                    title: Row(
-                                      children: [
-                                        Text(
-                                          totalNominal.toIdr(),
-                                          style: TextStyle(
-                                            fontSize: 18,
-                                            color: isTerkunci
-                                                ? Colors.grey
-                                                : colorTipe,
-                                            fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                // Grid Transaksi per Tanggal
+                                SliverPadding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                  ),
+                                  sliver: SliverGrid(
+                                    gridDelegate:
+                                        SliverGridDelegateWithFixedCrossAxisCount(
+                                          crossAxisCount: crossAxisCount,
+                                          mainAxisExtent: 110, // Ketinggian tetap untuk card transaksi (mencegah overflow)
+                                          crossAxisSpacing: 4,
+                                          mainAxisSpacing: 4,
+                                        ),
+                                    delegate: SliverChildBuilderDelegate((
+                                      context,
+                                      index,
+                                    ) {
+                                      final t = entry.value[index];
+
+                                      final double totalNominal =
+                                          (t.nominal * t.kuantitas) +
+                                          (t.biayaTambahan ?? 0);
+                                      String namaSumber = getAkunName(
+                                        t.akunSumberId,
+                                      );
+                                      String namaTujuan = getAkunName(
+                                        t.akunTujuanId,
+                                      );
+                                      List<String> namaLabels = getLabelNames(
+                                        t.labelId,
+                                      );
+
+                                      IconData iconTipe;
+                                      Color colorTipe;
+                                      String textAkun;
+
+                                      if (t.tipe == TipeTransaksi.pemasukan) {
+                                        iconTipe = Icons.arrow_downward;
+                                        colorTipe = Colors.green;
+                                        textAkun = 'Ke $namaTujuan';
+                                      } else if (t.tipe ==
+                                          TipeTransaksi.pengeluaran) {
+                                        iconTipe = Icons.arrow_upward;
+                                        colorTipe = Colors.red;
+                                        textAkun = 'Dari $namaSumber';
+                                      } else {
+                                        iconTipe = Icons.swap_horiz;
+                                        colorTipe = Colors.blue;
+                                        textAkun = '$namaSumber ➔ $namaTujuan';
+                                      }
+
+                                      final bool isTerkunci = isBulanTerkunci(
+                                        t.waktu,
+                                      );
+
+                                      return Card(
+                                        elevation: 2,
+                                        clipBehavior: Clip.antiAlias,
+                                        color: isTerkunci
+                                            ? Colors.grey.shade100
+                                            : null,
+                                        child: InkWell(
+                                          onTap: () => _tampilSummaryTransaksi(
+                                            context,
+                                            t,
+                                            namaSumber,
+                                            namaTujuan,
+                                            namaLabels,
+                                            isTerkunci,
+                                          ),
+                                          child: Center(
+                                            // Ubah Padding menjadi Center
+                                            child: ListTile(
+                                              leading: CircleAvatar(
+                                                backgroundColor: colorTipe
+                                                    .withValues(alpha: 0.15),
+                                                child: Icon(
+                                                  iconTipe,
+                                                  color: colorTipe,
+                                                ),
+                                              ),
+                                              title: Row(
+                                                children: [
+                                                  Expanded(
+                                                    child: Text(
+                                                      totalNominal.toIdr(),
+                                                      style: TextStyle(
+                                                        fontSize: 16,
+                                                        color: isTerkunci
+                                                            ? Colors.grey
+                                                            : colorTipe,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                      ),
+                                                      maxLines: 1,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                    ),
+                                                  ),
+                                                  if (isTerkunci) ...[
+                                                    const SizedBox(width: 4),
+                                                    const Icon(
+                                                      Icons.lock,
+                                                      size: 16,
+                                                      color: Colors.grey,
+                                                    ),
+                                                  ],
+                                                ],
+                                              ),
+                                              subtitle: Padding(
+                                                padding: const EdgeInsets.only(
+                                                  top: 4,
+                                                ),
+                                                child: Column(
+                                                  mainAxisSize: MainAxisSize.min, // Tambahkan baris ini
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      t.catatan,
+                                                      style: const TextStyle(
+                                                        fontSize: 13,
+                                                        fontWeight:
+                                                            FontWeight.w500,
+                                                      ),
+                                                      maxLines: 1,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                    ),
+                                                    const SizedBox(height: 2),
+                                                    Text(
+                                                      textAkun,
+                                                      style: const TextStyle(
+                                                        fontSize: 11,
+                                                      ),
+                                                      maxLines: 1,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
                                           ),
                                         ),
-                                        // Indikator visual
-                                        if (isTerkunci) ...[
-                                          const SizedBox(width: 8),
+                                      );
+                                    }, childCount: entry.value.length),
+                                  ),
+                                ),
+                              ],
+                              // Footer / Pemuat Transaksi Bulan Ini
+                              if (!_isFilterActive && !_showFullMonth)
+                                SliverToBoxAdapter(
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(24.0),
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        if (filteredList.isEmpty) ...[
                                           const Icon(
-                                            Icons.lock,
-                                            size: 16,
+                                            Icons.receipt_long,
+                                            size: 48,
                                             color: Colors.grey,
                                           ),
+                                          const SizedBox(height: 12),
+                                          const Text(
+                                            'Tidak ada transaksi di tanggal ini.',
+                                            style: TextStyle(
+                                              color: Colors.grey,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 24),
                                         ],
+                                        OutlinedButton(
+                                          onPressed: () => setState(
+                                            () => _showFullMonth = true,
+                                          ),
+                                          child: const Text(
+                                            'Transaksi Bulan Ini',
+                                          ),
+                                        ),
                                       ],
                                     ),
-                                    subtitle: Padding(
-                                      padding: const EdgeInsets.only(top: 4),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            t.catatan,
-                                            style: const TextStyle(
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            textAkun,
-                                            style: const TextStyle(
-                                              fontSize: 12,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    trailing: isTerkunci
-                                        ? null // Jika terkunci, tidak ada menu titik tiga
-                                        : PopupMenuButton<String>(
-                                            icon: const Icon(Icons.more_vert),
-                                            onSelected: (value) async {
-                                              if (value == 'edit') {
-                                                Navigator.push(
-                                                  context,
-                                                  MaterialPageRoute(
-                                                    builder: (_) =>
-                                                        FormTransaksiScreen(
-                                                          tipeTransaksi: t.tipe,
-                                                          dataEdit: t,
-                                                        ),
-                                                  ),
-                                                );
-                                              } else if (value == 'hapus') {
-                                                showDialog<void>(
-                                                  context: context,
-                                                  builder: (_) => AlertDialog(
-                                                    title: const Text(
-                                                      'Konfirmasi Hapus',
-                                                    ),
-                                                    content: const Text(
-                                                      'Apakah Anda yakin ingin menghapus transaksi ini?',
-                                                    ),
-                                                    actions: [
-                                                      TextButton(
-                                                        onPressed: () =>
-                                                            Navigator.pop(
-                                                              context,
-                                                            ),
-                                                        child: const Text(
-                                                          'Batal',
-                                                        ),
-                                                      ),
-                                                      FilledButton(
-                                                        onPressed: () {
-                                                          ref
-                                                              .read(
-                                                                transaksiControllerProvider
-                                                                    .notifier,
-                                                              )
-                                                              .hapusTransaksi(
-                                                                t.id,
-                                                              );
-                                                          Navigator.pop(
-                                                            context,
-                                                          );
-                                                        },
-                                                        child: const Text(
-                                                          'Hapus',
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                );
-                                              }
-                                            },
-                                            itemBuilder: (context) => [
-                                              const PopupMenuItem(
-                                                value: 'edit',
-                                                child: Text('Edit'),
-                                              ),
-                                              const PopupMenuItem(
-                                                value: 'hapus',
-                                                child: Text('Hapus'),
-                                              ),
-                                            ],
-                                          ),
                                   ),
                                 ),
-                              ),
-                            ),
+                            ],
                           );
-
-                          if (showHeader) {
-                            return Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Padding(
-                                  padding: const EdgeInsets.fromLTRB(
-                                    16,
-                                    16,
-                                    16,
-                                    4,
-                                  ),
-                                  child: Text(
-                                    formatHeadingTanggal(t.waktu),
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 14,
-                                      color: Colors.blueGrey.shade600,
-                                    ),
-                                  ),
-                                ),
-                                cardWidget,
-                              ],
-                            );
-                          }
-
-                          return cardWidget;
                         },
                       ),
               ),
@@ -611,6 +588,7 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
     String namaSumber,
     String namaTujuan,
     List<String> namaLabels,
+    bool isTerkunci, // Parameter baru
   ) {
     final double totalNominal =
         (t.nominal * t.kuantitas) + (t.biayaTambahan ?? 0);
@@ -730,9 +708,59 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
           ),
         ),
         actions: [
-          TextButton(
+          // Sembunyikan tombol Edit & Hapus jika bulan terkunci
+          if (!isTerkunci)
+            FilledButton(
+              onPressed: () {
+                Navigator.pop(context); // Tutup dialog detail
+                showDialog<void>(
+                  context: context,
+                  builder: (_) => AlertDialog(
+                    title: const Text('Konfirmasi Hapus'),
+                    content: const Text(
+                      'Apakah Anda yakin ingin menghapus transaksi ini?',
+                    ),
+                    actions: [
+                      FilledButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('Batal'),
+                      ),
+                      FilledButton(
+                        onPressed: () {
+                          ref
+                              .read(transaksiControllerProvider.notifier)
+                              .hapusTransaksi(t.id);
+                          Navigator.pop(context);
+                        },
+                        child: const Text('Hapus'),
+                      ),
+                    ],
+                  ),
+                );
+              },
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color.fromARGB(255, 191, 71, 71),
+              ),
+              child: const Text('Hapus'),
+            ),
+          const SizedBox(height: 8),
+          FilledButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Tutup'),
+          ),
+          if (!isTerkunci) const SizedBox(height: 8),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(context); // Tutup dialog detail
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) =>
+                      FormTransaksiScreen(tipeTransaksi: t.tipe, dataEdit: t),
+                ),
+              );
+            },
+            child: const Text('Edit'),
           ),
         ],
       ),
@@ -877,7 +905,7 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
                 ),
               ),
               actions: [
-                TextButton(
+                FilledButton(
                   onPressed: () {
                     Navigator.pop(dialogContext);
                     setState(() {
