@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../controllers/pembukuan_controller.dart';
+import '../controllers/transaksi_controller.dart'; // TAMBAHKAN BARIS INI
 import '../models/pembukuan_model.dart';
 
 class PembukuanScreen extends ConsumerStatefulWidget {
@@ -12,7 +13,7 @@ class PembukuanScreen extends ConsumerStatefulWidget {
 }
 
 class _PembukuanScreenState extends ConsumerState<PembukuanScreen> {
-  int _selectedYear = DateTime.now().year;
+  int? _selectedYear; // Diubah menjadi nullable
 
   final List<String> _bulanList = [
     'Januari',
@@ -32,7 +33,31 @@ class _PembukuanScreenState extends ConsumerState<PembukuanScreen> {
   @override
   Widget build(BuildContext context) {
     final pembukuanState = ref.watch(pembukuanControllerProvider);
+    final transaksiState = ref.watch(transaksiControllerProvider);
     final now = DateTime.now();
+
+    final transaksiList = transaksiState.value ?? [];
+
+    // 1. Dapatkan daftar tahun unik yang memiliki transaksi
+    List<int> tahunDenganTransaksi = transaksiList
+        .map((t) => t.waktu.year)
+        .toSet()
+        .toList();
+
+    // Urutkan dari tahun terbaru ke terlama
+    tahunDenganTransaksi.sort((a, b) => b.compareTo(a));
+
+    // Jika belum ada transaksi sama sekali, tampilkan tahun saat ini sebagai fallback
+    if (tahunDenganTransaksi.isEmpty) {
+      tahunDenganTransaksi = [now.year];
+    }
+
+    // 2. Tentukan tahun yang sedang aktif
+    int activeYear = _selectedYear ?? tahunDenganTransaksi.first;
+    // Jika tahun yang di-select sebelumnya tiba-tiba tidak ada (misal transaksinya dihapus), reset ke tahun pertama
+    if (!tahunDenganTransaksi.contains(activeYear)) {
+      activeYear = tahunDenganTransaksi.first;
+    }
 
     return Scaffold(
       appBar: AppBar(title: const Text('Pembukuan Bulanan')),
@@ -48,14 +73,13 @@ class _PembukuanScreenState extends ConsumerState<PembukuanScreen> {
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 DropdownButton<int>(
-                  value: _selectedYear,
-                  items: List.generate(10, (index) {
-                    final year = now.year - 5 + index;
+                  value: activeYear, // Gunakan activeYear
+                  items: tahunDenganTransaksi.map((year) {
                     return DropdownMenuItem(
                       value: year,
                       child: Text(year.toString()),
                     );
-                  }),
+                  }).toList(),
                   onChanged: (val) {
                     if (val != null) {
                       setState(() => _selectedYear = val);
@@ -70,24 +94,67 @@ class _PembukuanScreenState extends ConsumerState<PembukuanScreen> {
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (err, stack) => Center(child: Text('Error: $err')),
               data: (pList) {
-                return ListView.builder(
-                  itemCount: 12,
-                  itemBuilder: (context, index) {
-                    final monthInt = index + 1;
+                // Gunakan activeYear untuk memfilter transaksi
+                final List<int> bulanDenganTransaksi = transaksiList
+                    .where((t) => t.waktu.year == activeYear)
+                    .map((t) => t.waktu.month)
+                    .toSet()
+                    .toList();
 
-                    // Pembukuan hanya diizinkan untuk bulan yang sudah terlewati
+                bulanDenganTransaksi.sort();
+
+                if (bulanDenganTransaksi.isEmpty) {
+                  return const Center(
+                    child: Text('Tidak ada transaksi di tahun ini.'),
+                  );
+                }
+
+                return ListView.builder(
+                  itemCount: bulanDenganTransaksi.length,
+                  itemBuilder: (context, index) {
+                    final monthInt = bulanDenganTransaksi[index];
+
+                    // Gunakan activeYear untuk evaluasi logika waktu
                     final isFutureOrCurrent =
-                        (_selectedYear > now.year) ||
-                        (_selectedYear == now.year && monthInt >= now.month);
+                        (activeYear > now.year) ||
+                        (activeYear == now.year && monthInt >= now.month);
 
                     PembukuanModel? currentPembukuan;
                     try {
                       currentPembukuan = pList.firstWhere(
-                        (p) => p.tahun == _selectedYear && p.bulan == monthInt,
+                        (p) => p.tahun == activeYear && p.bulan == monthInt,
                       );
                     } catch (_) {}
 
                     final isTerkunci = currentPembukuan?.isTerkunci ?? false;
+
+                    Widget trailingWidget;
+                    if (isFutureOrCurrent) {
+                      trailingWidget = const Tooltip(
+                        message: 'Bulan aktif/masa depan belum bisa ditutup',
+                        child: Icon(Icons.help_outline, color: Colors.grey),
+                      );
+                    } else {
+                      trailingWidget = ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: isTerkunci
+                              ? Colors.orange
+                              : Colors.blue,
+                        ),
+                        onPressed: () => _prosesUbahStatus(
+                          context,
+                          ref,
+                          monthInt,
+                          currentPembukuan,
+                          isTerkunci,
+                          activeYear, // Kirim activeYear sebagai param agar fungsi simpan tahu tahun berapa
+                        ),
+                        child: Text(
+                          isTerkunci ? 'Buka Kunci' : 'Tutup Buku',
+                          style: const TextStyle(color: Colors.white),
+                        ),
+                      );
+                    }
 
                     return Card(
                       margin: const EdgeInsets.symmetric(
@@ -99,39 +166,13 @@ class _PembukuanScreenState extends ConsumerState<PembukuanScreen> {
                           isTerkunci ? Icons.lock : Icons.lock_open,
                           color: isTerkunci ? Colors.red : Colors.green,
                         ),
-                        title: Text('${_bulanList[index]} $_selectedYear'),
+                        title: Text('${_bulanList[monthInt - 1]} $activeYear'),
                         subtitle: Text(
                           isTerkunci
                               ? 'Sudah Dibukukan (Terkunci)'
                               : 'Belum Dibukukan (Terbuka)',
                         ),
-                        trailing: isFutureOrCurrent
-                            ? const Tooltip(
-                                message:
-                                    'Bulan aktif/masa depan belum bisa ditutup',
-                                child: Icon(
-                                  Icons.help_outline,
-                                  color: Colors.grey,
-                                ),
-                              )
-                            : ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: isTerkunci
-                                      ? Colors.orange
-                                      : Colors.blue,
-                                ),
-                                onPressed: () => _prosesUbahStatus(
-                                  context,
-                                  ref,
-                                  monthInt,
-                                  currentPembukuan,
-                                  isTerkunci,
-                                ),
-                                child: Text(
-                                  isTerkunci ? 'Buka Kunci' : 'Tutup Buku',
-                                  style: const TextStyle(color: Colors.white),
-                                ),
-                              ),
+                        trailing: trailingWidget,
                       ),
                     );
                   },
@@ -150,6 +191,7 @@ class _PembukuanScreenState extends ConsumerState<PembukuanScreen> {
     int monthInt,
     PembukuanModel? existingData,
     bool isTerkunci,
+    int activeYear, // Tambahan parameter baru
   ) async {
     final textValidasi = isTerkunci ? 'BUKA' : 'KUNCI';
     bool isChecked = false;
@@ -218,7 +260,7 @@ class _PembukuanScreenState extends ConsumerState<PembukuanScreen> {
       } else {
         final newData = PembukuanModel(
           id: DateTime.now().millisecondsSinceEpoch.toString(),
-          tahun: _selectedYear,
+          tahun: activeYear, // Gunakan activeYear alih-alih _selectedYear
           bulan: monthInt,
           isTerkunci: true,
         );
