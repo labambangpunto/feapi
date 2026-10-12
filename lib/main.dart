@@ -4,13 +4,17 @@ import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:flutter/foundation.dart';
+import 'package:path/path.dart';
 
 import 'screens/main_screen.dart';
 import 'controllers/theme_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
+  // Ubah CWD ke direktori binary berada
+  if (Platform.isLinux || Platform.isWindows) {
+    Directory.current = dirname(Platform.resolvedExecutable);
+  }
   // Inisialisasi FFI untuk platform desktop (Windows/Linux)
   if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
     sqfliteFfiInit();
