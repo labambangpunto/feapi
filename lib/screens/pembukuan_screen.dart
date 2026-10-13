@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../controllers/pembukuan_controller.dart';
 import '../controllers/transaksi_controller.dart'; // TAMBAHKAN BARIS INI
 import '../models/pembukuan_model.dart';
+import '../utils/currency_format.dart';
+import '../models/transaksi_model.dart';
 
 class PembukuanScreen extends ConsumerStatefulWidget {
   const PembukuanScreen({super.key});
@@ -128,6 +130,25 @@ class _PembukuanScreenState extends ConsumerState<PembukuanScreen> {
 
                     final isTerkunci = currentPembukuan?.isTerkunci ?? false;
 
+                    // 1. Hitung total transaksi (jumlah data, pemasukan, pengeluaran) untuk bulan ini
+                    double totalPemasukan = 0;
+                    double totalPengeluaran = 0;
+                    int jumlahTransaksi = 0;
+
+                    for (var t in transaksiList) {
+                      if (t.waktu.year == activeYear &&
+                          t.waktu.month == monthInt) {
+                        jumlahTransaksi++;
+                        final nominal =
+                            (t.nominal * t.kuantitas) + (t.biayaTambahan ?? 0);
+                        if (t.tipe == TipeTransaksi.pemasukan) {
+                          totalPemasukan += nominal;
+                        } else if (t.tipe == TipeTransaksi.pengeluaran) {
+                          totalPengeluaran += nominal;
+                        }
+                      }
+                    }
+
                     Widget trailingWidget;
                     if (isFutureOrCurrent) {
                       trailingWidget = const Tooltip(
@@ -147,7 +168,7 @@ class _PembukuanScreenState extends ConsumerState<PembukuanScreen> {
                           monthInt,
                           currentPembukuan,
                           isTerkunci,
-                          activeYear, // Kirim activeYear sebagai param agar fungsi simpan tahu tahun berapa
+                          activeYear,
                         ),
                         child: Text(
                           isTerkunci ? 'Buka Kunci' : 'Tutup Buku',
@@ -167,10 +188,24 @@ class _PembukuanScreenState extends ConsumerState<PembukuanScreen> {
                           color: isTerkunci ? Colors.red : Colors.green,
                         ),
                         title: Text('${_bulanList[monthInt - 1]} $activeYear'),
-                        subtitle: Text(
-                          isTerkunci
-                              ? 'Sudah Dibukukan (Terkunci)'
-                              : 'Belum Dibukukan (Terbuka)',
+                        // 2. Tampilkan hasil perhitungan di subtitle
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              isTerkunci
+                                  ? 'Sudah Dibukukan (Terkunci)'
+                                  : 'Belum Dibukukan (Terbuka)',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '$jumlahTransaksi Transaksi\nMasuk: ${totalPemasukan.toIdr()} | Keluar: ${totalPengeluaran.toIdr()}',
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                          ],
                         ),
                         trailing: trailingWidget,
                       ),
