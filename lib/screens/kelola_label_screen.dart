@@ -19,70 +19,93 @@ class KelolaLabelScreen extends ConsumerWidget {
         error: (err, stack) => Center(child: Text('Error: $err')),
         data: (labelList) {
           if (labelList.isEmpty) {
-            return const Center(child: Text('Belum ada label'));
+            return const SafeArea(
+              child: Center(child: Text('Belum ada label')),
+            );
           }
-          return ListView.builder(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            itemCount: labelList.length,
-            itemBuilder: (context, index) {
-              final label = labelList[index];
-              final isDibekukan = label.isDibekukan;
+          return SafeArea(
+            bottom: true, // Pastikan area bawah aman
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                // Deteksi lebar layar, jika lebih dari 600px gunakan grid 2 kolom, jika tidak 1 kolom (ponsel)
+                final crossAxisCount = constraints.maxWidth > 600 ? 2 : 1;
 
-              return Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 4,
-                ),
-                child: Card(
-                  elevation: 2,
-                  child: ListTile(
-                    title: Text(
-                      '${index + 1}. ${label.nama}',
-                      style: TextStyle(
-                        decoration: isDibekukan
-                            ? TextDecoration.lineThrough
-                            : null,
+                return GridView.builder(
+                  // Tambahkan ruang di bawah (bottom: 80) agar daftar terakhir tidak terhalang FAB
+                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 80),
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: crossAxisCount,
+                    mainAxisExtent: 80, // Tinggi tetap untuk setiap item label
+                    crossAxisSpacing: 8,
+                    mainAxisSpacing: 8,
+                  ),
+                  itemCount: labelList.length,
+                  itemBuilder: (context, index) {
+                    final label = labelList[index];
+                    final isDibekukan = label.isDibekukan;
 
-                        fontWeight: FontWeight.normal,
-                      ),
-                    ),
-                    subtitle: isDibekukan
-                        ? const Text(
-                            'Dibekukan',
-                            style: TextStyle(color: Colors.red),
-                          )
-                        : null,
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (!isDibekukan)
-                          IconButton(
-                            icon: const Icon(Icons.edit, color: Colors.blue),
-                            onPressed: () => _tampilFormFormLabel(
-                              context,
-                              ref,
-                              dataEdit: label,
+                    return Card(
+                      elevation: 2,
+                      child: Center(
+                        child: ListTile(
+                          title: Text(
+                            '${index + 1}. ${label.nama}',
+                            style: TextStyle(
+                              decoration: isDibekukan
+                                  ? TextDecoration.lineThrough
+                                  : null,
+                              fontWeight: FontWeight.normal,
                             ),
                           ),
-                        IconButton(
-                          icon: Icon(
-                            isDibekukan ? Icons.restore : Icons.delete,
-                            color: isDibekukan ? Colors.green : Colors.red,
+                          subtitle: isDibekukan
+                              ? const Text(
+                                  'Dibekukan',
+                                  style: TextStyle(color: Colors.red),
+                                )
+                              : null,
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (!isDibekukan)
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.edit,
+                                    color: Colors.blue,
+                                  ),
+                                  onPressed: () => _tampilFormFormLabel(
+                                    context,
+                                    ref,
+                                    dataEdit: label,
+                                  ),
+                                ),
+                              IconButton(
+                                icon: Icon(
+                                  isDibekukan ? Icons.restore : Icons.delete,
+                                  color: isDibekukan
+                                      ? Colors.green
+                                      : Colors.red,
+                                ),
+                                onPressed: () {
+                                  if (isDibekukan) {
+                                    _pulihkanLabel(context, ref, label);
+                                  } else {
+                                    _cekDanHapusAtauBekukan(
+                                      context,
+                                      ref,
+                                      label,
+                                    );
+                                  }
+                                },
+                              ),
+                            ],
                           ),
-                          onPressed: () {
-                            if (isDibekukan) {
-                              _pulihkanLabel(context, ref, label);
-                            } else {
-                              _cekDanHapusAtauBekukan(context, ref, label);
-                            }
-                          },
                         ),
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            },
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
           );
         },
       ),

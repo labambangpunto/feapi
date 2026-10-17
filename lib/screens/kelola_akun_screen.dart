@@ -20,66 +20,84 @@ class KelolaAkunScreen extends ConsumerWidget {
         error: (err, stack) => Center(child: Text('Error: $err')),
         data: (akunList) {
           if (akunList.isEmpty) {
-            return const Center(child: Text('Belum ada akun'));
+            return const SafeArea(child: Center(child: Text('Belum ada akun')));
           }
-          return ListView.builder(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            itemCount: akunList.length,
-            itemBuilder: (context, index) {
-              final akun = akunList[index];
-              final isDibekukan = akun.isDibekukan;
+          return SafeArea(
+            bottom: true, // Pastikan area bawah aman
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                // Deteksi lebar layar: gunakan grid 2 kolom jika lebar > 600px, selain itu 1 kolom
+                final crossAxisCount = constraints.maxWidth > 600 ? 2 : 1;
 
-              return Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 4,
-                ),
-                child: Card(
-                  elevation: 2,
-                  child: ListTile(
-                    title: Text(
-                      '${index + 1}. ${akun.nama}',
-                      style: TextStyle(
-                        decoration: isDibekukan
-                            ? TextDecoration.lineThrough
-                            : null,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    subtitle: isDibekukan
-                        ? const Text(
-                            'Dibekukan',
-                            style: TextStyle(color: Colors.red),
-                          )
-                        : null,
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (!isDibekukan)
-                          IconButton(
-                            icon: const Icon(Icons.edit, color: Colors.blue),
-                            onPressed: () =>
-                                _tampilFormEditAkun(context, ref, akun),
-                          ),
-                        IconButton(
-                          icon: Icon(
-                            isDibekukan ? Icons.restore : Icons.delete,
-                            color: isDibekukan ? Colors.green : Colors.red,
-                          ),
-                          onPressed: () {
-                            if (isDibekukan) {
-                              _pulihkanAkun(context, ref, akun);
-                            } else {
-                              _cekDanHapusAtauBekukan(context, ref, akun);
-                            }
-                          },
-                        ),
-                      ],
-                    ),
+                return GridView.builder(
+                  // Tambahkan ruang di bawah (bottom: 80) agar daftar terakhir tidak terhalang FAB
+                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 80),
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: crossAxisCount,
+                    mainAxisExtent: 80, // Tinggi tetap untuk setiap item akun
+                    crossAxisSpacing: 8,
+                    mainAxisSpacing: 8,
                   ),
-                ),
-              );
-            },
+                  itemCount: akunList.length,
+                  itemBuilder: (context, index) {
+                    final akun = akunList[index];
+                    final isDibekukan = akun.isDibekukan;
+
+                    return Card(
+                      elevation: 2,
+                      child: Center(
+                        child: ListTile(
+                          title: Text(
+                            '${index + 1}. ${akun.nama}',
+                            style: TextStyle(
+                              decoration: isDibekukan
+                                  ? TextDecoration.lineThrough
+                                  : null,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          subtitle: isDibekukan
+                              ? const Text(
+                                  'Dibekukan',
+                                  style: TextStyle(color: Colors.red),
+                                )
+                              : null,
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (!isDibekukan)
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.edit,
+                                    color: Colors.blue,
+                                  ),
+                                  onPressed: () =>
+                                      _tampilFormEditAkun(context, ref, akun),
+                                ),
+                              IconButton(
+                                icon: Icon(
+                                  isDibekukan ? Icons.restore : Icons.delete,
+                                  color: isDibekukan
+                                      ? Colors.green
+                                      : Colors.red,
+                                ),
+                                onPressed: () {
+                                  if (isDibekukan) {
+                                    _pulihkanAkun(context, ref, akun);
+                                  } else {
+                                    _cekDanHapusAtauBekukan(context, ref, akun);
+                                  }
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
           );
         },
       ),
