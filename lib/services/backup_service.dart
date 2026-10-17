@@ -13,6 +13,7 @@ import '../models/akun_model.dart';
 import '../models/label_model.dart';
 import '../models/transaksi_model.dart';
 import '../models/utang_piutang_model.dart';
+import '../models/pembukuan_model.dart';
 
 class BackupService {
   final DatabaseRepository _dbRepo;
@@ -78,7 +79,7 @@ class BackupService {
 
     await file.writeAsString(csvData);
     await SharePlus.instance.share(
-      ShareParams(files: [XFile(file.path)], text: 'Data CSV Feapi App'),
+      ShareParams(files: [XFile(file.path)], text: 'Data CSV feapi App'),
     );
   }
 
@@ -107,7 +108,7 @@ class BackupService {
 
     await file.writeAsString(finalData);
     await SharePlus.instance.share(
-      ShareParams(files: [XFile(file.path)], text: 'Backup Feapi App'),
+      ShareParams(files: [XFile(file.path)], text: 'Backup feapi App'),
     );
   }
 
@@ -128,12 +129,29 @@ class BackupService {
     final utang = await _dbRepo.getSemuaUtangPiutang();
     final profil = await _dbRepo.getProfil();
 
+    // 1. Ambil data pembukuan
+    final pembukuan = await _dbRepo.getSemuaPembukuan();
+
     final Map<String, dynamic> seluruhData = {
       'akun': akun.map((e) => {'id': e.id, 'nama': e.nama}).toList(),
       'profil': profil,
       'label': label.map((e) => {'id': e.id, 'nama': e.nama}).toList(),
+
+      // 2. Masukkan ke dalam payload
+      'pembukuan': pembukuan
+          .map(
+            (e) => {
+              'id': e.id,
+              'tahun': e.tahun,
+              'bulan': e.bulan,
+              'isTerkunci': e.isTerkunci ? 1 : 0,
+            },
+          )
+          .toList(),
+
       'transaksi': transaksi
           .map(
+            // ... sisa kode tidak berubah
             (e) => {
               'id': e.id,
               'tipe': e.tipe.name,
@@ -246,6 +264,18 @@ class BackupService {
             tenggatWaktu: DateTime.parse(item['tenggatWaktu']),
             catatan: item['catatan'],
             isLunas: item['isLunas'] == 1,
+          ),
+        );
+      }
+    }
+    if (data['pembukuan'] != null) {
+      for (var item in data['pembukuan']) {
+        await _dbRepo.insertPembukuan(
+          PembukuanModel(
+            id: item['id'],
+            tahun: item['tahun'],
+            bulan: item['bulan'],
+            isTerkunci: item['isTerkunci'] == 1,
           ),
         );
       }
