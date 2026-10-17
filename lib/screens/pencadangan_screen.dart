@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -75,15 +77,15 @@ class _PencadanganScreenState extends ConsumerState<PencadanganScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Pencadangan Data')),
-      body: ListView(
+    // 1. KELOMPOKKAN MENU CLOUD
+    final cloudSection = Card(
+      margin: const EdgeInsets.all(8.0),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 16.0,
-              vertical: 16.0,
-            ),
+            padding: const EdgeInsets.all(16.0),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -107,6 +109,7 @@ class _PencadanganScreenState extends ConsumerState<PencadanganScreen> {
               ],
             ),
           ),
+          const Divider(height: 1),
           ListTile(
             leading: const Icon(Icons.cloud_upload, color: Colors.blue),
             title: const Text('Backup ke Google Drive'),
@@ -162,6 +165,7 @@ class _PencadanganScreenState extends ConsumerState<PencadanganScreen> {
             leading: const Icon(Icons.cloud_download, color: Colors.blue),
             title: const Text('Restore dari Google Drive'),
             subtitle: const Text('Timpa data lokal dengan data cloud'),
+
             onTap: () async {
               final password = await _tampilDialogPassword(
                 context,
@@ -260,9 +264,19 @@ class _PencadanganScreenState extends ConsumerState<PencadanganScreen> {
               );
             },
           ),
-          const Divider(),
+        ],
+      ),
+    );
+
+    // 2. KELOMPOKKAN MENU LOKAL
+    final localSection = Card(
+      margin: const EdgeInsets.all(8.0),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
           const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+            padding: EdgeInsets.all(16.0),
             child: Text(
               'Backup Data Lokal (.enc)',
               style: TextStyle(
@@ -272,6 +286,7 @@ class _PencadanganScreenState extends ConsumerState<PencadanganScreen> {
               ),
             ),
           ),
+          const Divider(height: 1),
           ListTile(
             leading: const Icon(Icons.save_alt),
             title: const Text('Backup lokal'),
@@ -302,23 +317,26 @@ class _PencadanganScreenState extends ConsumerState<PencadanganScreen> {
               }
             },
           ),
-          ListTile(
-            leading: const Icon(Icons.share),
-            title: const Text('Bagikan Backup'),
-            subtitle: const Text('Bagikan berkas .enc'),
-            onTap: () async {
-              final password = await _tampilDialogPassword(
-                context,
-                'Buat Password Backup',
-              );
-              if (password != null) {
-                final backupService = BackupService(
-                  ref.read(databaseRepositoryProvider),
+
+          // 3. SEMBUNYIKAN "BAGIKAN BACKUP" SAAT DI LINUX
+          if (Platform.isAndroid)
+            ListTile(
+              leading: const Icon(Icons.share),
+              title: const Text('Bagikan Backup'),
+              subtitle: const Text('Bagikan berkas .enc'),
+              onTap: () async {
+                final password = await _tampilDialogPassword(
+                  context,
+                  'Buat Password Backup',
                 );
-                await backupService.bagikanBackupLangsung(password);
-              }
-            },
-          ),
+                if (password != null) {
+                  final backupService = BackupService(
+                    ref.read(databaseRepositoryProvider),
+                  );
+                  await backupService.bagikanBackupLangsung(password);
+                }
+              },
+            ),
           ListTile(
             leading: const Icon(Icons.settings_backup_restore),
             title: const Text('Restore Lokal'),
@@ -363,6 +381,36 @@ class _PencadanganScreenState extends ConsumerState<PencadanganScreen> {
             },
           ),
         ],
+      ),
+    );
+
+    // 4. SUSUN GRID RESPONSIF
+    return Scaffold(
+      appBar: AppBar(title: const Text('Pencadangan Data')),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final isDesktop = constraints.maxWidth > 600;
+
+          if (isDesktop) {
+            // Tampilan Grid 2 Kolom untuk Layar Lebar (Desktop/Linux)
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(8.0),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: cloudSection),
+                  Expanded(child: localSection),
+                ],
+              ),
+            );
+          } else {
+            // Tampilan 1 Kolom untuk Layar Sempit (Ponsel/Android)
+            return ListView(
+              padding: const EdgeInsets.all(8.0),
+              children: [cloudSection, localSection],
+            );
+          }
+        },
       ),
     );
   }

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -297,17 +298,20 @@ class _AturScreenState extends ConsumerState<AturScreen> {
               }
             },
           ),
-          ListTile(
-            leading: const Icon(Icons.share),
-            title: const Text('Bagikan CSV'),
-            subtitle: const Text('Bagikan berkas .csv'),
-            onTap: () async {
-              final backupService = BackupService(
-                ref.read(databaseRepositoryProvider),
-              );
-              await backupService.bagikanCsvLangsung();
-            },
-          ),
+
+          // Tambahkan pengecekan OS di sini
+          if (Platform.isAndroid)
+            ListTile(
+              leading: const Icon(Icons.share),
+              title: const Text('Bagikan CSV'),
+              subtitle: const Text('Bagikan berkas .csv'),
+              onTap: () async {
+                final backupService = BackupService(
+                  ref.read(databaseRepositoryProvider),
+                );
+                await backupService.bagikanCsvLangsung();
+              },
+            ),
           const Divider(),
 
           // 8. Tentang Aplikasi
