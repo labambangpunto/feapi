@@ -9,6 +9,10 @@ import '../models/transaksi_model.dart';
 import '../controllers/utang_piutang_controller.dart';
 import '../models/utang_piutang_model.dart';
 import '../utils/currency_format.dart';
+import '../controllers/label_controller.dart';
+import '../models/label_model.dart';
+import '../controllers/akun_controller.dart';
+import '../models/akun_model.dart';
 import 'atur_screen.dart';
 
 // Komponen lencana (badge) kustom untuk Pie Chart (mengadaptasi pie_chart_sample3)
@@ -58,9 +62,10 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
-  // Variabel untuk menyimpan status filter (Default: 1 Bulan)
   String _filterWaktu = '1 Bulan';
-  int _touchedPieIndex = -1; // Status interaksi Pie Chart
+  int _touchedPieIndex = -1;
+  String _sortLabel = 'latest';
+  String _sortAkun = 'latest';
 
   @override
   Widget build(BuildContext context) {
@@ -407,9 +412,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ],
             ),
             const SizedBox(height: 32),
-
             // --- 1. PIE CHART KOMPOSISI ---
             _buildPieChart(totalPemasukan, totalPengeluaran, totalTransfer),
+
+            // --- TABEL RINGKASAN PER AKUN (BARU) ---
+            _buildTableAkun(
+              transaksiState.value ?? [],
+              ref.watch(akunControllerProvider).value ?? [],
+            ),
+
+            // --- TABEL RINGKASAN PER LABEL (BARU) ---
+            _buildTableLabel(
+              transaksiState.value ?? [],
+              ref.watch(labelControllerProvider).value ?? [],
+            ),
 
             // --- 2. LINE CHART PENGELUARAN ---
             _buildLineChart(
@@ -773,4 +789,522 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       child: Text(text, style: style),
     );
   }
+
+  Widget _buildTableAkun(
+    List<TransaksiModel> transaksiList,
+    List<AkunModel> akunList,
+  ) {
+    final now = DateTime.now();
+
+    final filteredTransaksi = transaksiList.where((t) {
+      if (_filterWaktu == '1 Hari') {
+        return t.waktu.year == now.year &&
+            t.waktu.month == now.month &&
+            t.waktu.day == now.day;
+      } else if (_filterWaktu == '1 Minggu') {
+        final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
+        final sDate = DateTime(
+          startOfWeek.year,
+          startOfWeek.month,
+          startOfWeek.day,
+        );
+        final tDate = DateTime(t.waktu.year, t.waktu.month, t.waktu.day);
+        return tDate.isAfter(sDate.subtract(const Duration(days: 1))) &&
+            tDate.isBefore(
+              DateTime(
+                now.year,
+                now.month,
+                now.day,
+              ).add(const Duration(days: 1)),
+            );
+      } else if (_filterWaktu == '1 Bulan') {
+        return t.waktu.year == now.year && t.waktu.month == now.month;
+      }
+      return false;
+    }).toList();
+
+    final Map<String, _AkunStat> statsMap = {};
+
+    String getNamaAkun(String id) {
+      try {
+        return akunList.firstWhere((a) => a.id == id).nama;
+      } catch (_) {
+        return 'Akun Terhapus';
+      }
+    }
+
+    void prosesStatAkun(
+      String? akunId,
+      double nominal,
+      TipeTransaksi tipe,
+      DateTime waktu, {
+      bool isTransferSumber = false,
+    }) {
+      if (akunId == null || akunId.isEmpty) return;
+
+      final stat = statsMap.putIfAbsent(
+        akunId,
+        () => _AkunStat(getNamaAkun(akunId)),
+      );
+
+      if (tipe == TipeTransaksi.pengeluaran) {
+        stat.pengeluaran += nominal;
+      } else if (tipe == TipeTransaksi.pemasukan) {
+        stat.pemasukan += nominal;
+      } else if (tipe == TipeTransaksi.transfer) {
+        if (isTransferSumber) {
+          stat.transferSumber += nominal;
+        } else {
+          stat.transferTujuan += nominal;
+        }
+      }
+
+      if (stat.latestWaktu == null || waktu.isAfter(stat.latestWaktu!)) {
+        stat.latestWaktu = waktu;
+      }
+    }
+
+    for (var t in filteredTransaksi) {
+      final nominal = (t.nominal * t.kuantitas) + (t.biayaTambahan ?? 0);
+
+      if (t.tipe == TipeTransaksi.pengeluaran) {
+        prosesStatAkun(t.akunSumberId, nominal, t.tipe, t.waktu);
+      } else if (t.tipe == TipeTransaksi.pemasukan) {
+        prosesStatAkun(t.akunTujuanId, nominal, t.tipe, t.waktu);
+      } else if (t.tipe == TipeTransaksi.transfer) {
+        prosesStatAkun(
+          t.akunSumberId,
+          nominal,
+          t.tipe,
+          t.waktu,
+          isTransferSumber: true,
+        );
+        prosesStatAkun(
+          t.akunTujuanId,
+          nominal,
+          t.tipe,
+          t.waktu,
+          isTransferSumber: false,
+        );
+      }
+    }
+
+    List<_AkunStat> statList = statsMap.values.toList();
+
+    switch (_sortAkun) {
+      case 'A-Z':
+        statList.sort(
+          (a, b) => a.nama.toLowerCase().compareTo(b.nama.toLowerCase()),
+        );
+        break;
+      case 'Z-A':
+        statList.sort(
+          (a, b) => b.nama.toLowerCase().compareTo(a.nama.toLowerCase()),
+        );
+        break;
+      case 'latest':
+        statList.sort(
+          (a, b) => (b.latestWaktu ?? DateTime(2000)).compareTo(
+            a.latestWaktu ?? DateTime(2000),
+          ),
+        );
+        break;
+      case 'largest':
+        statList.sort((a, b) => b.total.compareTo(a.total));
+        break;
+      case 'smallest':
+        statList.sort((a, b) => a.total.compareTo(b.total));
+        break;
+    }
+
+    final displayList = statList.take(5).toList();
+
+    return Card(
+      elevation: 2,
+      margin: const EdgeInsets.only(bottom: 24),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Total per Akun',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                DropdownButton<String>(
+                  value: _sortAkun,
+                  underline: const SizedBox(),
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: 'largest', child: Text('Terbesar')),
+                    DropdownMenuItem(
+                      value: 'smallest',
+                      child: Text('Terkecil'),
+                    ),
+                    DropdownMenuItem(value: 'latest', child: Text('Terbaru')),
+                    DropdownMenuItem(value: 'A-Z', child: Text('A - Z')),
+                    DropdownMenuItem(value: 'Z-A', child: Text('Z - A')),
+                  ],
+                  onChanged: (val) {
+                    if (val != null) setState(() => _sortAkun = val);
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Center(
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: DataTable(
+                  columnSpacing: 16,
+                  headingRowHeight: 40,
+                  dataRowMinHeight: 36,
+                  dataRowMaxHeight: 44,
+                  columns: const [
+                    DataColumn(
+                      label: Text(
+                        'Akun',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    DataColumn(
+                      label: Text(
+                        'Pengeluaran',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    DataColumn(
+                      label: Text(
+                        'Pemasukan',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    DataColumn(
+                      label: Text(
+                        'Transfer',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                  rows: displayList.isEmpty
+                      ? [
+                          const DataRow(
+                            cells: [
+                              DataCell(Text('Belum ada data')),
+                              DataCell(Text('-')),
+                              DataCell(Text('-')),
+                              DataCell(Text('-')),
+                            ],
+                          ),
+                        ]
+                      : displayList.map((item) {
+                          String transferText = '-';
+                          if (item.transferSumber > 0 &&
+                              item.transferTujuan > 0) {
+                            transferText =
+                                '${item.transferSumber.toIdr()} (sumber)\n${item.transferTujuan.toIdr()} (tujuan)';
+                          } else if (item.transferSumber > 0) {
+                            transferText =
+                                '${item.transferSumber.toIdr()} (sumber)';
+                          } else if (item.transferTujuan > 0) {
+                            transferText =
+                                '${item.transferTujuan.toIdr()} (tujuan)';
+                          } else {
+                            transferText = '0';
+                          }
+
+                          return DataRow(
+                            cells: [
+                              DataCell(
+                                Text(
+                                  item.nama,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                              DataCell(
+                                Text(
+                                  item.pengeluaran.toIdr(),
+                                  style: const TextStyle(color: Colors.red),
+                                ),
+                              ),
+                              DataCell(
+                                Text(
+                                  item.pemasukan.toIdr(),
+                                  style: const TextStyle(color: Colors.green),
+                                ),
+                              ),
+                              DataCell(
+                                Text(
+                                  transferText,
+                                  style: const TextStyle(color: Colors.blue),
+                                ),
+                              ),
+                            ],
+                          );
+                        }).toList(),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTableLabel(
+    List<TransaksiModel> transaksiList,
+    List<LabelModel> labelList,
+  ) {
+    final now = DateTime.now();
+
+    final filteredTransaksi = transaksiList.where((t) {
+      if (_filterWaktu == '1 Hari') {
+        return t.waktu.year == now.year &&
+            t.waktu.month == now.month &&
+            t.waktu.day == now.day;
+      } else if (_filterWaktu == '1 Minggu') {
+        final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
+        final sDate = DateTime(
+          startOfWeek.year,
+          startOfWeek.month,
+          startOfWeek.day,
+        );
+        final tDate = DateTime(t.waktu.year, t.waktu.month, t.waktu.day);
+        return tDate.isAfter(sDate.subtract(const Duration(days: 1))) &&
+            tDate.isBefore(
+              DateTime(
+                now.year,
+                now.month,
+                now.day,
+              ).add(const Duration(days: 1)),
+            );
+      } else if (_filterWaktu == '1 Bulan') {
+        return t.waktu.year == now.year && t.waktu.month == now.month;
+      }
+      return false;
+    }).toList();
+
+    final Map<String, _LabelStat> statsMap = {};
+
+    String getNamaLabel(String id) {
+      try {
+        return labelList.firstWhere((l) => l.id == id).nama;
+      } catch (_) {
+        return 'Label Terhapus';
+      }
+    }
+
+    for (var t in filteredTransaksi) {
+      final nominal = (t.nominal * t.kuantitas) + (t.biayaTambahan ?? 0);
+      List<String> ids = (t.labelId != null && t.labelId!.isNotEmpty)
+          ? t.labelId!.split(',')
+          : ['tanpa_label'];
+
+      for (var id in ids) {
+        final nama = id == 'tanpa_label' ? 'Tanpa Label' : getNamaLabel(id);
+        final stat = statsMap.putIfAbsent(id, () => _LabelStat(nama));
+
+        if (t.tipe == TipeTransaksi.pengeluaran) {
+          stat.pengeluaran += nominal;
+        } else if (t.tipe == TipeTransaksi.pemasukan) {
+          stat.pemasukan += nominal;
+        } else if (t.tipe == TipeTransaksi.transfer) {
+          stat.transfer += nominal;
+        }
+
+        if (stat.latestWaktu == null || t.waktu.isAfter(stat.latestWaktu!)) {
+          stat.latestWaktu = t.waktu;
+        }
+      }
+    }
+
+    List<_LabelStat> statList = statsMap.values.toList();
+
+    switch (_sortLabel) {
+      case 'A-Z':
+        statList.sort(
+          (a, b) => a.nama.toLowerCase().compareTo(b.nama.toLowerCase()),
+        );
+        break;
+      case 'Z-A':
+        statList.sort(
+          (a, b) => b.nama.toLowerCase().compareTo(a.nama.toLowerCase()),
+        );
+        break;
+      case 'latest':
+        statList.sort(
+          (a, b) => (b.latestWaktu ?? DateTime(2000)).compareTo(
+            a.latestWaktu ?? DateTime(2000),
+          ),
+        );
+        break;
+      case 'largest':
+        statList.sort((a, b) => b.total.compareTo(a.total));
+        break;
+      case 'smallest':
+        statList.sort((a, b) => a.total.compareTo(b.total));
+        break;
+    }
+
+    final displayList = statList.take(5).toList();
+
+    return Card(
+      elevation: 2,
+      margin: const EdgeInsets.only(bottom: 24),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Total per Label',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                DropdownButton<String>(
+                  value: _sortLabel,
+                  underline: const SizedBox(),
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: 'largest', child: Text('Terbesar')),
+                    DropdownMenuItem(
+                      value: 'smallest',
+                      child: Text('Terkecil'),
+                    ),
+                    DropdownMenuItem(value: 'latest', child: Text('Terbaru')),
+                    DropdownMenuItem(value: 'A-Z', child: Text('A - Z')),
+                    DropdownMenuItem(value: 'Z-A', child: Text('Z - A')),
+                  ],
+                  onChanged: (val) {
+                    if (val != null) setState(() => _sortLabel = val);
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Center(
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: DataTable(
+                  columnSpacing: 16,
+                  headingRowHeight: 40,
+                  dataRowMinHeight: 36,
+                  dataRowMaxHeight: 44,
+                  columns: const [
+                    DataColumn(
+                      label: Text(
+                        'Label',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    DataColumn(
+                      label: Text(
+                        'Keluar',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    DataColumn(
+                      label: Text(
+                        'Masuk',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    DataColumn(
+                      label: Text(
+                        'Transfer',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                  rows: displayList.isEmpty
+                      ? [
+                          const DataRow(
+                            cells: [
+                              DataCell(Text('No data')),
+                              DataCell(Text('-')),
+                              DataCell(Text('-')),
+                              DataCell(Text('-')),
+                            ],
+                          ),
+                        ]
+                      : displayList.map((item) {
+                          return DataRow(
+                            cells: [
+                              DataCell(
+                                Text(
+                                  item.nama,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                              DataCell(
+                                Text(
+                                  item.pengeluaran.toIdr(),
+                                  style: const TextStyle(color: Colors.red),
+                                ),
+                              ),
+                              DataCell(
+                                Text(
+                                  item.pemasukan.toIdr(),
+                                  style: const TextStyle(color: Colors.green),
+                                ),
+                              ),
+                              DataCell(
+                                Text(
+                                  item.transfer.toIdr(),
+                                  style: const TextStyle(color: Colors.blue),
+                                ),
+                              ),
+                            ],
+                          );
+                        }).toList(),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+} // AKHIR DARI CLASS _HomeScreenState
+
+class _AkunStat {
+  final String nama;
+  double pengeluaran = 0;
+  double pemasukan = 0;
+  double transferSumber = 0;
+  double transferTujuan = 0;
+  DateTime? latestWaktu;
+
+  _AkunStat(this.nama);
+  double get total => pengeluaran + pemasukan + transferSumber + transferTujuan;
+}
+
+class _LabelStat {
+  final String nama;
+  double pengeluaran = 0;
+  double pemasukan = 0;
+  double transfer = 0;
+  DateTime? latestWaktu;
+
+  _LabelStat(this.nama);
+  double get total => pengeluaran + pemasukan + transfer;
 }
