@@ -623,16 +623,40 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                totalNominal.toIdr(),
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: isPemasukan
-                      ? Colors.green
-                      : (isPengeluaran ? Colors.red : Colors.blue),
+              // 1. Logika Tampilan Nominal Baru
+              if ((isPengeluaran || isTransfer) &&
+                  t.biayaTambahan != null &&
+                  t.biayaTambahan! > 0) ...[
+                Text(
+                  'Nominal: ${(t.nominal * t.kuantitas).toIdr()}',
+                  style: const TextStyle(fontSize: 14, color: Colors.grey),
                 ),
-              ),
+                Text(
+                  'Biaya Tambahan: ${t.biayaTambahan!.toIdr()}',
+                  style: const TextStyle(fontSize: 14, color: Colors.grey),
+                ),
+                const Divider(),
+                Text(
+                  'Total: ${totalNominal.toIdr()}',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: isPengeluaran ? Colors.red : Colors.blue,
+                  ),
+                ),
+              ] else ...[
+                Text(
+                  totalNominal.toIdr(),
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: isPemasukan
+                        ? Colors.green
+                        : (isPengeluaran ? Colors.red : Colors.blue),
+                  ),
+                ),
+              ],
+
               const SizedBox(height: 12),
               Text(
                 t.catatan,
@@ -643,22 +667,18 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
               ),
               const SizedBox(height: 12),
 
+              // 2. Tampilan Info Tambahan (Biaya Tambahan Dihapus dari Sini)
               if (isPengeluaran) ...[
                 Text('Kuantitas: ${t.kuantitas}'),
-                if (t.biayaTambahan != null && t.biayaTambahan! > 0)
-                  Text('Biaya Tambahan: ${t.biayaTambahan!.toIdr()}'),
                 const SizedBox(height: 4),
                 Text('Sumber dana: $namaSumber'),
               ] else if (isPemasukan) ...[
                 Text('Tujuan dana: $namaTujuan'),
               ] else if (isTransfer) ...[
-                if (t.biayaTambahan != null && t.biayaTambahan! > 0)
-                  Text('Biaya Tambahan: ${t.biayaTambahan!.toIdr()}'),
                 const SizedBox(height: 4),
                 Text('Dari: $namaSumber'),
                 Text('Ke: $namaTujuan'),
               ],
-
               const SizedBox(height: 12),
               const Divider(),
               Row(
