@@ -1,59 +1,29 @@
-# 💰 Feapi
+# Feapi
 
-Aplikasi pencatat keuangan pribadi simpel yang dibuat **dari, oleh, dan untuk diri sendiri**.
+Adalah sebuah aplikasi pencatat pengeluara, pemasukan, transfer antarakun, utang dan piutang.
+<br><br>
 
-## 💬 Latar Belakang
+> **Terima Kasih**
 
-Bikin aplikasi ini karena butuh pencatat keuangan yang pas dengan *workflow* sendiri tanpa fitur berlebihan yang tidak terpakai. Dibuat pakai **Flutter** supaya bisa jalan di my **Linux** gw dan **Android**.
+untuk _Gemini_ sudah menjadi partner pengembangan kode aplikasi ini
+<br><br>
 
-Diunggah ke GitHub sekadar buat arsip terbuka, portofolio, dan berbagi.
+> **Disclaimer**
 
-> 💡 **Catatan:**  
-> Dibuat murni sesuai preferensi pribadi. **Sama sekali tdk ada paksaan buat pakai.**  
-> Kalau cocok silakan pakai, kalau tidak ywdah sih 😄.
+1. aplikasi ini dibuat penuh menggunakan kecerdasan buatan, jadi tidak ada jaminan 100% keamanan dan stabilitas.
+2. aplikasi ini saya buat UNTUK DIRI SAYA SENDIRI, jadi jika ingin sebuah perubahan, maka silahkan fork kode ini.
+   <br><br>
 
-## 🌟 Fitur Utama
+> **Bisa dipasang dimana?**
 
-* 📊 **Catat pengeluaran dan pemasukan:** Biar antum tau udah berape duit yang abis.
-* 📊 **Catat utang piutan:** Biar ingat bayar utang!!!
-* 🔐 **100% Offline:** Saat ini masih offline, nanti bakal dihubungkan pake gdrive API ygy.
-* 💻📱 **Multiplatform:** Tersedia format `.apk` (Android) dan `.tar.gz` (Linux), yang windows nanti ajah dulu.
-* 🌓 **Mode Gelap/Terang:** Biar mata lu gak kena flashbang.
+- Android arm64
+- Linux X86_64
+  <br><br>
 
-## 📸 Screenshots
+> **Lisensi**
 
-| Android | Linux |
-| --- | --- |
-| *(Tautan Gambar)* | *(Tautan Gambar)* |
+GPLv3
 
-## 📥 Download & Instalasi
+<br><br>
 
-Unduh biner siap pakai di halaman [Releases](../../releases/latest).
-
-### 📱 Android (`.apk`)
-1. Download file `.apk`.
-2. Izinkan instalasi dari *Unknown Sources* jika diminta.
-3. Install dan pakai.
-
-### 🐧 Linux (`.tar.gz`)
-1. Download & ekstrak file tarball:
-   ```bash
-   tar -xvf pokoknya-nama-aplikasi-udah.tar.gz
-   cd pokoknya-nama-aplikasi-udah
-   ./pokoknya-nama-aplikasi-udah
-   ```
-*(Opsional)* Enaknya ditarud di `/home/nama-antum/.local/share/feapi/` atau buat file `.desktop` supaya muncul di *app launcher*.
-
-## 🛠️ Teknologi
-
-* **Framework:** [Flutter](https://flutter.dev) (Dart)
-* **Target Platform:** Android & Linux Desktop
-
-## 📌 Disclaimer & Kontribusi
-
-* **Update & Fitur:** Dikembangkan santai sesuai kebutuhan harian saya.
-* **Fork & Modifikasi:** Mau ubah atau sesuaikan dengan kebutuhan Anda sendiri? Silakan **Fork** repo ini dan modifikasi bebas sesuai ketentuan GPLv3!
-
-## 📜 Lisensi
-
-Didistribusikan di bawah lisensi **GNU General Public License v3.0 (GPLv3)**. Lihat file [`LICENSE`](LICENSE) untuk detailnya.
+_Mari kita diskusi di **issue** saja_
