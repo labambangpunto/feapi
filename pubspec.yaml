@@ -46,6 +46,8 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/icon/logo.png
   fonts:
     - family: "SN Pro"
       fonts:

@@ -17,6 +17,7 @@ import 'kelola_akun_screen.dart';
 import 'kelola_label_screen.dart';
 import 'pencadangan_screen.dart';
 import 'pembukuan_screen.dart';
+import 'tentang_aplikasi_screen.dart';
 
 final profilProvider = FutureProvider<Map<String, dynamic>?>((ref) async {
   return await ref.read(databaseRepositoryProvider).getProfil();
@@ -315,25 +316,16 @@ class _AturScreenState extends ConsumerState<AturScreen> {
           const Divider(),
 
           // 8. Tentang Aplikasi
+          // 8. Tentang Aplikasi
           ListTile(
             leading: const Icon(Icons.info),
             title: const Text('Tentang Aplikasi'),
             onTap: () {
-              showAboutDialog(
-                context: context,
-                applicationName: 'Finance Tracker App',
-                applicationVersion: '1.2.0',
-                applicationIcon: const Icon(
-                  Icons.account_balance_wallet,
-                  size: 58,
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const TentangAplikasiScreen(),
                 ),
-                applicationLegalese: '© 2026 Developer',
-                children: [
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Aplikasi pencatatan uang masuk dan keluar dengan arsitektur sinkronisasi Google Drive terenkripsi (Zero-Knowledge).',
-                  ),
-                ],
               );
             },
           ),
