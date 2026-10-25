@@ -1,5 +1,3 @@
-import 'dart:math';
-
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -13,7 +11,6 @@ import '../controllers/label_controller.dart';
 import '../models/label_model.dart';
 import '../controllers/akun_controller.dart';
 import '../models/akun_model.dart';
-import 'atur_screen.dart';
 
 // Komponen lencana (badge) kustom untuk Pie Chart (mengadaptasi pie_chart_sample3)
 class _Badge extends StatelessWidget {
@@ -72,45 +69,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     // Pantau langsung transaksi untuk difilter secara lokal
     final transaksiState = ref.watch(transaksiControllerProvider);
     final utangState = ref.watch(utangPiutangControllerProvider);
-    final profilAsync = ref.watch(profilProvider);
-
-    // Ambil nama dari profil, gunakan 'Pengguna' jika kosong
-    final nama = profilAsync.value?['nama']?.isNotEmpty == true
-        ? profilAsync.value!['nama']
-        : 'Pengguna';
-
-    // Logika sapaan berdasarkan waktu
-    final hour = DateTime.now().hour;
-    final random = Random(hour);
-    List<String> greetings;
-
-    if (hour >= 5 && hour < 11) {
-      greetings = [
-        'Selamat pagi, $nama\nYuk, catat sarapanmu.',
-        'Pagi, $nama\nCek anggaranmu dulu ya.',
-        'Selamat pagi, $nama\nCatat transaksi kemarin yuk.',
-      ];
-    } else if (hour >= 11 && hour < 15) {
-      greetings = [
-        'Selamat siang, $nama\nSudah catat makan siang?',
-        'Siang, $nama\nYuk, cek sisa anggaranmu.',
-        'Selamat siang, $nama\nJangan ada yang terlewat ya.',
-      ];
-    } else if (hour >= 15 && hour < 18) {
-      greetings = [
-        'Selamat sore, $nama\nYuk, rekap hari ini.',
-        'Sore, $nama\nSemua pengeluaran sudah tercatat?',
-        'Selamat sore, $nama\nSaatnya cek catatanmu.',
-      ];
-    } else {
-      greetings = [
-        'Selamat malam, $nama\nCatat transaksi terakhirmu yuk.',
-        'Malam, $nama\nYuk, tinjau pengeluaran hari ini.',
-        'Selamat malam, $nama\nTerima kasih sudah disiplin mencatat.',
-      ];
-    }
-
-    final sapaan = greetings[random.nextInt(greetings.length)];
 
     // LOGIKA PERHITUNGAN FILTER ARUS KAS & DATA GRAFIK
     double totalPemasukan = 0;
@@ -221,242 +179,314 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       }
     }
 
-    return Scaffold(
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(16),
+    // 1. DIVISI 1: ARUS KAS TRANSAKSI (Tampilan Utama)
+    final divisi1 = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Widget teks sapaan dan SizedBox telah dihapus
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              sapaan,
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 24),
-            // Header dengan Komponen Filter
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Arus Kas Transaksi',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                ),
-                DropdownButton<String>(
-                  value: _filterWaktu,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Theme.of(context).colorScheme.primary,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  underline: const SizedBox(),
-                  items: const [
-                    DropdownMenuItem(value: '1 Hari', child: Text('Hari Ini')),
-                    DropdownMenuItem(
-                      value: '1 Minggu',
-                      child: Text('Minggu Ini'),
-                    ),
-                    DropdownMenuItem(
-                      value: '1 Bulan',
-                      child: Text('Bulan Ini'),
-                    ),
-                  ],
-                  onChanged: (val) {
-                    if (val != null) {
-                      setState(() => _filterWaktu = val);
-                    }
-                  },
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: Card(
-                    elevation: 0,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .surfaceContainerHighest,
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        children: [
-                          const Text(
-                            'Pemasukan',
-                            style: TextStyle(
-                              color: Colors.green,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            totalPemasukan.toIdr(),
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Card(
-                    elevation: 0,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .surfaceContainerHighest,
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        children: [
-                          const Text(
-                            'Pengeluaran',
-                            style: TextStyle(
-                              color: Colors.red,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            totalPengeluaran.toIdr(),
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
             const Text(
-              'Tagihan Berjalan (Belum Lunas)',
+              'Arus Kas Transaksi',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
             ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: Card(
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      side: BorderSide(
-                        color: Theme.of(context).colorScheme.outlineVariant,
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    color: Colors.transparent,
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        children: [
-                          const Text(
-                            'Utang',
-                            style: TextStyle(
-                              color: Colors.orange,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            totalUtangBelumLunas.toIdr(),
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Card(
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      side: BorderSide(
-                        color: Theme.of(context).colorScheme.outlineVariant,
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    color: Colors.transparent,
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        children: [
-                          const Text(
-                            'Piutang',
-                            style: TextStyle(
-                              color: Colors.blue,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            totalPiutangBelumLunas.toIdr(),
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
+            DropdownButton<String>(
+              value: _filterWaktu,
+              style: TextStyle(
+                fontSize: 14,
+                color: Theme.of(context).colorScheme.primary,
+                fontWeight: FontWeight.bold,
+              ),
+              underline: const SizedBox(),
+              items: const [
+                DropdownMenuItem(value: '1 Hari', child: Text('Hari Ini')),
+                DropdownMenuItem(value: '1 Minggu', child: Text('Minggu Ini')),
+                DropdownMenuItem(value: '1 Bulan', child: Text('Bulan Ini')),
               ],
-            ),
-            const SizedBox(height: 32),
-            // --- 1. PIE CHART KOMPOSISI ---
-            _buildPieChart(totalPemasukan, totalPengeluaran, totalTransfer),
-
-            // --- TABEL RINGKASAN PER AKUN (BARU) ---
-            _buildTableAkun(
-              transaksiState.value ?? [],
-              ref.watch(akunControllerProvider).value ?? [],
-            ),
-
-            // --- TABEL RINGKASAN PER LABEL (BARU) ---
-            _buildTableLabel(
-              transaksiState.value ?? [],
-              ref.watch(labelControllerProvider).value ?? [],
-            ),
-
-            // --- 2. LINE CHART PENGELUARAN ---
-            _buildLineChart(
-              title: 'Tren Pengeluaran',
-              spots: pengeluaranSpots,
-              color: Colors.red,
-              minX: minX,
-              maxX: maxX,
-              filterWaktu: _filterWaktu,
-            ),
-
-            // --- 3. LINE CHART PEMASUKAN ---
-            _buildLineChart(
-              title: 'Tren Pemasukan',
-              spots: pemasukanSpots,
-              color: Colors.green,
-              minX: minX,
-              maxX: maxX,
-              filterWaktu: _filterWaktu,
-            ),
-
-            // --- 4. LINE CHART TRANSFER ---
-            _buildLineChart(
-              title: 'Tren Transfer Antarakun',
-              spots: transferSpots,
-              color: Colors.blue,
-              minX: minX,
-              maxX: maxX,
-              filterWaktu: _filterWaktu,
+              onChanged: (val) {
+                if (val != null) {
+                  setState(() => _filterWaktu = val);
+                }
+              },
             ),
           ],
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            // ... Sisa kode divisi 1 tidak berubah
+            Expanded(
+              child: Card(
+                elevation: 0,
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    children: [
+                      const Text(
+                        'Pemasukan',
+                        style: TextStyle(
+                          color: Colors.green,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        totalPemasukan.toIdr(),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Card(
+                elevation: 0,
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    children: [
+                      const Text(
+                        'Pengeluaran',
+                        style: TextStyle(
+                          color: Colors.red,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        totalPengeluaran.toIdr(),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+
+    // 2. DIVISI 3: TAGIHAN BERJALAN (Tampilan Utama Utang-Piutang)
+    final divisi3 = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Text(
+          'Tagihan Berjalan (Belum Lunas)',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: Card(
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  side: BorderSide(
+                    color: Theme.of(context).colorScheme.outlineVariant,
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                color: Colors.transparent,
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    children: [
+                      const Text(
+                        'Utang',
+                        style: TextStyle(
+                          color: Colors.orange,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        totalUtangBelumLunas.toIdr(),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Card(
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  side: BorderSide(
+                    color: Theme.of(context).colorScheme.outlineVariant,
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                color: Colors.transparent,
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    children: [
+                      const Text(
+                        'Piutang',
+                        style: TextStyle(
+                          color: Colors.blue,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        totalPiutangBelumLunas.toIdr(),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+
+    // 3. DIVISI 2: KELOMPOK SUB-TAMPILAN TRANSAKSI
+    final divisi2 = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _buildPieChart(totalPemasukan, totalPengeluaran, totalTransfer),
+        _buildTableAkun(
+          transaksiState.value ?? [],
+          ref.watch(akunControllerProvider).value ?? [],
+        ),
+        _buildTableLabel(
+          transaksiState.value ?? [],
+          ref.watch(labelControllerProvider).value ?? [],
+        ),
+        _buildLineChart(
+          title: 'Tren Pengeluaran',
+          spots: pengeluaranSpots,
+          color: Colors.red,
+          minX: minX,
+          maxX: maxX,
+          filterWaktu: _filterWaktu,
+        ),
+        _buildLineChart(
+          title: 'Tren Pemasukan',
+          spots: pemasukanSpots,
+          color: Colors.green,
+          minX: minX,
+          maxX: maxX,
+          filterWaktu: _filterWaktu,
+        ),
+        _buildLineChart(
+          title: 'Tren Transfer Antarakun',
+          spots: transferSpots,
+          color: Colors.blue,
+          minX: minX,
+          maxX: maxX,
+          filterWaktu: _filterWaktu,
+        ),
+      ],
+    );
+
+    // 4. DIVISI 4: KELOMPOK SUB-TAMPILAN UTANG-PIUTANG (Coming Soon)
+    final divisi4 = Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: const Padding(
+        padding: EdgeInsets.symmetric(vertical: 64, horizontal: 16),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.construction, size: 48, color: Colors.grey),
+              SizedBox(height: 16),
+              Text(
+                'Sub-tampilan Utang-Piutang\n(Coming Soon)',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.grey,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    // 5. PENYUSUNAN TATA LETAK RESPONSIF
+    return Scaffold(
+      body: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isDesktop =
+                constraints.maxWidth >
+                800; // Breakpoint batas dua kolom (desktop)
+
+            if (isDesktop) {
+              return SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Kolom Kiri: Hal Transaksi
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          divisi1,
+                          const SizedBox(height: 32),
+                          divisi2,
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 24),
+                    // Kolom Kanan: Hal Utang-Piutang
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          divisi3,
+                          const SizedBox(height: 32),
+                          divisi4,
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            } else {
+              // Tampilan Mobile (Satu Kolom)
+              return ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  divisi1,
+                  const SizedBox(height: 32),
+                  divisi3,
+                  const SizedBox(height: 32),
+                  divisi2,
+                  const SizedBox(height: 32),
+                  divisi4,
+                ],
+              );
+            }
+          },
         ),
       ),
     );
