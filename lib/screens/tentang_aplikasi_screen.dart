@@ -44,11 +44,7 @@ class TentangAplikasiScreen extends StatelessWidget {
             style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Versi 1.4.0',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 16, color: Colors.grey),
-          ),
+
           const SizedBox(height: 32),
           const Text(
             'Aplikasi pencatatan uang masuk dan keluar dengan arsitektur sinkronisasi Google Drive terenkripsi (Zero-Knowledge).',
@@ -84,7 +80,6 @@ class TentangAplikasiScreen extends StatelessWidget {
                 showLicensePage(
                   context: context,
                   applicationName: 'Finance Tracker App',
-                  applicationVersion: '1.4.0+1',
                 );
               },
               icon: const Icon(Icons.description),
