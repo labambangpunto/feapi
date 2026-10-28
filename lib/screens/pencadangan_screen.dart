@@ -49,7 +49,7 @@ class _PencadanganScreenState extends ConsumerState<PencadanganScreen> {
           decoration: const InputDecoration(
             labelText: 'Password Enkripsi',
             counterText: '',
-            helperText: 'Minimal 6 karakter untuk keamanan AES',
+            helperText: 'Minimal 6 karakter',
             border: OutlineInputBorder(),
           ),
         ),
@@ -294,7 +294,7 @@ class _PencadanganScreenState extends ConsumerState<PencadanganScreen> {
             onTap: () async {
               final password = await _tampilDialogPassword(
                 context,
-                'Buat Password Backup',
+                'Buat Password backup lokal',
               );
               if (password != null) {
                 try {
@@ -344,7 +344,7 @@ class _PencadanganScreenState extends ConsumerState<PencadanganScreen> {
             onTap: () async {
               final password = await _tampilDialogPassword(
                 context,
-                'Masukkan Password Backup',
+                'Masukkan Password restore lokal',
               );
               if (password != null) {
                 try {
@@ -387,30 +387,44 @@ class _PencadanganScreenState extends ConsumerState<PencadanganScreen> {
     // 4. SUSUN GRID RESPONSIF
     return Scaffold(
       appBar: AppBar(title: const Text('Pencadangan Data')),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          final isDesktop = constraints.maxWidth > 600;
+      body: Center(
+        // Tambahkan Center
+        child: SingleChildScrollView(
+          // Tambahkan scroll horizontal
+          scrollDirection: Axis.horizontal,
+          child: SizedBox(
+            // Tambahkan batas lebar minimum
+            width: MediaQuery.of(context).size.width < 320
+                ? 320
+                : MediaQuery.of(context).size.width,
+            child: LayoutBuilder(
+              // LayoutBuilder yang sudah ada
+              builder: (context, constraints) {
+                final isDesktop = constraints.maxWidth > 700;
 
-          if (isDesktop) {
-            // Tampilan Grid 2 Kolom untuk Layar Lebar (Desktop/Linux)
-            return SingleChildScrollView(
-              padding: const EdgeInsets.all(8.0),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(child: cloudSection),
-                  Expanded(child: localSection),
-                ],
-              ),
-            );
-          } else {
-            // Tampilan 1 Kolom untuk Layar Sempit (Ponsel/Android)
-            return ListView(
-              padding: const EdgeInsets.all(8.0),
-              children: [cloudSection, localSection],
-            );
-          }
-        },
+                if (isDesktop) {
+                  // Tampilan Grid 2 Kolom untuk Layar Lebar (Desktop/Linux)
+                  return SingleChildScrollView(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(child: cloudSection),
+                        Expanded(child: localSection),
+                      ],
+                    ),
+                  );
+                } else {
+                  // Tampilan 1 Kolom untuk Layar Sempit (Ponsel/Android)
+                  return ListView(
+                    padding: const EdgeInsets.all(8.0),
+                    children: [cloudSection, localSection],
+                  );
+                }
+              },
+            ),
+          ),
+        ),
       ),
     );
   }

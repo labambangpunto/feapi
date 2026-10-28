@@ -63,159 +63,186 @@ class _PembukuanScreenState extends ConsumerState<PembukuanScreen> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Pembukuan Bulanan')),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      body: Center(
+        // Tambahkan Center
+        child: SingleChildScrollView(
+          // Tambahkan scroll horizontal
+          scrollDirection: Axis.horizontal,
+          child: SizedBox(
+            // Tambahkan batas lebar minimum
+            width: MediaQuery.of(context).size.width < 320
+                ? 320
+                : MediaQuery.of(context).size.width,
+            child: Column(
+              // Column yang sudah ada
               children: [
-                const Text(
-                  'Pilih Tahun:',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Pilih Tahun:',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      DropdownButton<int>(
+                        value: activeYear, // Gunakan activeYear
+                        items: tahunDenganTransaksi.map((year) {
+                          return DropdownMenuItem(
+                            value: year,
+                            child: Text(year.toString()),
+                          );
+                        }).toList(),
+                        onChanged: (val) {
+                          if (val != null) {
+                            setState(() => _selectedYear = val);
+                          }
+                        },
+                      ),
+                    ],
+                  ),
                 ),
-                DropdownButton<int>(
-                  value: activeYear, // Gunakan activeYear
-                  items: tahunDenganTransaksi.map((year) {
-                    return DropdownMenuItem(
-                      value: year,
-                      child: Text(year.toString()),
-                    );
-                  }).toList(),
-                  onChanged: (val) {
-                    if (val != null) {
-                      setState(() => _selectedYear = val);
-                    }
-                  },
+                Expanded(
+                  child: pembukuanState.when(
+                    loading: () =>
+                        const Center(child: CircularProgressIndicator()),
+                    error: (err, stack) => Center(child: Text('Error: $err')),
+                    data: (pList) {
+                      // Gunakan activeYear untuk memfilter transaksi
+                      final List<int> bulanDenganTransaksi = transaksiList
+                          .where((t) => t.waktu.year == activeYear)
+                          .map((t) => t.waktu.month)
+                          .toSet()
+                          .toList();
+
+                      bulanDenganTransaksi.sort();
+
+                      if (bulanDenganTransaksi.isEmpty) {
+                        return const Center(
+                          child: Text('Tidak ada transaksi di tahun ini.'),
+                        );
+                      }
+
+                      return ListView.builder(
+                        itemCount: bulanDenganTransaksi.length,
+                        itemBuilder: (context, index) {
+                          final monthInt = bulanDenganTransaksi[index];
+
+                          // Gunakan activeYear untuk evaluasi logika waktu
+                          final isFutureOrCurrent =
+                              (activeYear > now.year) ||
+                              (activeYear == now.year && monthInt >= now.month);
+
+                          PembukuanModel? currentPembukuan;
+                          try {
+                            currentPembukuan = pList.firstWhere(
+                              (p) =>
+                                  p.tahun == activeYear && p.bulan == monthInt,
+                            );
+                          } catch (_) {}
+
+                          final isTerkunci =
+                              currentPembukuan?.isTerkunci ?? false;
+
+                          // 1. Hitung total transaksi (jumlah data, pemasukan, pengeluaran) untuk bulan ini
+                          double totalPemasukan = 0;
+                          double totalPengeluaran = 0;
+                          int jumlahTransaksi = 0;
+
+                          for (var t in transaksiList) {
+                            if (t.waktu.year == activeYear &&
+                                t.waktu.month == monthInt) {
+                              jumlahTransaksi++;
+                              final nominal =
+                                  (t.nominal * t.kuantitas) +
+                                  (t.biayaTambahan ?? 0);
+                              if (t.tipe == TipeTransaksi.pemasukan) {
+                                totalPemasukan += nominal;
+                              } else if (t.tipe == TipeTransaksi.pengeluaran) {
+                                totalPengeluaran += nominal;
+                              }
+                            }
+                          }
+
+                          Widget trailingWidget;
+                          if (isFutureOrCurrent) {
+                            trailingWidget = const Tooltip(
+                              message:
+                                  'Bulan aktif/masa depan belum bisa ditutup',
+                              child: Icon(
+                                Icons.help_outline,
+                                color: Colors.grey,
+                              ),
+                            );
+                          } else {
+                            trailingWidget = ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: isTerkunci
+                                    ? Colors.orange
+                                    : Colors.blue,
+                              ),
+                              onPressed: () => _prosesUbahStatus(
+                                context,
+                                ref,
+                                monthInt,
+                                currentPembukuan,
+                                isTerkunci,
+                                activeYear,
+                              ),
+                              child: Text(
+                                isTerkunci ? 'Buka Kunci' : 'Tutup Buku',
+                                style: const TextStyle(color: Colors.white),
+                              ),
+                            );
+                          }
+
+                          return Card(
+                            margin: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 6,
+                            ),
+                            child: ListTile(
+                              leading: Icon(
+                                isTerkunci ? Icons.lock : Icons.lock_open,
+                                color: isTerkunci ? Colors.red : Colors.green,
+                              ),
+                              title: Text(
+                                '${_bulanList[monthInt - 1]} $activeYear',
+                              ),
+                              // 2. Tampilkan hasil perhitungan di subtitle
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    isTerkunci
+                                        ? 'Sudah Dibukukan (Terkunci)'
+                                        : 'Belum Dibukukan (Terbuka)',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '$jumlahTransaksi Transaksi\nMasuk: ${totalPemasukan.toIdr()} | Keluar: ${totalPengeluaran.toIdr()}',
+                                    style: const TextStyle(fontSize: 12),
+                                  ),
+                                ],
+                              ),
+                              trailing: trailingWidget,
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  ),
                 ),
               ],
             ),
           ),
-          Expanded(
-            child: pembukuanState.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, stack) => Center(child: Text('Error: $err')),
-              data: (pList) {
-                // Gunakan activeYear untuk memfilter transaksi
-                final List<int> bulanDenganTransaksi = transaksiList
-                    .where((t) => t.waktu.year == activeYear)
-                    .map((t) => t.waktu.month)
-                    .toSet()
-                    .toList();
-
-                bulanDenganTransaksi.sort();
-
-                if (bulanDenganTransaksi.isEmpty) {
-                  return const Center(
-                    child: Text('Tidak ada transaksi di tahun ini.'),
-                  );
-                }
-
-                return ListView.builder(
-                  itemCount: bulanDenganTransaksi.length,
-                  itemBuilder: (context, index) {
-                    final monthInt = bulanDenganTransaksi[index];
-
-                    // Gunakan activeYear untuk evaluasi logika waktu
-                    final isFutureOrCurrent =
-                        (activeYear > now.year) ||
-                        (activeYear == now.year && monthInt >= now.month);
-
-                    PembukuanModel? currentPembukuan;
-                    try {
-                      currentPembukuan = pList.firstWhere(
-                        (p) => p.tahun == activeYear && p.bulan == monthInt,
-                      );
-                    } catch (_) {}
-
-                    final isTerkunci = currentPembukuan?.isTerkunci ?? false;
-
-                    // 1. Hitung total transaksi (jumlah data, pemasukan, pengeluaran) untuk bulan ini
-                    double totalPemasukan = 0;
-                    double totalPengeluaran = 0;
-                    int jumlahTransaksi = 0;
-
-                    for (var t in transaksiList) {
-                      if (t.waktu.year == activeYear &&
-                          t.waktu.month == monthInt) {
-                        jumlahTransaksi++;
-                        final nominal =
-                            (t.nominal * t.kuantitas) + (t.biayaTambahan ?? 0);
-                        if (t.tipe == TipeTransaksi.pemasukan) {
-                          totalPemasukan += nominal;
-                        } else if (t.tipe == TipeTransaksi.pengeluaran) {
-                          totalPengeluaran += nominal;
-                        }
-                      }
-                    }
-
-                    Widget trailingWidget;
-                    if (isFutureOrCurrent) {
-                      trailingWidget = const Tooltip(
-                        message: 'Bulan aktif/masa depan belum bisa ditutup',
-                        child: Icon(Icons.help_outline, color: Colors.grey),
-                      );
-                    } else {
-                      trailingWidget = ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: isTerkunci
-                              ? Colors.orange
-                              : Colors.blue,
-                        ),
-                        onPressed: () => _prosesUbahStatus(
-                          context,
-                          ref,
-                          monthInt,
-                          currentPembukuan,
-                          isTerkunci,
-                          activeYear,
-                        ),
-                        child: Text(
-                          isTerkunci ? 'Buka Kunci' : 'Tutup Buku',
-                          style: const TextStyle(color: Colors.white),
-                        ),
-                      );
-                    }
-
-                    return Card(
-                      margin: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 6,
-                      ),
-                      child: ListTile(
-                        leading: Icon(
-                          isTerkunci ? Icons.lock : Icons.lock_open,
-                          color: isTerkunci ? Colors.red : Colors.green,
-                        ),
-                        title: Text('${_bulanList[monthInt - 1]} $activeYear'),
-                        // 2. Tampilkan hasil perhitungan di subtitle
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              isTerkunci
-                                  ? 'Sudah Dibukukan (Terkunci)'
-                                  : 'Belum Dibukukan (Terbuka)',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '$jumlahTransaksi Transaksi\nMasuk: ${totalPemasukan.toIdr()} | Keluar: ${totalPengeluaran.toIdr()}',
-                              style: const TextStyle(fontSize: 12),
-                            ),
-                          ],
-                        ),
-                        trailing: trailingWidget,
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

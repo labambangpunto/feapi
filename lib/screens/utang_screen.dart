@@ -236,128 +236,127 @@ class _UtangScreenState extends ConsumerState<UtangScreen> {
                             child: InkWell(
                               onTap: () =>
                                   _tampilFormPelunasan(context, ref, item),
-                              child: Center(
-                                child: ListTile(
-                                  leading: CircleAvatar(
-                                    backgroundColor: colorTipe.withValues(
-                                      alpha: 0.15,
-                                    ),
-                                    child: Icon(iconTipe, color: colorTipe),
+
+                              child: ListTile(
+                                leading: CircleAvatar(
+                                  backgroundColor: colorTipe.withValues(
+                                    alpha: 0.15,
                                   ),
-                                  title: Text(
-                                    item.nominal.toIdr(),
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      color: item.isLunas
-                                          ? Colors.grey
-                                          : colorTipe,
-                                      decoration: item.isLunas
-                                          ? TextDecoration.lineThrough
-                                          : null,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
+                                  child: Icon(iconTipe, color: colorTipe),
+                                ),
+                                title: Text(
+                                  item.nominal.toIdr(),
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: item.isLunas
+                                        ? Colors.grey
+                                        : colorTipe,
+                                    decoration: item.isLunas
+                                        ? TextDecoration.lineThrough
+                                        : null,
                                   ),
-                                  subtitle: Padding(
-                                    padding: const EdgeInsets.only(top: 4),
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          isUtang
-                                              ? 'Utang ke: ${item.pihakTerkait}'
-                                              : 'Piutang ke: ${item.pihakTerkait}',
-                                          style: const TextStyle(
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          'Jatuh tempo: $formatJatuhTempo',
-                                          style: const TextStyle(fontSize: 11),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  trailing: Row(
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                subtitle: Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Column(
                                     mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
-                                      if (item.isLunas)
-                                        const Icon(
-                                          Icons.check_circle,
-                                          color: Colors.green,
+                                      Text(
+                                        isUtang
+                                            ? 'Utang ke: ${item.pihakTerkait}'
+                                            : 'Piutang ke: ${item.pihakTerkait}',
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w500,
                                         ),
-                                      PopupMenuButton<String>(
-                                        icon: const Icon(Icons.more_vert),
-                                        onSelected: (value) {
-                                          if (value == 'edit') {
-                                            Navigator.push(
-                                              context,
-                                              MaterialPageRoute(
-                                                builder: (_) =>
-                                                    FormUtangPiutangScreen(
-                                                      tipe: item.tipe,
-                                                      dataEdit: item,
-                                                    ),
-                                              ),
-                                            );
-                                          } else if (value == 'hapus') {
-                                            showDialog<void>(
-                                              context: context,
-                                              builder: (_) => AlertDialog(
-                                                title: const Text(
-                                                  'Konfirmasi Hapus',
-                                                ),
-                                                content: Text(
-                                                  'Apakah Anda yakin ingin menghapus data ${isUtang ? "utang" : "piutang"} ini?',
-                                                ),
-                                                actions: [
-                                                  TextButton(
-                                                    onPressed: () =>
-                                                        Navigator.pop(context),
-                                                    child: const Text('Batal'),
-                                                  ),
-                                                  FilledButton(
-                                                    onPressed: () {
-                                                      ref
-                                                          .read(
-                                                            utangPiutangControllerProvider
-                                                                .notifier,
-                                                          )
-                                                          .hapusUtangPiutang(
-                                                            item.id,
-                                                          );
-                                                      Navigator.pop(context);
-                                                    },
-                                                    child: const Text('Hapus'),
-                                                  ),
-                                                ],
-                                              ),
-                                            );
-                                          }
-                                        },
-                                        itemBuilder: (context) => [
-                                          if (!item.isLunas)
-                                            const PopupMenuItem(
-                                              value: 'edit',
-                                              child: Text('Edit'),
-                                            ),
-                                          const PopupMenuItem(
-                                            value: 'hapus',
-                                            child: Text('Hapus'),
-                                          ),
-                                        ],
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        'Jatuh tempo: $formatJatuhTempo',
+                                        style: const TextStyle(fontSize: 11),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
                                       ),
                                     ],
                                   ),
+                                ),
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    if (item.isLunas)
+                                      const Icon(
+                                        Icons.check_circle,
+                                        color: Colors.green,
+                                      ),
+                                    PopupMenuButton<String>(
+                                      icon: const Icon(Icons.more_vert),
+                                      onSelected: (value) {
+                                        if (value == 'edit') {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (_) =>
+                                                  FormUtangPiutangScreen(
+                                                    tipe: item.tipe,
+                                                    dataEdit: item,
+                                                  ),
+                                            ),
+                                          );
+                                        } else if (value == 'hapus') {
+                                          showDialog<void>(
+                                            context: context,
+                                            builder: (_) => AlertDialog(
+                                              title: const Text(
+                                                'Konfirmasi Hapus',
+                                              ),
+                                              content: Text(
+                                                'Apakah Anda yakin ingin menghapus data ${isUtang ? "utang" : "piutang"} ini?',
+                                              ),
+                                              actions: [
+                                                TextButton(
+                                                  onPressed: () =>
+                                                      Navigator.pop(context),
+                                                  child: const Text('Batal'),
+                                                ),
+                                                FilledButton(
+                                                  onPressed: () {
+                                                    ref
+                                                        .read(
+                                                          utangPiutangControllerProvider
+                                                              .notifier,
+                                                        )
+                                                        .hapusUtangPiutang(
+                                                          item.id,
+                                                        );
+                                                    Navigator.pop(context);
+                                                  },
+                                                  child: const Text('Hapus'),
+                                                ),
+                                              ],
+                                            ),
+                                          );
+                                        }
+                                      },
+                                      itemBuilder: (context) => [
+                                        if (!item.isLunas)
+                                          const PopupMenuItem(
+                                            value: 'edit',
+                                            child: Text('Edit'),
+                                          ),
+                                        const PopupMenuItem(
+                                          value: 'hapus',
+                                          child: Text('Hapus'),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
                                 ),
                               ),
                             ),

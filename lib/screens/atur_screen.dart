@@ -145,217 +145,265 @@ class _AturScreenState extends ConsumerState<AturScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Pengaturan')),
       body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(
-            maxWidth: 600,
-          ), // Batas maksimal lebar layar
-          child: ListView(
-            children: [
-              // 1. Profil
-              profilAsync.when(
-                data: (profil) => Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 30,
-                        backgroundImage:
-                            profil != null && profil['fotoBase64'] != null
-                            ? MemoryImage(base64Decode(profil['fotoBase64']))
-                            : null,
-                        child: profil == null || profil['fotoBase64'] == null
-                            ? const Icon(Icons.person, size: 30)
-                            : null,
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              profil?['nama']?.isNotEmpty == true
-                                  ? profil!['nama']
-                                  : 'Pengguna',
-                              style: const TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            InkWell(
-                              onTap: () => _editProfil(profil),
-                              child: const Text(
-                                'Edit Profil',
-                                style: TextStyle(
-                                  color: Colors.blue,
-                                  fontWeight: FontWeight.w500,
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: SizedBox(
+            // Batas minimum 320px, maksimum 600px
+            width: MediaQuery.of(context).size.width < 320
+                ? 320
+                : (MediaQuery.of(context).size.width > 600
+                      ? 600
+                      : MediaQuery.of(context).size.width),
+            child: ListView(
+              padding: const EdgeInsets.all(
+                12.0,
+              ), // Tambahan padding agar card tidak menempel di tepi
+              children: [
+                // 1. Profil
+                Card(
+                  clipBehavior: Clip.antiAlias,
+                  child: profilAsync.when(
+                    data: (profil) => Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 30,
+                            backgroundImage:
+                                profil != null && profil['fotoBase64'] != null
+                                ? MemoryImage(
+                                    base64Decode(profil['fotoBase64']),
+                                  )
+                                : null,
+                            child:
+                                profil == null || profil['fotoBase64'] == null
+                                ? const Icon(Icons.person, size: 30)
+                                : null,
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  profil?['nama']?.isNotEmpty == true
+                                      ? profil!['nama']
+                                      : 'Pengguna',
+                                  style: const TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
-                              ),
+                                InkWell(
+                                  onTap: () => _editProfil(profil),
+                                  child: const Text(
+                                    'Edit Profil',
+                                    style: TextStyle(
+                                      color: Colors.blue,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
+                    loading: () => const Padding(
+                      padding: EdgeInsets.all(16),
+                      child: CircularProgressIndicator(),
+                    ),
+                    error: (_, _) => const SizedBox.shrink(),
                   ),
                 ),
-                loading: () => const Padding(
-                  padding: EdgeInsets.all(16),
-                  child: CircularProgressIndicator(),
-                ),
-                error: (_, _) => const SizedBox.shrink(),
-              ),
-              const Divider(),
+                const SizedBox(height: 4),
 
-              // 2. Mode Gelap
-              ListTile(
-                leading: const Icon(Icons.dark_mode),
-                title: const Text('Mode Gelap'),
-                trailing: Switch(
-                  value: isDark,
-                  onChanged: (value) {
-                    ref.read(themeProvider.notifier).toggleTheme(value);
-                  },
-                ),
-              ),
-              const Divider(),
-
-              // 3. Kelola Akun
-              ListTile(
-                leading: const Icon(Icons.account_balance_wallet),
-                title: const Text('Kelola Akun'),
-                subtitle: const Text('Tambah, edit, atau hapus akun'),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const KelolaAkunScreen()),
-                  );
-                },
-              ),
-
-              // 4. Kelola Label
-              ListTile(
-                leading: const Icon(Icons.label),
-                title: const Text('Kelola Label'),
-                subtitle: const Text('Tambah, edit, atau hapus label'),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const KelolaLabelScreen(),
+                // 2. Mode Gelap
+                Card(
+                  clipBehavior: Clip.antiAlias,
+                  child: ListTile(
+                    leading: const Icon(Icons.dark_mode),
+                    title: const Text('Mode Gelap'),
+                    trailing: Switch(
+                      value: isDark,
+                      onChanged: (value) {
+                        ref.read(themeProvider.notifier).toggleTheme(value);
+                      },
                     ),
-                  );
-                },
-              ),
-
-              // MENU BARU: Pembukuan Bulanan
-              ListTile(
-                leading: const Icon(Icons.lock_clock, color: Colors.indigo),
-                title: const Text('Pembukuan Bulanan'),
-                subtitle: const Text('Kunci/buka transaksi bulanan'),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const PembukuanScreen()),
-                  );
-                },
-              ),
-
-              // 5. Pencadangan
-              ListTile(
-                leading: const Icon(Icons.backup, color: Colors.blue),
-                title: const Text('Pencadangan'),
-                subtitle: const Text('Backup Cloud & Lokal'),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const PencadanganScreen(),
-                    ),
-                  );
-                },
-              ),
-              const Divider(),
-
-              // 6 & 7. Ekspor CSV
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                child: Text(
-                  'Ekspor CSV',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.blue,
                   ),
                 ),
-              ),
-              ListTile(
-                leading: const Icon(Icons.folder),
-                title: const Text('Simpan CSV'),
-                subtitle: const Text('Simpan berkas .csv di perangkat'),
-                onTap: () async {
-                  try {
-                    final backupService = BackupService(
-                      ref.read(databaseRepositoryProvider),
-                    );
-                    final path = await backupService.simpanCsvKeFolder();
+                const SizedBox(height: 4),
 
-                    if (context.mounted && path != null) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('CSV tersimpan')),
+                // 3. Kelola Akun
+                Card(
+                  clipBehavior: Clip.antiAlias,
+                  child: ListTile(
+                    leading: const Icon(Icons.account_balance_wallet),
+                    title: const Text('Kelola Akun'),
+                    subtitle: const Text('Tambah, edit, atau hapus akun'),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const KelolaAkunScreen(),
+                        ),
                       );
-                    }
-                  } catch (e) {
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Gagal menyimpan: $e')),
-                      );
-                    }
-                  }
-                },
-              ),
-
-              // Tambahkan pengecekan OS di sini
-              if (Platform.isAndroid)
-                ListTile(
-                  leading: const Icon(Icons.share),
-                  title: const Text('Bagikan CSV'),
-                  subtitle: const Text('Bagikan berkas .csv'),
-                  onTap: () async {
-                    final backupService = BackupService(
-                      ref.read(databaseRepositoryProvider),
-                    );
-                    await backupService.bagikanCsvLangsung();
-                  },
+                    },
+                  ),
                 ),
-              const Divider(),
+                const SizedBox(height: 4),
 
-              // 8. Tentang Aplikasi
-              // 8. Tentang Aplikasi
-              ListTile(
-                leading: const Icon(Icons.info),
-                title: const Text('Tentang Aplikasi'),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const TentangAplikasiScreen(),
+                // 4. Kelola Label
+                Card(
+                  clipBehavior: Clip.antiAlias,
+                  child: ListTile(
+                    leading: const Icon(Icons.label),
+                    title: const Text('Kelola Label'),
+                    subtitle: const Text('Tambah, edit, atau hapus label'),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const KelolaLabelScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 4),
+
+                // 5. Pembukuan Bulanan
+                Card(
+                  clipBehavior: Clip.antiAlias,
+                  child: ListTile(
+                    leading: const Icon(Icons.lock_clock, color: Colors.indigo),
+                    title: const Text('Pembukuan Bulanan'),
+                    subtitle: const Text('Kunci/buka transaksi bulanan'),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const PembukuanScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 4),
+
+                // 6. Pencadangan
+                Card(
+                  clipBehavior: Clip.antiAlias,
+                  child: ListTile(
+                    leading: const Icon(Icons.backup, color: Colors.blue),
+                    title: const Text('Pencadangan'),
+                    subtitle: const Text('Backup Cloud & Lokal'),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const PencadanganScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // 7 & 8. Ekspor CSV
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 4.0, vertical: 8.0),
+                  child: Text(
+                    'Ekspor CSV',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blue,
                     ),
-                  );
-                },
-              ),
-              const Divider(),
-
-              // 9. Reset Seluruh Database
-              ListTile(
-                leading: const Icon(Icons.warning, color: Colors.red),
-                title: const Text(
-                  'RESET SELURUH DATABASE',
-                  style: TextStyle(color: Colors.red),
+                  ),
                 ),
-                onTap: () => _tampilDialogReset(context, ref),
-              ),
-            ],
-          ), // Penutup ListView
-        ), // Penutup ConstrainedBox
-      ), // Penutup Center
+                Card(
+                  clipBehavior: Clip.antiAlias,
+                  child: ListTile(
+                    leading: const Icon(Icons.folder),
+                    title: const Text('Simpan CSV'),
+                    subtitle: const Text('Simpan berkas .csv di perangkat'),
+                    onTap: () async {
+                      try {
+                        final backupService = BackupService(
+                          ref.read(databaseRepositoryProvider),
+                        );
+                        final path = await backupService.simpanCsvKeFolder();
+
+                        if (context.mounted && path != null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('CSV tersimpan')),
+                          );
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Gagal menyimpan: $e')),
+                          );
+                        }
+                      }
+                    },
+                  ),
+                ),
+                const SizedBox(height: 4),
+
+                if (Platform.isAndroid)
+                  Card(
+                    clipBehavior: Clip.antiAlias,
+                    child: ListTile(
+                      leading: const Icon(Icons.share),
+                      title: const Text('Bagikan CSV'),
+                      subtitle: const Text('Bagikan berkas .csv'),
+                      onTap: () async {
+                        final backupService = BackupService(
+                          ref.read(databaseRepositoryProvider),
+                        );
+                        await backupService.bagikanCsvLangsung();
+                      },
+                    ),
+                  ),
+                const SizedBox(height: 12),
+
+                // 9. Tentang Aplikasi
+                Card(
+                  clipBehavior: Clip.antiAlias,
+                  child: ListTile(
+                    leading: const Icon(Icons.info),
+                    title: const Text('Tentang Aplikasi'),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const TentangAplikasiScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // 10. Reset Seluruh Database
+                Card(
+                  clipBehavior: Clip.antiAlias,
+                  child: ListTile(
+                    leading: const Icon(Icons.warning, color: Colors.red),
+                    title: const Text(
+                      'RESET SELURUH DATABASE',
+                      style: TextStyle(color: Colors.red),
+                    ),
+                    onTap: () => _tampilDialogReset(context, ref),
+                  ),
+                ),
+              ],
+            ), // Penutup ListView
+          ), // Penutup ConstrainedBox
+        ), // Penutup Center
+      ),
     ); // Penutup Scaffold
   }
 

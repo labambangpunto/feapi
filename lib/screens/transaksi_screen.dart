@@ -166,21 +166,19 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
               selectedDate.day == DateTime.now().day)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8.0),
-              child: Center(
-                child: showFullMonth
-                    ? FilledButton(
-                        onPressed: () =>
-                            ref.read(showFullMonthProvider.notifier).state =
-                                false,
-                        child: const Text('Go to today'),
-                      )
-                    : FilledButton(
-                        onPressed: () =>
-                            ref.read(showFullMonthProvider.notifier).state =
-                                true,
-                        child: const Text('Expand view'),
-                      ),
-              ),
+
+              child: showFullMonth
+                  ? FilledButton(
+                      onPressed: () =>
+                          ref.read(showFullMonthProvider.notifier).state =
+                              false,
+                      child: const Text('Go to today'),
+                    )
+                  : FilledButton(
+                      onPressed: () =>
+                          ref.read(showFullMonthProvider.notifier).state = true,
+                      child: const Text('Expand view'),
+                    ),
             ),
         ],
       ),
