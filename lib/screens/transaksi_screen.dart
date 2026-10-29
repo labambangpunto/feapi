@@ -87,14 +87,14 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
       final strAkhir =
           '${rentangAkhir.day.toString().padLeft(2, '0')} ${bulanMap[rentangAkhir.month]} ${rentangAkhir.year}';
       topLabelInfo = isFilterActive
-          ? 'Filter rentang: $strAwal - $strAkhir'
-          : 'Rentang: $strAwal - $strAkhir';
+          ? 'Filter rentang $strAwal - $strAkhir'
+          : 'Rentang $strAwal - $strAkhir';
     } else if (showFullMonth || isFilterActive) {
       topLabelInfo = isFilterActive
-          ? 'Filter bulan: $displayMonth'
-          : 'Transaksi bulan: $displayMonth';
+          ? 'Filter bulan $displayMonth'
+          : 'Transaksi bulan $displayMonth';
     } else {
-      topLabelInfo = 'Transaksi tanggal: $displayDate';
+      topLabelInfo = 'Transaksi $displayDate';
     }
 
     return Scaffold(

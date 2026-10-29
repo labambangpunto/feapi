@@ -178,12 +178,37 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         }
       }
     }
-
+    const hariMap = [
+      '',
+      'Senin',
+      'Selasa',
+      'Rabu',
+      'Kamis',
+      'Jumat',
+      'Sabtu',
+      'Minggu',
+    ];
+    const bulanMap = [
+      '',
+      'Januari',
+      'Februari',
+      'Maret',
+      'April',
+      'Mei',
+      'Juni',
+      'Juli',
+      'Agustus',
+      'September',
+      'Oktober',
+      'November',
+      'Desember',
+    ];
+    final namaHari = hariMap[now.weekday];
+    final tanggalLengkap = '${now.day} ${bulanMap[now.month]} ${now.year}';
     // 1. DIVISI 1: ARUS KAS TRANSAKSI (Tampilan Utama)
     final divisi1 = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Widget teks sapaan dan SizedBox telah dihapus
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -368,6 +393,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _buildPieChart(totalPemasukan, totalPengeluaran, totalTransfer),
+        _buildCalendarCard(transaksiState.value ?? []),
+        _buildTableAkun(
+          transaksiState.value ?? [],
+          ref.watch(akunControllerProvider).value ?? [],
+        ),
         _buildTableAkun(
           transaksiState.value ?? [],
           ref.watch(akunControllerProvider).value ?? [],
@@ -432,6 +462,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     // 5. PENYUSUNAN TATA LETAK RESPONSIF
     return Scaffold(
+      appBar: AppBar(
+        toolbarHeight: 76, // Mengatur tinggi agar muat untuk dua baris teks
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              namaHari,
+              style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+            ),
+            Text(
+              tanggalLengkap,
+              style: const TextStyle(
+                fontSize: 16,
+                color: Colors.grey,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      ),
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
@@ -637,6 +688,189 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           throw Error();
       }
     });
+  }
+
+  Widget _buildCalendarCard(List<TransaksiModel> transaksiList) {
+    final now = DateTime.now();
+    final year = now.year;
+    final month = now.month;
+
+    // Hitung rekap harian untuk bulan ini
+    final Map<int, _DailyStat> dailyStats = {};
+    for (var t in transaksiList) {
+      if (t.waktu.year == year && t.waktu.month == month) {
+        final day = t.waktu.day;
+        final nominal = (t.nominal * t.kuantitas) + (t.biayaTambahan ?? 0);
+
+        dailyStats.putIfAbsent(day, () => _DailyStat());
+        if (t.tipe == TipeTransaksi.pemasukan) {
+          dailyStats[day]!.pemasukan += nominal;
+        } else if (t.tipe == TipeTransaksi.pengeluaran) {
+          dailyStats[day]!.pengeluaran += nominal;
+        } else if (t.tipe == TipeTransaksi.transfer) {
+          dailyStats[day]!.transfer += nominal;
+        }
+      }
+    }
+
+    final firstDayOfMonth = DateTime(year, month, 1);
+    final daysInMonth = DateTime(year, month + 1, 0).day;
+    // Dart: Senin=1, Minggu=7 -> Ubah agar Minggu=0
+    final firstWeekday = firstDayOfMonth.weekday == 7
+        ? 0
+        : firstDayOfMonth.weekday;
+
+    final List<String> hariStr = [
+      'Min',
+      'Sen',
+      'Sel',
+      'Rab',
+      'Kam',
+      'Jum',
+      'Sab',
+    ];
+
+    return Card(
+      elevation: 2,
+      margin: const EdgeInsets.only(bottom: 24),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text(
+              'Kalender Transaksi Bulan Ini',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: hariStr
+                  .map(
+                    (h) => Expanded(
+                      child: Text(
+                        h,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  )
+                  .toList(),
+            ),
+            const SizedBox(height: 8),
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 7,
+                childAspectRatio: 0.7,
+                crossAxisSpacing: 4,
+                mainAxisSpacing: 4,
+              ),
+              itemCount: firstWeekday + daysInMonth,
+              itemBuilder: (context, index) {
+                if (index < firstWeekday) return const SizedBox();
+
+                final day = index - firstWeekday + 1;
+                final stat = dailyStats[day];
+                final hasData =
+                    stat != null &&
+                    (stat.pemasukan > 0 ||
+                        stat.pengeluaran > 0 ||
+                        stat.transfer > 0);
+
+                // Siapkan teks Tooltip
+                String tooltipText = 'Tanggal $day\n';
+                if (hasData) {
+                  tooltipText += 'Pemasukan: ${stat.pemasukan.toIdr()}\n';
+                  tooltipText += 'Pengeluaran: ${stat.pengeluaran.toIdr()}\n';
+                  tooltipText += 'Transfer: ${stat.transfer.toIdr()}';
+                } else {
+                  tooltipText += 'Tidak ada transaksi';
+                }
+
+                return Tooltip(
+                  message: tooltipText,
+                  triggerMode: TooltipTriggerMode
+                      .tap, // Akan muncul saat diklik di Mobile
+                  padding: const EdgeInsets.all(12),
+                  margin: const EdgeInsets.symmetric(horizontal: 24),
+                  showDuration: const Duration(seconds: 3),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: Colors.grey.withValues(alpha: 0.3),
+                      ),
+                      borderRadius: BorderRadius.circular(6),
+                      color: day == now.day
+                          ? Colors.blue.withValues(alpha: 0.1)
+                          : Colors.transparent,
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 2),
+                        Text(
+                          day.toString(),
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: day == now.day
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                            color: day == now.day ? Colors.blue : null,
+                          ),
+                        ),
+                        if (hasData) ...[
+                          const Spacer(),
+                          if (stat.pemasukan > 0)
+                            _buildMiniIndicator(Colors.green, stat.pemasukan),
+                          if (stat.pengeluaran > 0)
+                            _buildMiniIndicator(Colors.red, stat.pengeluaran),
+                          if (stat.transfer > 0)
+                            _buildMiniIndicator(Colors.blue, stat.transfer),
+                          const SizedBox(height: 4),
+                        ],
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMiniIndicator(Color color, double value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 1),
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Text(
+          _formatSingkat(value),
+          style: TextStyle(
+            fontSize: 8,
+            color: color,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _formatSingkat(double value) {
+    if (value >= 1000000000) {
+      return '${(value / 1000000000).toStringAsFixed(1)}B';
+    }
+    if (value >= 1000000) return '${(value / 1000000).toStringAsFixed(1)}M';
+    if (value >= 1000) return '${(value / 1000).toStringAsFixed(0)}K';
+    return value.toStringAsFixed(0);
   }
 
   Widget _buildLineChart({
@@ -1337,4 +1571,10 @@ class _LabelStat {
 
   _LabelStat(this.nama);
   double get total => pengeluaran + pemasukan + transfer;
+}
+
+class _DailyStat {
+  double pengeluaran = 0;
+  double pemasukan = 0;
+  double transfer = 0;
 }
