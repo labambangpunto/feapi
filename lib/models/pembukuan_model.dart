@@ -3,12 +3,13 @@ class PembukuanModel {
   final int tahun;
   final int bulan;
   final bool isTerkunci;
-
+  final String tipe;
   PembukuanModel({
     required this.id,
     required this.tahun,
     required this.bulan,
-    this.isTerkunci = false,
+    required this.isTerkunci,
+    this.tipe = 'transaksi',
   });
 
   Map<String, dynamic> toMap() {
@@ -17,6 +18,7 @@ class PembukuanModel {
       'tahun': tahun,
       'bulan': bulan,
       'isTerkunci': isTerkunci ? 1 : 0,
+      'tipe': tipe,
     };
   }
 
@@ -26,6 +28,7 @@ class PembukuanModel {
       tahun: map['tahun'],
       bulan: map['bulan'],
       isTerkunci: map['isTerkunci'] == 1,
+      tipe: map['tipe'] ?? 'transaksi',
     );
   }
 }

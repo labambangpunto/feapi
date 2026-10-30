@@ -99,17 +99,42 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          topLabelInfo,
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              topLabelInfo,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            // Indikator muncul jika filter aktif atau tanggal tidak berada di hari ini
+            if (isFilterActive ||
+                isModeRentang ||
+                selectedDate.year != DateTime.now().year ||
+                selectedDate.month != DateTime.now().month ||
+                selectedDate.day != DateTime.now().day)
+              Text(
+                'Filter nyala',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.orange.shade700,
+                ),
+              ),
+          ],
         ),
         actions: [
-          if (isFilterActive)
-            Tooltip(
-              message: 'Hapus Filter',
-              child: IconButton(
-                icon: const Icon(Icons.filter_alt_off),
-                onPressed: () {
+          PopupMenuButton<String>(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(23),
+            ),
+            icon: const Icon(Icons.menu_rounded),
+            onSelected: (value) {
+              switch (value) {
+                case 'filter':
+                  _tampilFormFilter(akunList, labelList, ref);
+                  break;
+                case 'hapus_filter':
                   ref.read(isFilterActiveProvider.notifier).state = false;
                   ref.read(filterCatatanProvider.notifier).state = '';
                   ref.read(filterAkunIdProvider.notifier).state = null;
@@ -117,69 +142,117 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
                   ref.read(filterMinNominalProvider.notifier).state = null;
                   ref.read(filterMaxNominalProvider.notifier).state = null;
                   ref.read(filterTipeProvider.notifier).state = null;
-                },
-              ),
-            )
-          else
-            Tooltip(
-              message: 'Filter', // Mengubah nama Tooltip
-              child: IconButton(
-                icon: const Icon(Icons.search),
-                onPressed: () =>
-                    _tampilFormFilter(akunList, labelList, ref), // Melempar ref
-              ),
-            ),
-          Tooltip(
-            message: 'Jump to Date',
-            child: IconButton(
-              icon: const Icon(Icons.calendar_month),
-              onPressed: () {
-                if (transaksiState.hasValue) {
-                  _tampilFormJumpToDate(transaksiState.value!, ref);
-                }
-              },
-            ),
-          ),
-          // TOMBOL CLEAR JUMP TO DATE
-          if (isModeRentang ||
-              selectedDate.year != DateTime.now().year ||
-              selectedDate.month != DateTime.now().month ||
-              selectedDate.day != DateTime.now().day)
-            Tooltip(
-              message: 'Clear',
-              child: IconButton(
-                icon: const Icon(Icons.event_busy),
-                onPressed: () {
+                  break;
+                case 'jump':
+                  if (transaksiState.hasValue) {
+                    _tampilFormJumpToDate(transaksiState.value!, ref);
+                  }
+                  break;
+                case 'clear_jump':
                   ref.read(selectedDateProvider.notifier).state =
                       DateTime.now();
                   ref.read(isModeRentangProvider.notifier).state = false;
                   ref.read(rentangAwalProvider.notifier).state = null;
                   ref.read(rentangAkhirProvider.notifier).state = null;
                   ref.read(showFullMonthProvider.notifier).state = false;
-                },
-              ),
-            ),
-          if (!isFilterActive &&
-              !isModeRentang &&
-              selectedDate.year == DateTime.now().year &&
-              selectedDate.month == DateTime.now().month &&
-              selectedDate.day == DateTime.now().day)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                  break;
+                case 'expand':
+                  ref.read(showFullMonthProvider.notifier).state = true;
+                  break;
+                case 'collapse':
+                  ref.read(showFullMonthProvider.notifier).state = false;
+                  break;
+              }
+            },
+            itemBuilder: (context) {
+              final isDateModified =
+                  isModeRentang ||
+                  selectedDate.year != DateTime.now().year ||
+                  selectedDate.month != DateTime.now().month ||
+                  selectedDate.day != DateTime.now().day;
 
-              child: showFullMonth
-                  ? FilledButton(
-                      onPressed: () =>
-                          ref.read(showFullMonthProvider.notifier).state =
-                              false,
-                      child: const Text('Go to today'),
-                    )
-                  : FilledButton(
-                      onPressed: () =>
-                          ref.read(showFullMonthProvider.notifier).state = true,
-                      child: const Text('Expand view'),
+              final canExpandCollapse =
+                  !isFilterActive && !isModeRentang && !isDateModified;
+
+              return [
+                // 1. Menu Filter
+                if (isFilterActive)
+                  const PopupMenuItem(
+                    value: 'hapus_filter',
+                    child: Row(
+                      children: [
+                        Icon(Icons.filter_alt_off_rounded, color: Colors.grey),
+                        SizedBox(width: 12),
+                        Text('Hapus Filter'),
+                      ],
                     ),
-            ),
+                  )
+                else
+                  const PopupMenuItem(
+                    value: 'filter',
+                    child: Row(
+                      children: [
+                        Icon(Icons.filter_alt_rounded, color: Colors.grey),
+                        SizedBox(width: 12),
+                        Text('Filter'),
+                      ],
+                    ),
+                  ),
+
+                const PopupMenuDivider(),
+
+                // 2. Menu Jump to Date
+                const PopupMenuItem(
+                  value: 'jump',
+                  child: Row(
+                    children: [
+                      Icon(Icons.event_rounded, color: Colors.grey),
+                      SizedBox(width: 12),
+                      Text('Pergi ke Tanggal'),
+                    ],
+                  ),
+                ),
+                if (isDateModified)
+                  const PopupMenuItem(
+                    value: 'clear_jump',
+                    child: Row(
+                      children: [
+                        Icon(Icons.close_rounded, color: Colors.grey),
+                        SizedBox(width: 12),
+                        Text('Clear (Kembali ke Hari Ini)'),
+                      ],
+                    ),
+                  ),
+
+                // 3. Menu Expand / Collapse View
+                if (canExpandCollapse) ...[
+                  const PopupMenuDivider(),
+                  if (showFullMonth)
+                    const PopupMenuItem(
+                      value: 'collapse',
+                      child: Row(
+                        children: [
+                          Icon(Icons.unfold_less, color: Colors.grey),
+                          SizedBox(width: 12),
+                          Text('Persempit Tampilan'),
+                        ],
+                      ),
+                    )
+                  else
+                    const PopupMenuItem(
+                      value: 'expand',
+                      child: Row(
+                        children: [
+                          Icon(Icons.unfold_more, color: Colors.grey),
+                          SizedBox(width: 12),
+                          Text('Perluas Tampilan'),
+                        ],
+                      ),
+                    ),
+                ],
+              ];
+            },
+          ),
         ],
       ),
       body: transaksiState.when(
@@ -321,21 +394,34 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
                       )
                     : LayoutBuilder(
                         builder: (context, constraints) {
-                          // Deteksi lebar layar untuk mengatur jumlah kolom grid
                           final double lebarLayar = constraints.maxWidth;
                           final int crossAxisCount;
 
                           if (lebarLayar >= 840) {
-                            crossAxisCount = 4; // Layar Desktop
+                            crossAxisCount = 4;
                           } else if (lebarLayar >= 600) {
-                            crossAxisCount = 3; // Layar Tablet / Mini-tablet
+                            crossAxisCount = 3;
                           } else if (lebarLayar >= 400) {
                             crossAxisCount = 2;
-                          } // Hp horizontal
-                          else {
-                            crossAxisCount = 1; // Layar Ponsel
+                          } else {
+                            crossAxisCount = 1;
                           }
-                          // Kelompokkan data per tanggal agar header tanggal dapat memisahkan setiap grup (full-width)
+
+                          // Hitung summary jumlah transaksi yang tampil
+                          int countPemasukan = 0;
+                          int countPengeluaran = 0;
+                          int countTransfer = 0;
+
+                          for (var t in filteredList) {
+                            if (t.tipe == TipeTransaksi.pemasukan) {
+                              countPemasukan++;
+                            } else if (t.tipe == TipeTransaksi.pengeluaran) {
+                              countPengeluaran++;
+                            } else if (t.tipe == TipeTransaksi.transfer) {
+                              countTransfer++;
+                            }
+                          }
+
                           final Map<String, List<TransaksiModel>>
                           groupedTransactions = {};
                           for (var t in filteredList) {
@@ -381,7 +467,7 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
                                     gridDelegate:
                                         SliverGridDelegateWithFixedCrossAxisCount(
                                           crossAxisCount: crossAxisCount,
-                                          mainAxisExtent: 110, // Ketinggian tetap untuk card transaksi (mencegah overflow)
+                                          mainAxisExtent: 110,
                                           crossAxisSpacing: 4,
                                           mainAxisSpacing: 4,
                                         ),
@@ -424,13 +510,13 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
                                       );
 
                                       return Card(
-                                        elevation: 0, // Hilangkan bayangan agar outline terlihat bersih
+                                        elevation: 0,
                                         shape: RoundedRectangleBorder(
                                           borderRadius: BorderRadius.circular(
-                                            12,
+                                            14,
                                           ),
                                           side: BorderSide(
-                                            color: colorTipe, // Warna outline sesuai tipe transaksi
+                                            color: colorTipe,
                                             width: 1.5,
                                           ),
                                         ),
@@ -449,7 +535,6 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
                                           ),
                                           child: Center(
                                             child: ListTile(
-                                              // Properti leading dihapus
                                               title: Row(
                                                 children: [
                                                   Expanded(
@@ -520,7 +605,7 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
                                   ),
                                 ),
                               ],
-                              // Footer / Pemuat Transaksi Bulan Ini
+
                               if (!isFilterActive &&
                                   !showFullMonth &&
                                   filteredList.isEmpty)
@@ -544,6 +629,99 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
                                     ),
                                   ),
                                 ),
+
+                              // Summary Paling Bawah
+                              if (filteredList.isNotEmpty)
+                                SliverToBoxAdapter(
+                                  child: Padding(
+                                    padding: const EdgeInsets.fromLTRB(
+                                      16,
+                                      24,
+                                      16,
+                                      88,
+                                    ),
+                                    child: Card(
+                                      elevation: 0,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .surfaceContainerHighest,
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(16.0),
+                                        child: Column(
+                                          children: [
+                                            const Text(
+                                              'Ringkasan Jumlah Transaksi',
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 16),
+                                            Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.spaceEvenly,
+                                              children: [
+                                                Column(
+                                                  children: [
+                                                    const Icon(
+                                                      Icons.arrow_upward,
+                                                      color: Colors.red,
+                                                    ),
+                                                    const SizedBox(height: 4),
+                                                    Text(
+                                                      '$countPengeluaran Keluar',
+                                                      style: const TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                                Column(
+                                                  children: [
+                                                    const Icon(
+                                                      Icons.arrow_downward,
+                                                      color: Colors.green,
+                                                    ),
+                                                    const SizedBox(height: 4),
+                                                    Text(
+                                                      '$countPemasukan Masuk',
+                                                      style: const TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                                Column(
+                                                  children: [
+                                                    const Icon(
+                                                      Icons.swap_horiz,
+                                                      color: Colors.blue,
+                                                    ),
+                                                    const SizedBox(height: 4),
+                                                    Text(
+                                                      '$countTransfer Transfer',
+                                                      style: const TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+
+                              // Jika list kosong, berikan spasi kosong agar footer default tidak tertutup FAB
+                              if (filteredList.isEmpty)
+                                const SliverToBoxAdapter(
+                                  child: SizedBox(height: 88),
+                                ),
                             ],
                           );
                         },
@@ -553,74 +731,65 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
           );
         },
       ),
-      floatingActionButton: FloatingActionButton(
-        child: const Icon(Icons.add),
-        onPressed: () {
-          showDialog<void>(
-            context: context,
-            builder: (BuildContext dialogContext) {
-              return AlertDialog(
-                contentPadding: const EdgeInsets.symmetric(vertical: 8),
-                content: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    ListTile(
-                      leading: const Icon(
-                        Icons.arrow_upward,
-                        color: Colors.red,
-                      ),
-                      title: const Text('Pengeluaran'),
-                      onTap: () {
-                        Navigator.pop(dialogContext);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const FormTransaksiScreen(
-                              tipeTransaksi: TipeTransaksi.pengeluaran,
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                    ListTile(
-                      leading: const Icon(
-                        Icons.arrow_downward,
-                        color: Colors.green,
-                      ),
-                      title: const Text('Pemasukan'),
-                      onTap: () {
-                        Navigator.pop(dialogContext);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const FormTransaksiScreen(
-                              tipeTransaksi: TipeTransaksi.pemasukan,
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                    ListTile(
-                      leading: const Icon(Icons.swap_horiz, color: Colors.blue),
-                      title: const Text('Transfer Antarakun'),
-                      onTap: () {
-                        Navigator.pop(dialogContext);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const FormTransaksiScreen(
-                              tipeTransaksi: TipeTransaksi.transfer,
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              );
-            },
+      floatingActionButton: PopupMenuButton<TipeTransaksi>(
+        offset: const Offset(0, -170), // Menempatkan menu melayang di atas FAB
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(23)),
+        onSelected: (tipe) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => FormTransaksiScreen(tipeTransaksi: tipe),
+            ),
           );
         },
+        itemBuilder: (context) => [
+          const PopupMenuItem(
+            value: TipeTransaksi.pengeluaran,
+            child: Row(
+              children: [
+                Icon(Icons.arrow_upward, color: Colors.red),
+                SizedBox(width: 16),
+                Text('Pengeluaran'),
+              ],
+            ),
+          ),
+          const PopupMenuItem(
+            value: TipeTransaksi.pemasukan,
+            child: Row(
+              children: [
+                Icon(Icons.arrow_downward, color: Colors.green),
+                SizedBox(width: 16),
+                Text('Pemasukan'),
+              ],
+            ),
+          ),
+          const PopupMenuItem(
+            value: TipeTransaksi.transfer,
+            child: Row(
+              children: [
+                Icon(Icons.swap_horiz, color: Colors.blue),
+                SizedBox(width: 16),
+                Text('Transfer Antarakun'),
+              ],
+            ),
+          ),
+        ],
+        // Mereplika tampilan default FloatingActionButton agar efek klik berfungsi pada PopupMenu
+        child: Material(
+          color: Theme.of(context).colorScheme.primaryContainer,
+          elevation: 6,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: SizedBox(
+            width: 56,
+            height: 56,
+            child: Icon(
+              Icons.add_rounded,
+              color: Theme.of(context).colorScheme.onPrimaryContainer,
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -744,7 +913,7 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(4),
+                            borderRadius: BorderRadius.circular(10),
                             border: Border.all(
                               color: Colors.grey, // warna border
                               width: 1, // ketebalan border
@@ -857,6 +1026,7 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
         return StatefulBuilder(
           builder: (contextState, setStateDialog) {
             return AlertDialog(
+              title: const Text('Filter Transaksi'),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -1128,7 +1298,7 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
             }
 
             return AlertDialog(
-              title: const Text('Pencarian Tanggal'),
+              title: const Text('Pergi ke Tanggal'),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,

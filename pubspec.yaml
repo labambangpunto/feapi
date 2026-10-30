@@ -1,7 +1,7 @@
 name: feapi
 description: "Personal Finance Tracker"
 publish_to: "none" # Remove this line if you wish to publish to pub.dev
-version: 1.4.5
+version: 1.5.0
 
 environment:
   sdk: ^3.13.4

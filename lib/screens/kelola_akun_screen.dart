@@ -37,9 +37,8 @@ class KelolaAkunScreen extends ConsumerWidget {
                   bottom: true,
                   child: LayoutBuilder(
                     builder: (context, constraints) {
-                      // Deteksi lebar layar: gunakan grid 2 kolom jika lebar > 600px, selain itu 1 kolom
-                      final crossAxisCount = constraints.maxWidth > 600 ? 2 : 1;
-
+                      final w = constraints.maxWidth;
+                      final crossAxisCount = w > 1000 ? 4 : (w > 700 ? 3 : 1);
                       return GridView.builder(
                         // Tambahkan ruang di bawah (bottom: 80) agar daftar terakhir tidak terhalang FAB
                         padding: const EdgeInsets.fromLTRB(12, 8, 12, 80),
@@ -74,42 +73,40 @@ class KelolaAkunScreen extends ConsumerWidget {
                                         style: TextStyle(color: Colors.red),
                                       )
                                     : null,
-                                trailing: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
+                                trailing: PopupMenuButton<String>(
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  icon: const Icon(Icons.more_vert),
+                                  onSelected: (value) {
+                                    if (value == 'edit') {
+                                      _tampilFormEditAkun(context, ref, akun);
+                                    } else if (value == 'pulihkan') {
+                                      _pulihkanAkun(context, ref, akun);
+                                    } else if (value == 'hapus_bekukan') {
+                                      _cekDanHapusAtauBekukan(
+                                        context,
+                                        ref,
+                                        akun,
+                                      );
+                                    }
+                                  },
+                                  itemBuilder: (context) => [
                                     if (!isDibekukan)
-                                      IconButton(
-                                        icon: const Icon(
-                                          Icons.edit,
-                                          color: Colors.blue,
-                                        ),
-                                        onPressed: () => _tampilFormEditAkun(
-                                          context,
-                                          ref,
-                                          akun,
-                                        ),
+                                      const PopupMenuItem(
+                                        value: 'edit',
+                                        child: Text('Edit'),
                                       ),
-                                    IconButton(
-                                      icon: Icon(
-                                        isDibekukan
-                                            ? Icons.restore
-                                            : Icons.delete,
-                                        color: isDibekukan
-                                            ? Colors.green
-                                            : Colors.red,
+                                    if (isDibekukan)
+                                      const PopupMenuItem(
+                                        value: 'pulihkan',
+                                        child: Text('Pulihkan'),
+                                      )
+                                    else
+                                      const PopupMenuItem(
+                                        value: 'hapus_bekukan',
+                                        child: Text('Hapus'),
                                       ),
-                                      onPressed: () {
-                                        if (isDibekukan) {
-                                          _pulihkanAkun(context, ref, akun);
-                                        } else {
-                                          _cekDanHapusAtauBekukan(
-                                            context,
-                                            ref,
-                                            akun,
-                                          );
-                                        }
-                                      },
-                                    ),
                                   ],
                                 ),
                               ),

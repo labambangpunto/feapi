@@ -38,9 +38,9 @@ class KelolaLabelScreen extends ConsumerWidget {
                   bottom: true,
                   child: LayoutBuilder(
                     builder: (context, constraints) {
-                      // Deteksi lebar layar, jika lebih dari 600px gunakan grid 2 kolom, jika tidak 1 kolom (ponsel)
-                      final crossAxisCount = constraints.maxWidth > 600 ? 2 : 1;
-
+                      // final crossAxisCount = constraints.maxWidth > 600 ? 4 : 1;
+                      final w = constraints.maxWidth;
+                      final crossAxisCount = w > 1000 ? 4 : (w > 700 ? 3 : 1);
                       return GridView.builder(
                         // Tambahkan ruang di bawah (bottom: 80) agar daftar terakhir tidak terhalang FAB
                         padding: const EdgeInsets.fromLTRB(12, 8, 12, 80),
@@ -75,42 +75,44 @@ class KelolaLabelScreen extends ConsumerWidget {
                                         style: TextStyle(color: Colors.red),
                                       )
                                     : null,
-                                trailing: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
+                                trailing: PopupMenuButton<String>(
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  icon: const Icon(Icons.more_vert),
+                                  onSelected: (value) {
+                                    if (value == 'edit') {
+                                      _tampilFormFormLabel(
+                                        context,
+                                        ref,
+                                        dataEdit: label,
+                                      );
+                                    } else if (value == 'pulihkan') {
+                                      _pulihkanLabel(context, ref, label);
+                                    } else if (value == 'hapus_bekukan') {
+                                      _cekDanHapusAtauBekukan(
+                                        context,
+                                        ref,
+                                        label,
+                                      );
+                                    }
+                                  },
+                                  itemBuilder: (context) => [
                                     if (!isDibekukan)
-                                      IconButton(
-                                        icon: const Icon(
-                                          Icons.edit,
-                                          color: Colors.blue,
-                                        ),
-                                        onPressed: () => _tampilFormFormLabel(
-                                          context,
-                                          ref,
-                                          dataEdit: label,
-                                        ),
+                                      const PopupMenuItem(
+                                        value: 'edit',
+                                        child: Text('Edit'),
                                       ),
-                                    IconButton(
-                                      icon: Icon(
-                                        isDibekukan
-                                            ? Icons.restore
-                                            : Icons.delete,
-                                        color: isDibekukan
-                                            ? Colors.green
-                                            : Colors.red,
+                                    if (isDibekukan)
+                                      const PopupMenuItem(
+                                        value: 'pulihkan',
+                                        child: Text('Pulihkan'),
+                                      )
+                                    else
+                                      const PopupMenuItem(
+                                        value: 'hapus_bekukan',
+                                        child: Text('Hapus'),
                                       ),
-                                      onPressed: () {
-                                        if (isDibekukan) {
-                                          _pulihkanLabel(context, ref, label);
-                                        } else {
-                                          _cekDanHapusAtauBekukan(
-                                            context,
-                                            ref,
-                                            label,
-                                          );
-                                        }
-                                      },
-                                    ),
                                   ],
                                 ),
                               ),

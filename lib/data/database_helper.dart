@@ -106,7 +106,8 @@ class DatabaseHelper {
       id $idType,
       tahun $intType,
       bulan $intType,
-      isTerkunci INTEGER DEFAULT 0
+      isTerkunci INTEGER DEFAULT 0,
+      tipe $textType DEFAULT 'transaksi'
     )
     ''');
 
