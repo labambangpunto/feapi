@@ -63,6 +63,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   int _touchedPieIndex = -1;
   String _sortLabel = 'latest';
   String _sortAkun = 'latest';
+  //
+  String _filterUtang = 'Tahun Ini';
+  String _sortUtang = 'latest';
+  String _sortPiutang = 'latest';
 
   @override
   Widget build(BuildContext context) {
@@ -170,10 +174,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     if (utangState.hasValue) {
       for (var item in utangState.value!) {
         if (!item.isLunas) {
-          if (item.tipe == TipeUtangPiutang.utang) {
-            totalUtangBelumLunas += item.nominal;
-          } else {
-            totalPiutangBelumLunas += item.nominal;
+          // Validasi filter waktu
+          bool isIncluded = false;
+          if (_filterUtang == 'Bulan Ini') {
+            isIncluded =
+                item.waktu.year == now.year && item.waktu.month == now.month;
+          } else if (_filterUtang == 'Tahun Ini') {
+            isIncluded = item.waktu.year == now.year;
+          }
+
+          if (isIncluded) {
+            if (item.tipe == TipeUtangPiutang.utang) {
+              totalUtangBelumLunas += item.nominal;
+            } else {
+              totalPiutangBelumLunas += item.nominal;
+            }
           }
         }
       }
@@ -307,11 +322,36 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final divisi3 = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text(
-          'Tagihan Berjalan (Belum Lunas)',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Tagihan Berjalan (Belum Lunas)',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            ),
+            DropdownButton<String>(
+              value: _filterUtang,
+              style: TextStyle(
+                fontSize: 14,
+                color: Theme.of(context).colorScheme.primary,
+                fontWeight: FontWeight.bold,
+              ),
+              underline: const SizedBox(),
+              items: const [
+                DropdownMenuItem(value: 'Bulan Ini', child: Text('Bulan Ini')),
+                DropdownMenuItem(value: 'Tahun Ini', child: Text('Tahun Ini')),
+              ],
+              onChanged: (val) {
+                if (val != null) {
+                  setState(() => _filterUtang = val);
+                }
+              },
+            ),
+          ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(
+          height: 8,
+        ), // Spasi diubah menjadi 8 agar selaras dengan divisi 1
         Row(
           children: [
             Expanded(
@@ -398,10 +438,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           transaksiState.value ?? [],
           ref.watch(akunControllerProvider).value ?? [],
         ),
-        _buildTableAkun(
-          transaksiState.value ?? [],
-          ref.watch(akunControllerProvider).value ?? [],
-        ),
         _buildTableLabel(
           transaksiState.value ?? [],
           ref.watch(labelControllerProvider).value ?? [],
@@ -434,30 +470,28 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
 
     // 4. DIVISI 4: KELOMPOK SUB-TAMPILAN UTANG-PIUTANG (Coming Soon)
-    final divisi4 = Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: const Padding(
-        padding: EdgeInsets.symmetric(vertical: 64, horizontal: 16),
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.construction, size: 48, color: Colors.grey),
-              SizedBox(height: 16),
-              Text(
-                'Sub-tampilan Utang-Piutang\n(Coming Soon)',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Colors.grey,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
+    final divisi4 = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _buildTableUtangPiutang(
+          title: 'Daftar Utang',
+          tipe: TipeUtangPiutang.utang,
+          data: utangState.value ?? [],
+          sortValue: _sortUtang,
+          onSortChanged: (val) {
+            if (val != null) setState(() => _sortUtang = val);
+          },
         ),
-      ),
+        _buildTableUtangPiutang(
+          title: 'Daftar Piutang',
+          tipe: TipeUtangPiutang.piutang,
+          data: utangState.value ?? [],
+          sortValue: _sortPiutang,
+          onSortChanged: (val) {
+            if (val != null) setState(() => _sortPiutang = val);
+          },
+        ),
+      ],
     );
 
     // 5. PENYUSUNAN TATA LETAK RESPONSIF
@@ -1537,6 +1571,176 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   style: const TextStyle(color: Colors.blue),
                                 ),
                               ),
+                            ],
+                          );
+                        }).toList(),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTableUtangPiutang({
+    required String title,
+    required TipeUtangPiutang tipe,
+    required List<UtangPiutangModel> data,
+    required String sortValue,
+    required ValueChanged<String?> onSortChanged,
+  }) {
+    final now = DateTime.now();
+
+    // 1. Filter sesuai jenis dan cakupan waktu (dropdown divisi 3)
+    final filteredList = data.where((item) {
+      if (item.tipe != tipe) return false;
+
+      if (_filterUtang == 'Bulan Ini') {
+        return item.waktu.year == now.year && item.waktu.month == now.month;
+      } else if (_filterUtang == 'Tahun Ini') {
+        return item.waktu.year == now.year;
+      }
+      return true;
+    }).toList();
+
+    // 2. Terapkan pengurutan
+    switch (sortValue) {
+      case 'latest':
+        filteredList.sort((a, b) => b.waktu.compareTo(a.waktu));
+        break;
+      case 'largest':
+        filteredList.sort((a, b) => b.nominal.compareTo(a.nominal));
+        break;
+      case 'smallest':
+        filteredList.sort((a, b) => a.nominal.compareTo(b.nominal));
+        break;
+    }
+
+    // 3. Batasi maksimal 5 baris
+    final displayList = filteredList.take(5).toList();
+
+    const bulanMap = [
+      '',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'Mei',
+      'Jun',
+      'Jul',
+      'Agt',
+      'Sep',
+      'Okt',
+      'Nov',
+      'Des',
+    ];
+
+    return Card(
+      elevation: 2,
+      margin: const EdgeInsets.only(bottom: 24),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                DropdownButton<String>(
+                  value: sortValue,
+                  underline: const SizedBox(),
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: 'latest', child: Text('Terbaru')),
+                    DropdownMenuItem(value: 'largest', child: Text('Terbesar')),
+                    DropdownMenuItem(
+                      value: 'smallest',
+                      child: Text('Terkecil'),
+                    ),
+                  ],
+                  onChanged: onSortChanged,
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Center(
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: DataTable(
+                  columnSpacing: 16,
+                  headingRowHeight: 40,
+                  dataRowMinHeight: 36,
+                  dataRowMaxHeight: 44,
+                  columns: const [
+                    DataColumn(
+                      label: Text(
+                        'Nominal',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    DataColumn(
+                      label: Text(
+                        'Pihak',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    DataColumn(
+                      label: Text(
+                        'Tanggal',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                  rows: displayList.isEmpty
+                      ? [
+                          const DataRow(
+                            cells: [
+                              DataCell(Text('-')),
+                              DataCell(Text('Belum ada data')),
+                              DataCell(Text('-')),
+                            ],
+                          ),
+                        ]
+                      : displayList.map((item) {
+                          final tgl =
+                              '${item.waktu.day.toString().padLeft(2, '0')} ${bulanMap[item.waktu.month]} ${item.waktu.year}';
+
+                          // Memberi warna dan coretan (jika sudah lunas)
+                          final color = item.isLunas
+                              ? Colors.grey
+                              : (tipe == TipeUtangPiutang.utang
+                                    ? Colors.orange
+                                    : Colors.blue);
+
+                          return DataRow(
+                            cells: [
+                              DataCell(
+                                Text(
+                                  item.nominal.toIdr(),
+                                  style: TextStyle(
+                                    color: color,
+                                    decoration: item.isLunas
+                                        ? TextDecoration.lineThrough
+                                        : null,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                              DataCell(Text(item.pihakTerkait)),
+                              DataCell(Text(tgl)),
                             ],
                           );
                         }).toList(),
