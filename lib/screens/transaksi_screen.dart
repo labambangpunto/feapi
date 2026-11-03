@@ -262,7 +262,11 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
           bool isBulanTerkunci(DateTime dt) {
             final pList = pembukuanState.value ?? [];
             return pList.any(
-              (p) => p.tahun == dt.year && p.bulan == dt.month && p.isTerkunci,
+              (p) =>
+                  p.tahun == dt.year &&
+                  p.bulan == dt.month &&
+                  p.tipe == 'transaksi' &&
+                  p.isTerkunci,
             );
           }
 

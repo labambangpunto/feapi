@@ -107,7 +107,8 @@ class DatabaseHelper {
       tahun $intType,
       bulan $intType,
       isTerkunci INTEGER DEFAULT 0,
-      tipe $textType DEFAULT 'transaksi'
+      tipe $textType DEFAULT 'transaksi',
+      UNIQUE(tahun, bulan, tipe)
     )
     ''');
 

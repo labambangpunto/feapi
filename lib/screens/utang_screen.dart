@@ -7,6 +7,7 @@ import '../controllers/akun_controller.dart';
 import '../models/akun_model.dart';
 import '../utils/currency_format.dart';
 import '../utils/currency_formatter.dart';
+import '../controllers/pembukuan_controller.dart';
 import 'form_utang_piutang.dart';
 
 final utangFilterTanggalProvider = StateProvider<DateTime?>((ref) => null);
@@ -38,7 +39,8 @@ class _UtangScreenState extends ConsumerState<UtangScreen> {
     final filterStatusLunas = ref.watch(utangFilterStatusLunasProvider);
     final filterMinNominal = ref.watch(utangFilterMinNominalProvider);
     final filterMaxNominal = ref.watch(utangFilterMaxNominalProvider);
-
+    // pembukuan cuy
+    final pembukuanState = ref.watch(pembukuanControllerProvider);
     const bulanMap = [
       '',
       'Jan',
@@ -173,6 +175,17 @@ class _UtangScreenState extends ConsumerState<UtangScreen> {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => Center(child: Text('Error: $err')),
         data: (listData) {
+          bool isBulanTerkunci(DateTime dt) {
+            final pList = pembukuanState.value ?? [];
+            return pList.any(
+              (p) =>
+                  p.tahun == dt.year &&
+                  p.bulan == dt.month &&
+                  p.tipe == 'utang_piutang' &&
+                  p.isTerkunci,
+            );
+          }
+
           var filteredList = listData;
 
           // 1. Terapkan Filter Tanggal
@@ -301,6 +314,12 @@ class _UtangScreenState extends ConsumerState<UtangScreen> {
                         delegate: SliverChildBuilderDelegate((context, index) {
                           final item = entry.value[index];
                           final isUtang = item.tipe == TipeUtangPiutang.utang;
+
+                          // Panggil fungsi pengecekan
+                          final bool isTerkunci = isBulanTerkunci(item.waktu);
+
+                          // Update logika warna: abu-abu jika sudah lunas atau bulan terkunci
+                          final bool isDisabled = item.isLunas || isTerkunci;
                           final colorTipe = isUtang
                               ? Colors.orange
                               : Colors.blue;
@@ -328,11 +347,11 @@ class _UtangScreenState extends ConsumerState<UtangScreen> {
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(14),
                               side: BorderSide(
-                                color: item.isLunas ? Colors.grey : colorTipe,
+                                color: isDisabled ? Colors.grey : colorTipe,
                                 width: 1.5,
                               ),
                             ),
-                            color: item.isLunas ? Colors.grey.shade100 : null,
+                            color: isDisabled ? Colors.grey.shade100 : null,
                             child: InkWell(
                               // Hilangkan aksi onTap pelunasan dari card
                               onTap: null,
