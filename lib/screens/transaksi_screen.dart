@@ -829,7 +829,9 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
     final isPengeluaran = t.tipe == TipeTransaksi.pengeluaran;
     final isPemasukan = t.tipe == TipeTransaksi.pemasukan;
     final isTransfer = t.tipe == TipeTransaksi.transfer;
-
+    final bool hasBiayaTambahan =
+        t.biayaTambahan != null && t.biayaTambahan! > 0;
+    final bool hasKuantitasLebih = t.kuantitas > 1;
     showDialog<void>(
       context: context,
       builder: (_) => AlertDialog(
@@ -840,17 +842,22 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               // 1. Logika Tampilan Nominal Baru
-              if ((isPengeluaran || isTransfer) &&
-                  t.biayaTambahan != null &&
-                  t.biayaTambahan! > 0) ...[
+
+              if (((isPengeluaran || isTransfer) && hasBiayaTambahan) ||
+                  (isPengeluaran && hasKuantitasLebih)) ...[
                 Text(
-                  'Nominal: ${(t.nominal * t.kuantitas).toIdr()}',
+                  isTransfer || !hasKuantitasLebih
+                      ? 'Nominal: ${t.nominal.toIdr()}'
+                      : 'Nominal: ${t.nominal.toIdr()} x ${t.kuantitas}',
                   style: const TextStyle(fontSize: 14, color: Colors.grey),
                 ),
-                Text(
-                  'Biaya Tambahan: ${t.biayaTambahan!.toIdr()}',
-                  style: const TextStyle(fontSize: 14, color: Colors.grey),
-                ),
+
+                if (hasBiayaTambahan)
+                  Text(
+                    'Biaya Tambahan: ${t.biayaTambahan!.toIdr()}',
+                    style: const TextStyle(fontSize: 14, color: Colors.grey),
+                  ),
+
                 const Divider(),
                 Text(
                   'Total: ${totalNominal.toIdr()}',
@@ -981,11 +988,6 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
             ),
           const SizedBox(height: 8),
           FilledButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Tutup'),
-          ),
-          if (!isTerkunci) const SizedBox(height: 8),
-          FilledButton(
             onPressed: () {
               Navigator.pop(context); // Tutup dialog detail
               Navigator.push(
@@ -998,6 +1000,11 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
             },
             child: const Text('Edit'),
           ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Tutup'),
+          ),
+          if (!isTerkunci) const SizedBox(height: 8),
         ],
       ),
     );
@@ -1231,12 +1238,18 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
     // 1. Baca status terkini untuk pre-fill form
     final currentDate = ref.read(selectedDateProvider);
     final currentIsModeRentang = ref.read(isModeRentangProvider);
+    final currentShowFullMonth = ref.read(showFullMonthProvider);
 
-    int modePencarian = currentIsModeRentang ? 1 : 0;
+    // 0: Bulan Spesifik, 1: Tanggal Spesifik, 2: Rentang
+    int modePencarian = currentIsModeRentang
+        ? 2
+        : (currentShowFullMonth ? 0 : 1);
 
     int? selectedYear = currentIsModeRentang ? null : currentDate.year;
     int? selectedMonth = currentIsModeRentang ? null : currentDate.month;
-    int? selectedDay = currentIsModeRentang ? null : currentDate.day;
+    int? selectedDay = (currentIsModeRentang || currentShowFullMonth)
+        ? null
+        : currentDate.day;
 
     DateTime? tempStart = ref.read(rentangAwalProvider);
     DateTime? tempEnd = ref.read(rentangAkhirProvider);
@@ -1316,12 +1329,18 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
                           Row(
                             children: [
                               Radio<int>(value: 0),
-                              const Text('Tanggal Spesifik'),
+                              const Text('Bulan Spesifik'),
                             ],
                           ),
                           Row(
                             children: [
                               Radio<int>(value: 1),
+                              const Text('Tanggal Spesifik'),
+                            ],
+                          ),
+                          Row(
+                            children: [
+                              Radio<int>(value: 2),
                               const Text('Rentang (Max 30 Hari)'),
                             ],
                           ),
@@ -1330,7 +1349,7 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
                     ),
                     const Divider(),
 
-                    if (modePencarian == 0) ...[
+                    if (modePencarian == 0 || modePencarian == 1) ...[
                       DropdownButtonFormField<int>(
                         initialValue: selectedYear,
                         hint: const Text('Pilih Tahun'),
@@ -1367,22 +1386,25 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
                                 selectedDay = null;
                               }),
                       ),
-                      const SizedBox(height: 12),
-                      DropdownButtonFormField<int>(
-                        initialValue: selectedDay,
-                        hint: const Text('Pilih Tanggal'),
-                        items: availableDays
-                            .map(
-                              (d) => DropdownMenuItem(
-                                value: d,
-                                child: Text(d.toString().padLeft(2, '0')),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: availableDays.isEmpty
-                            ? null
-                            : (val) => setStateDialog(() => selectedDay = val),
-                      ),
+                      if (modePencarian == 1) ...[
+                        const SizedBox(height: 12),
+                        DropdownButtonFormField<int>(
+                          initialValue: selectedDay,
+                          hint: const Text('Pilih Tanggal'),
+                          items: availableDays
+                              .map(
+                                (d) => DropdownMenuItem(
+                                  value: d,
+                                  child: Text(d.toString().padLeft(2, '0')),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: availableDays.isEmpty
+                              ? null
+                              : (val) =>
+                                    setStateDialog(() => selectedDay = val),
+                        ),
+                      ],
                     ] else ...[
                       ListTile(
                         contentPadding: EdgeInsets.zero,
@@ -1447,6 +1469,28 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
                   onPressed: () {
                     // 2. Simpan nilai ke Provider saat diterapkan
                     if (modePencarian == 0) {
+                      if (selectedYear == null || selectedMonth == null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Lengkapi pilihan tahun dan bulan'),
+                          ),
+                        );
+                        return;
+                      }
+
+                      ref.read(selectedDateProvider.notifier).state = DateTime(
+                        selectedYear!,
+                        selectedMonth!,
+                        1, // Atur ke awal bulan
+                      );
+                      ref.read(isModeRentangProvider.notifier).state = false;
+                      ref.read(rentangAwalProvider.notifier).state = null;
+                      ref.read(rentangAkhirProvider.notifier).state = null;
+
+                      // Aktifkan expand bulan
+                      ref.read(showFullMonthProvider.notifier).state = true;
+                      Navigator.pop(dialogContext);
+                    } else if (modePencarian == 1) {
                       if (selectedYear == null ||
                           selectedMonth == null ||
                           selectedDay == null) {
