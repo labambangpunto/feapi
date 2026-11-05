@@ -390,98 +390,173 @@ class _UtangScreenState extends ConsumerState<UtangScreen> {
                                                 color: Colors.green,
                                                 size: 20,
                                               ),
-                                            SizedBox(
-                                              width: 32,
-                                              height: 32,
-                                              child: PopupMenuButton<String>(
-                                                shape: RoundedRectangleBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(23),
-                                                ),
-                                                padding: EdgeInsets.zero,
-                                                icon: const Icon(
-                                                  Icons.more_vert,
-                                                  size: 20,
-                                                ),
-                                                onSelected: (value) {
-                                                  if (value == 'pelunasan') {
-                                                    _tampilFormPelunasan(
-                                                      context,
-                                                      ref,
-                                                      item,
-                                                    );
-                                                  } else if (value == 'edit') {
-                                                    Navigator.push(
-                                                      context,
-                                                      MaterialPageRoute(
-                                                        builder: (_) =>
-                                                            FormUtangPiutangScreen(
-                                                              tipe: item.tipe,
-                                                              dataEdit: item,
+                                            if (!isTerkunci)
+                                              SizedBox(
+                                                width: 32,
+                                                height: 32,
+                                                child: PopupMenuButton<String>(
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          23,
+                                                        ),
+                                                  ),
+                                                  padding: EdgeInsets.zero,
+                                                  icon: const Icon(
+                                                    Icons.more_vert,
+                                                    size: 20,
+                                                  ),
+                                                  onSelected: (value) {
+                                                    if (value == 'pelunasan') {
+                                                      _tampilFormPelunasan(
+                                                        context,
+                                                        ref,
+                                                        item,
+                                                      );
+                                                    } else if (value ==
+                                                        'edit') {
+                                                      Navigator.push(
+                                                        context,
+                                                        MaterialPageRoute(
+                                                          builder: (_) =>
+                                                              FormUtangPiutangScreen(
+                                                                tipe: item.tipe,
+                                                                dataEdit: item,
+                                                              ),
+                                                        ),
+                                                      );
+                                                    } else if (value ==
+                                                        'batal_lunas') {
+                                                      showDialog<void>(
+                                                        context: context,
+                                                        builder: (_) => AlertDialog(
+                                                          title: const Text(
+                                                            'Batalkan Pelunasan',
+                                                          ),
+                                                          content: const Text(
+                                                            'Apakah Anda yakin ingin membatalkan status lunas untuk data ini?',
+                                                          ),
+                                                          actions: [
+                                                            TextButton(
+                                                              onPressed: () =>
+                                                                  Navigator.pop(
+                                                                    context,
+                                                                  ),
+                                                              child: const Text(
+                                                                'Kembali',
+                                                              ),
                                                             ),
-                                                      ),
-                                                    );
-                                                  } else if (value == 'hapus') {
-                                                    showDialog<void>(
-                                                      context: context,
-                                                      builder: (_) => AlertDialog(
-                                                        title: const Text(
-                                                          'Konfirmasi Hapus',
-                                                        ),
-                                                        content: Text(
-                                                          'Apakah Anda yakin ingin menghapus data ${isUtang ? "utang" : "piutang"} ini?',
-                                                        ),
-                                                        actions: [
-                                                          TextButton(
-                                                            onPressed: () =>
+                                                            FilledButton(
+                                                              onPressed: () {
+                                                                final updatedItem = UtangPiutangModel(
+                                                                  id: item.id,
+                                                                  tipe:
+                                                                      item.tipe,
+                                                                  nominal: item
+                                                                      .nominal,
+                                                                  pihakTerkait:
+                                                                      item.pihakTerkait,
+                                                                  akunId: item
+                                                                      .akunId,
+                                                                  waktu: item
+                                                                      .waktu,
+                                                                  tenggatWaktu:
+                                                                      item.tenggatWaktu,
+                                                                  catatan: item
+                                                                      .catatan,
+                                                                  isLunas:
+                                                                      false,
+                                                                );
+                                                                ref
+                                                                    .read(
+                                                                      utangPiutangControllerProvider
+                                                                          .notifier,
+                                                                    )
+                                                                    .updateUtangPiutang(
+                                                                      updatedItem,
+                                                                    );
                                                                 Navigator.pop(
                                                                   context,
-                                                                ),
-                                                            child: const Text(
-                                                              'Batal',
+                                                                );
+                                                              },
+                                                              child: const Text(
+                                                                'Batal Lunas',
+                                                              ),
                                                             ),
+                                                          ],
+                                                        ),
+                                                      );
+                                                    } else if (value ==
+                                                        'hapus') {
+                                                      showDialog<void>(
+                                                        context: context,
+                                                        builder: (_) => AlertDialog(
+                                                          title: const Text(
+                                                            'Konfirmasi Hapus',
                                                           ),
-                                                          FilledButton(
-                                                            onPressed: () {
-                                                              ref
-                                                                  .read(
-                                                                    utangPiutangControllerProvider
-                                                                        .notifier,
-                                                                  )
-                                                                  .hapusUtangPiutang(
-                                                                    item.id,
-                                                                  );
-                                                              Navigator.pop(
-                                                                context,
-                                                              );
-                                                            },
-                                                            child: const Text(
-                                                              'Hapus',
+                                                          content: Text(
+                                                            'Apakah Anda yakin ingin menghapus data ${isUtang ? "utang" : "piutang"} ini?',
+                                                          ),
+                                                          actions: [
+                                                            TextButton(
+                                                              onPressed: () =>
+                                                                  Navigator.pop(
+                                                                    context,
+                                                                  ),
+                                                              child: const Text(
+                                                                'Batal',
+                                                              ),
                                                             ),
-                                                          ),
-                                                        ],
+                                                            FilledButton(
+                                                              onPressed: () {
+                                                                ref
+                                                                    .read(
+                                                                      utangPiutangControllerProvider
+                                                                          .notifier,
+                                                                    )
+                                                                    .hapusUtangPiutang(
+                                                                      item.id,
+                                                                    );
+                                                                Navigator.pop(
+                                                                  context,
+                                                                );
+                                                              },
+                                                              child: const Text(
+                                                                'Hapus',
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      );
+                                                    }
+                                                  },
+                                                  itemBuilder: (context) => [
+                                                    if (!item.isLunas)
+                                                      const PopupMenuItem(
+                                                        value: 'pelunasan',
+                                                        child: Text(
+                                                          'Pelunasan',
+                                                        ),
                                                       ),
-                                                    );
-                                                  }
-                                                },
-                                                itemBuilder: (context) => [
-                                                  if (!item.isLunas)
+                                                    if (!item.isLunas)
+                                                      const PopupMenuItem(
+                                                        value: 'edit',
+                                                        child: Text('Edit'),
+                                                      ),
+                                                    if (item.isLunas)
+                                                      const PopupMenuItem(
+                                                        value: 'batal_lunas',
+                                                        child: Text(
+                                                          'Batal Lunas',
+                                                        ),
+                                                      ),
                                                     const PopupMenuItem(
-                                                      value: 'pelunasan',
-                                                      child: Text('Pelunasan'),
+                                                      value: 'hapus',
+                                                      child: Text('Hapus'),
                                                     ),
-                                                  if (!item.isLunas)
-                                                    const PopupMenuItem(
-                                                      value: 'edit',
-                                                      child: Text('Edit'),
-                                                    ),
-                                                  const PopupMenuItem(
-                                                    value: 'hapus',
-                                                    child: Text('Hapus'),
-                                                  ),
-                                                ],
+                                                  ],
+                                                ),
                                               ),
-                                            ),
                                           ],
                                         ),
                                       ],

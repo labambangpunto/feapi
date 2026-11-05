@@ -952,7 +952,7 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
         ),
         actions: [
           // Sembunyikan tombol Edit & Hapus jika bulan terkunci
-          if (!isTerkunci)
+          if (!isTerkunci) ...[
             FilledButton(
               onPressed: () {
                 Navigator.pop(context); // Tutup dialog detail
@@ -986,25 +986,25 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
               ),
               child: const Text('Hapus'),
             ),
-          const SizedBox(height: 8),
-          FilledButton(
-            onPressed: () {
-              Navigator.pop(context); // Tutup dialog detail
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) =>
-                      FormTransaksiScreen(tipeTransaksi: t.tipe, dataEdit: t),
-                ),
-              );
-            },
-            child: const Text('Edit'),
-          ),
+            const SizedBox(width: 8),
+            FilledButton(
+              onPressed: () {
+                Navigator.pop(context); // Tutup dialog detail
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        FormTransaksiScreen(tipeTransaksi: t.tipe, dataEdit: t),
+                  ),
+                );
+              },
+              child: const Text('Edit'),
+            ),
+          ],
           FilledButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Tutup'),
           ),
-          if (!isTerkunci) const SizedBox(height: 8),
         ],
       ),
     );
