@@ -145,10 +145,10 @@ class BackupService {
               'tahun': e.tahun,
               'bulan': e.bulan,
               'isTerkunci': e.isTerkunci ? 1 : 0,
+              'tipe': e.tipe, // <-- Tambahkan ini
             },
           )
           .toList(),
-
       'transaksi': transaksi
           .map(
             // ... sisa kode tidak berubah
@@ -276,6 +276,7 @@ class BackupService {
             tahun: item['tahun'],
             bulan: item['bulan'],
             isTerkunci: item['isTerkunci'] == 1,
+            tipe: item['tipe'] ?? 'transaksi', // <-- Tambahkan fallback
           ),
         );
       }
