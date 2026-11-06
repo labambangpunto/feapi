@@ -21,10 +21,18 @@ class BackupService {
   BackupService(this._dbRepo);
 
   Future<String> _generateCsvString() async {
+    // Ambil semua data yang diperlukan
     final transaksi = await _dbRepo.getSemuaTransaksi();
+    final akun = await _dbRepo.getSemuaAkun();
+    final label = await _dbRepo.getSemuaLabel();
+
+    // Buat Map (Kamus) untuk memetakan ID ke Nama dengan cepat
+    final Map<String, String> akunMap = {for (var a in akun) a.id: a.nama};
+    final Map<String, String> labelMap = {for (var l in label) l.id: l.nama};
+
     List<List<dynamic>> rows = [
       [
-        'ID',
+        'No', // <-- Header diubah menjadi No
         'Tipe',
         'Nominal',
         'Biaya Tambahan',
@@ -37,17 +45,45 @@ class BackupService {
       ],
     ];
 
+    int nomor = 1; // <-- Inisialisasi variabel penghitung (counter)
+
     for (var t in transaksi) {
+      // 1. Ubah ID Akun menjadi Nama Akun
+      final namaSumber =
+          akunMap[t.akunSumberId] ??
+          (t.akunSumberId != null && t.akunSumberId!.isNotEmpty
+              ? 'Akun Terhapus'
+              : '');
+      final namaTujuan =
+          akunMap[t.akunTujuanId] ??
+          (t.akunTujuanId != null && t.akunTujuanId!.isNotEmpty
+              ? 'Akun Terhapus'
+              : '');
+
+      // 2. Ubah ID Label menjadi Nama Label (Mendukung banyak label yang dipisah koma)
+      String namaLabels = '';
+      if (t.labelId != null && t.labelId!.isNotEmpty) {
+        final ids = t.labelId!.split(',');
+        namaLabels = ids
+            .map((id) => labelMap[id] ?? 'Label Terhapus')
+            .join(', ');
+      }
+
+      // 3. Format Waktu (YYYY-MM-DD HH:mm)
+      final w = t.waktu;
+      final waktuStr =
+          '${w.year}-${w.month.toString().padLeft(2, '0')}-${w.day.toString().padLeft(2, '0')} ${w.hour.toString().padLeft(2, '0')}:${w.minute.toString().padLeft(2, '0')}';
+
       rows.add([
-        t.id,
+        nomor++, // <-- Menggunakan nomor urut untuk setiap baris
         t.tipe.name,
         t.nominal,
         t.biayaTambahan ?? 0,
         t.kuantitas,
-        t.akunSumberId ?? '',
-        t.akunTujuanId ?? '',
-        t.labelId ?? '',
-        t.waktu.toIso8601String(),
+        namaSumber,
+        namaTujuan,
+        namaLabels,
+        waktuStr,
         t.catatan,
       ]);
     }
