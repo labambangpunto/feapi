@@ -21,34 +21,37 @@ class BackupService {
   BackupService(this._dbRepo);
 
   Future<String> _generateCsvString() async {
-    // Ambil semua data yang diperlukan
+    // 1. Ambil semua data dari database
     final transaksi = await _dbRepo.getSemuaTransaksi();
+    final utangPiutang = await _dbRepo.getSemuaUtangPiutang();
     final akun = await _dbRepo.getSemuaAkun();
     final label = await _dbRepo.getSemuaLabel();
+    final pembukuan = await _dbRepo.getSemuaPembukuan();
 
-    // Buat Map (Kamus) untuk memetakan ID ke Nama dengan cepat
     final Map<String, String> akunMap = {for (var a in akun) a.id: a.nama};
     final Map<String, String> labelMap = {for (var l in label) l.id: l.nama};
 
-    List<List<dynamic>> rows = [
-      [
-        'No', // <-- Header diubah menjadi No
-        'Tipe',
-        'Nominal',
-        'Biaya Tambahan',
-        'Kuantitas',
-        'Akun Sumber',
-        'Akun Tujuan',
-        'Label',
-        'Waktu',
-        'Catatan',
-      ],
-    ];
+    List<List<dynamic>> rows = [];
 
-    int nomor = 1; // <-- Inisialisasi variabel penghitung (counter)
+    // ==========================================
+    // 1. BAGIAN TRANSAKSI
+    // ==========================================
+    rows.add(['--- DAFTAR TRANSAKSI ---']);
+    rows.add([
+      'No',
+      'Tipe',
+      'Nominal',
+      'Biaya Tambahan',
+      'Kuantitas',
+      'Akun Sumber',
+      'Akun Tujuan',
+      'Label',
+      'Waktu',
+      'Catatan',
+    ]);
 
+    int nomorTransaksi = 1;
     for (var t in transaksi) {
-      // 1. Ubah ID Akun menjadi Nama Akun
       final namaSumber =
           akunMap[t.akunSumberId] ??
           (t.akunSumberId != null && t.akunSumberId!.isNotEmpty
@@ -60,7 +63,6 @@ class BackupService {
               ? 'Akun Terhapus'
               : '');
 
-      // 2. Ubah ID Label menjadi Nama Label (Mendukung banyak label yang dipisah koma)
       String namaLabels = '';
       if (t.labelId != null && t.labelId!.isNotEmpty) {
         final ids = t.labelId!.split(',');
@@ -69,13 +71,12 @@ class BackupService {
             .join(', ');
       }
 
-      // 3. Format Waktu (YYYY-MM-DD HH:mm)
       final w = t.waktu;
       final waktuStr =
           '${w.year}-${w.month.toString().padLeft(2, '0')}-${w.day.toString().padLeft(2, '0')} ${w.hour.toString().padLeft(2, '0')}:${w.minute.toString().padLeft(2, '0')}';
 
       rows.add([
-        nomor++, // <-- Menggunakan nomor urut untuk setiap baris
+        nomorTransaksi++,
         t.tipe.name,
         t.nominal,
         t.biayaTambahan ?? 0,
@@ -87,6 +88,97 @@ class BackupService {
         t.catatan,
       ]);
     }
+
+    // ==========================================
+    // 2. BAGIAN UTANG PIUTANG
+    // ==========================================
+    rows.add([]);
+    rows.add([]);
+    rows.add(['--- DAFTAR UTANG PIUTANG ---']);
+    rows.add([
+      'No',
+      'Tipe',
+      'Nominal',
+      'Pihak Terkait',
+      'Akun Terkait',
+      'Waktu Dibuat',
+      'Jatuh Tempo',
+      'Catatan',
+      'Status',
+    ]);
+
+    int nomorUtangPiutang = 1;
+    for (var u in utangPiutang) {
+      final namaAkun =
+          akunMap[u.akunId] ??
+          (u.akunId != null && u.akunId!.isNotEmpty ? 'Akun Terhapus' : '-');
+
+      final wBuat = u.waktu;
+      final waktuBuatStr =
+          '${wBuat.year}-${wBuat.month.toString().padLeft(2, '0')}-${wBuat.day.toString().padLeft(2, '0')} ${wBuat.hour.toString().padLeft(2, '0')}:${wBuat.minute.toString().padLeft(2, '0')}';
+
+      final wTempo = u.tenggatWaktu;
+      final waktuTempoStr =
+          '${wTempo.year}-${wTempo.month.toString().padLeft(2, '0')}-${wTempo.day.toString().padLeft(2, '0')}';
+
+      rows.add([
+        nomorUtangPiutang++,
+        u.tipe.name,
+        u.nominal,
+        u.pihakTerkait,
+        namaAkun,
+        waktuBuatStr,
+        waktuTempoStr,
+        u.catatan,
+        u.isLunas ? 'Lunas' : 'Belum Lunas',
+      ]);
+    }
+
+    // ==========================================
+    // 3. BAGIAN AKUN
+    // ==========================================
+    rows.add([]);
+    rows.add([]);
+    rows.add(['--- DAFTAR AKUN ---']);
+    rows.add(['No', 'Nama Akun']);
+
+    int nomorAkun = 1;
+    for (var a in akun) {
+      rows.add([nomorAkun++, a.nama]);
+    }
+
+    // ==========================================
+    // 4. BAGIAN LABEL
+    // ==========================================
+    rows.add([]);
+    rows.add([]);
+    rows.add(['--- DAFTAR LABEL ---']);
+    rows.add(['No', 'Nama Label']);
+
+    int nomorLabel = 1;
+    for (var l in label) {
+      rows.add([nomorLabel++, l.nama]);
+    }
+
+    // ==========================================
+    // 5. BAGIAN PEMBUKUAN
+    // ==========================================
+    rows.add([]);
+    rows.add([]);
+    rows.add(['--- DAFTAR PEMBUKUAN ---']);
+    rows.add(['No', 'Tahun', 'Bulan', 'Tipe', 'Status']);
+
+    int nomorPembukuan = 1;
+    for (var p in pembukuan) {
+      rows.add([
+        nomorPembukuan++,
+        p.tahun,
+        p.bulan,
+        p.tipe,
+        p.isTerkunci ? 'Terkunci' : 'Terbuka',
+      ]);
+    }
+
     return const ListToCsvConverter().convert(rows);
   }
 
