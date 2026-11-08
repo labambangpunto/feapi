@@ -89,12 +89,15 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
       topLabelInfo = isFilterActive
           ? 'Filter rentang $strAwal - $strAkhir'
           : 'Rentang $strAwal - $strAkhir';
-    } else if (showFullMonth || isFilterActive) {
+    } else if (showFullMonth) {
+      // Diubah: Hapus kondisi isFilterActive dari sini
       topLabelInfo = isFilterActive
           ? 'Filter bulan $displayMonth'
           : 'Transaksi bulan $displayMonth';
     } else {
-      topLabelInfo = 'Transaksi $displayDate';
+      topLabelInfo = isFilterActive
+          ? 'Filter transaksi $displayDate' // Diubah: Tambahkan keterangan filter di tanggal spesifik
+          : 'Transaksi $displayDate';
     }
 
     return Scaffold(
@@ -131,10 +134,15 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
             icon: const Icon(Icons.menu_rounded),
             onSelected: (value) {
               switch (value) {
-                case 'filter':
-                  _tampilFormFilter(akunList, labelList, ref);
+                case 'filter_terpadu':
+                  _tampilFormFilterTerpadu(
+                    akunList,
+                    labelList,
+                    transaksiState.value ?? [],
+                    ref,
+                  );
                   break;
-                case 'hapus_filter':
+                case 'hapus_semua':
                   ref.read(isFilterActiveProvider.notifier).state = false;
                   ref.read(filterCatatanProvider.notifier).state = '';
                   ref.read(filterAkunIdProvider.notifier).state = null;
@@ -142,13 +150,7 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
                   ref.read(filterMinNominalProvider.notifier).state = null;
                   ref.read(filterMaxNominalProvider.notifier).state = null;
                   ref.read(filterTipeProvider.notifier).state = null;
-                  break;
-                case 'jump':
-                  if (transaksiState.hasValue) {
-                    _tampilFormJumpToDate(transaksiState.value!, ref);
-                  }
-                  break;
-                case 'clear_jump':
+
                   ref.read(selectedDateProvider.notifier).state =
                       DateTime.now();
                   ref.read(isModeRentangProvider.notifier).state = false;
@@ -170,26 +172,25 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
                   selectedDate.year != DateTime.now().year ||
                   selectedDate.month != DateTime.now().month ||
                   selectedDate.day != DateTime.now().day;
-
               final canExpandCollapse =
                   !isFilterActive && !isModeRentang && !isDateModified;
 
               return [
-                // 1. Menu Filter
-                if (isFilterActive)
+                // 1. Menu Filter Terpadu
+                if (isFilterActive || isDateModified || isModeRentang)
                   const PopupMenuItem(
-                    value: 'hapus_filter',
+                    value: 'hapus_semua',
                     child: Row(
                       children: [
                         Icon(Icons.filter_alt_off_rounded, color: Colors.grey),
                         SizedBox(width: 12),
-                        Text('Hapus Filter'),
+                        Text('Hapus Semua Filter'),
                       ],
                     ),
                   )
                 else
                   const PopupMenuItem(
-                    value: 'filter',
+                    value: 'filter_terpadu',
                     child: Row(
                       children: [
                         Icon(Icons.filter_alt_rounded, color: Colors.grey),
@@ -199,32 +200,7 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
                     ),
                   ),
 
-                const PopupMenuDivider(),
-
-                // 2. Menu Jump to Date
-                const PopupMenuItem(
-                  value: 'jump',
-                  child: Row(
-                    children: [
-                      Icon(Icons.event_rounded, color: Colors.grey),
-                      SizedBox(width: 12),
-                      Text('Pergi ke Tanggal'),
-                    ],
-                  ),
-                ),
-                if (isDateModified)
-                  const PopupMenuItem(
-                    value: 'clear_jump',
-                    child: Row(
-                      children: [
-                        Icon(Icons.close_rounded, color: Colors.grey),
-                        SizedBox(width: 12),
-                        Text('Clear (Kembali ke Hari Ini)'),
-                      ],
-                    ),
-                  ),
-
-                // 3. Menu Expand / Collapse View
+                // 2. Menu Expand / Collapse View (Tetap ada jika default)
                 if (canExpandCollapse) ...[
                   const PopupMenuDivider(),
                   if (showFullMonth)
@@ -234,7 +210,7 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
                         children: [
                           Icon(Icons.unfold_less, color: Colors.grey),
                           SizedBox(width: 12),
-                          Text('Persempit Tampilan'),
+                          Text('Persempit Tampilan (Hari Ini)'),
                         ],
                       ),
                     )
@@ -245,7 +221,7 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
                         children: [
                           Icon(Icons.unfold_more, color: Colors.grey),
                           SizedBox(width: 12),
-                          Text('Perluas Tampilan'),
+                          Text('Perluas Tampilan (Bulan Ini)'),
                         ],
                       ),
                     ),
@@ -310,23 +286,24 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
                   date.isBefore(end.add(const Duration(days: 1)));
             }).toList();
           } else {
-            if (!isFilterActive && !showFullMonth) {
-              // Jika filter kriteria mati dan expand view mati, tampilkan satu hari
+            // Logika baru yang lebih sederhana untuk mematuhi kriteria filter
+            if (showFullMonth) {
+              // Cakupan satu bulan penuh
+              filteredList = filteredList
+                  .where(
+                    (t) =>
+                        t.waktu.year == selectedDate.year &&
+                        t.waktu.month == selectedDate.month,
+                  )
+                  .toList();
+            } else {
+              // Cakupan satu hari (tanggal spesifik)
               filteredList = filteredList
                   .where(
                     (t) =>
                         t.waktu.year == selectedDate.year &&
                         t.waktu.month == selectedDate.month &&
                         t.waktu.day == selectedDate.day,
-                  )
-                  .toList();
-            } else {
-              // Jika filter kriteria aktif atau expand view aktif, buka cakupan satu bulan
-              filteredList = filteredList
-                  .where(
-                    (t) =>
-                        t.waktu.year == selectedDate.year &&
-                        t.waktu.month == selectedDate.month,
                   )
                   .toList();
             }
@@ -1010,16 +987,17 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
     );
   }
 
-  void _tampilFormFilter(
+  void _tampilFormFilterTerpadu(
     List<AkunModel> akunList,
     List<LabelModel> labelList,
+    List<TransaksiModel> listTransaksi,
     WidgetRef ref,
   ) {
+    // A. Nilai Awal Transaksi
     String tempCatatan = ref.read(filterCatatanProvider);
     String? tempAkunId = ref.read(filterAkunIdProvider);
     String? tempLabelId = ref.read(filterLabelIdProvider);
     TipeTransaksi? tempTipe = ref.read(filterTipeProvider);
-
     final minVal = ref.read(filterMinNominalProvider);
     final maxVal = ref.read(filterMaxNominalProvider);
 
@@ -1031,228 +1009,48 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
       text: maxVal != null ? maxVal.toRibuan() : '',
     );
 
-    showDialog<void>(
-      context: context,
-      builder: (dialogContext) {
-        return StatefulBuilder(
-          builder: (contextState, setStateDialog) {
-            return AlertDialog(
-              title: const Text('Filter Transaksi'),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    DropdownButtonFormField<TipeTransaksi?>(
-                      initialValue: tempTipe,
-                      decoration: const InputDecoration(
-                        labelText: 'Jenis Transaksi',
-                        border: OutlineInputBorder(),
-                      ),
-                      items: const [
-                        DropdownMenuItem(value: null, child: Text('Semua')),
-                        DropdownMenuItem(
-                          value: TipeTransaksi.pemasukan,
-                          child: Text('Pemasukan'),
-                        ),
-                        DropdownMenuItem(
-                          value: TipeTransaksi.pengeluaran,
-                          child: Text('Pengeluaran'),
-                        ),
-                        DropdownMenuItem(
-                          value: TipeTransaksi.transfer,
-                          child: Text('Transfer Antarakun'),
-                        ),
-                      ],
-                      onChanged: (val) => setStateDialog(() => tempTipe = val),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: catatanCtrl,
-                      maxLength: 64,
-                      decoration: const InputDecoration(
-                        labelText: 'Catatan',
-                        prefixIcon: Icon(Icons.search),
-                        border: OutlineInputBorder(),
-                      ),
-                      onChanged: (val) => tempCatatan = val,
-                    ),
-                    const SizedBox(height: 12),
-                    DropdownButtonFormField<String>(
-                      initialValue: tempAkunId,
-                      decoration: const InputDecoration(
-                        labelText: 'Pilih Akun',
-                        border: OutlineInputBorder(),
-                      ),
-                      items: [
-                        const DropdownMenuItem(
-                          value: null,
-                          child: Text('Semua'),
-                        ),
-                        ...akunList.map(
-                          (a) => DropdownMenuItem(
-                            value: a.id,
-                            child: Text(a.nama),
-                          ),
-                        ),
-                      ],
-                      onChanged: (val) =>
-                          setStateDialog(() => tempAkunId = val),
-                    ),
-                    const SizedBox(height: 12),
-                    DropdownButtonFormField<String>(
-                      initialValue: tempLabelId,
-                      decoration: const InputDecoration(
-                        labelText: 'Pilih Label',
-                        border: OutlineInputBorder(),
-                      ),
-                      items: [
-                        const DropdownMenuItem(
-                          value: null,
-                          child: Text('Semua'),
-                        ),
-                        ...labelList.map(
-                          (l) => DropdownMenuItem(
-                            value: l.id,
-                            child: Text(l.nama),
-                          ),
-                        ),
-                      ],
-                      onChanged: (val) =>
-                          setStateDialog(() => tempLabelId = val),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: minCtrl,
-                            keyboardType: TextInputType.number,
-                            inputFormatters: [CurrencyFormatter()],
-                            maxLength: 11,
-                            decoration: const InputDecoration(
-                              labelText: 'Min (Rp)',
-                              counterText: '',
-                              border: OutlineInputBorder(),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: TextField(
-                            controller: maxCtrl,
-                            keyboardType: TextInputType.number,
-                            inputFormatters: [CurrencyFormatter()],
-                            maxLength: 11,
-                            decoration: const InputDecoration(
-                              labelText: 'Max (Rp)',
-                              counterText: '',
-                              border: OutlineInputBorder(),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                FilledButton(
-                  onPressed: () {
-                    ref.read(isFilterActiveProvider.notifier).state = false;
-                    ref.read(filterCatatanProvider.notifier).state = '';
-                    ref.read(filterAkunIdProvider.notifier).state = null;
-                    ref.read(filterLabelIdProvider.notifier).state = null;
-                    ref.read(filterMinNominalProvider.notifier).state = null;
-                    ref.read(filterMaxNominalProvider.notifier).state = null;
-                    ref.read(filterTipeProvider.notifier).state = null;
-                    Navigator.pop(dialogContext);
-                  },
-                  child: const Text('Batal'),
-                ),
-                FilledButton(
-                  onPressed: () {
-                    // Validasi pengisian Min dan Max
-                    if (minCtrl.text.isNotEmpty && maxCtrl.text.isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Wajib mengisi Max (Rp) jika Min (Rp) diisi',
-                          ),
-                        ),
-                      );
-                      return;
-                    }
-                    if (minCtrl.text.isEmpty && maxCtrl.text.isNotEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Wajib mengisi Min (Rp) jika Max (Rp) diisi',
-                          ),
-                        ),
-                      );
-                      return;
-                    }
+    // Tangkap inisial state (untuk mendeteksi perubahan)
+    final initialCatatan = tempCatatan;
+    final initialAkunId = tempAkunId;
+    final initialLabelId = tempLabelId;
+    final initialTipe = tempTipe;
+    final initialMin = minCtrl.text;
+    final initialMax = maxCtrl.text;
 
-                    Navigator.pop(dialogContext);
-
-                    final parsedMin = minCtrl.text.isNotEmpty
-                        ? double.parse(minCtrl.text.replaceAll('.', ''))
-                        : null;
-                    final parsedMax = maxCtrl.text.isNotEmpty
-                        ? double.parse(maxCtrl.text.replaceAll('.', ''))
-                        : null;
-
-                    ref.read(filterCatatanProvider.notifier).state = tempCatatan
-                        .trim();
-                    ref.read(filterAkunIdProvider.notifier).state = tempAkunId;
-                    ref.read(filterLabelIdProvider.notifier).state =
-                        tempLabelId;
-                    ref.read(filterTipeProvider.notifier).state = tempTipe;
-                    ref.read(filterMinNominalProvider.notifier).state =
-                        parsedMin;
-                    ref.read(filterMaxNominalProvider.notifier).state =
-                        parsedMax;
-
-                    ref.read(isFilterActiveProvider.notifier).state =
-                        tempCatatan.trim().isNotEmpty ||
-                        tempAkunId != null ||
-                        tempLabelId != null ||
-                        parsedMin != null ||
-                        parsedMax != null ||
-                        tempTipe != null;
-                  },
-                  child: const Text('Cari'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
-  void _tampilFormJumpToDate(
-    List<TransaksiModel> listTransaksi,
-    WidgetRef ref,
-  ) {
-    // 1. Baca status terkini untuk pre-fill form
+    // B. Nilai Awal Tanggal
     final currentDate = ref.read(selectedDateProvider);
     final currentIsModeRentang = ref.read(isModeRentangProvider);
     final currentShowFullMonth = ref.read(showFullMonthProvider);
 
-    // 0: Bulan Spesifik, 1: Tanggal Spesifik, 2: Rentang
-    int modePencarian = currentIsModeRentang
-        ? 2
-        : (currentShowFullMonth ? 0 : 1);
+    final isDateModified =
+        currentDate.year != DateTime.now().year ||
+        currentDate.month != DateTime.now().month ||
+        currentDate.day != DateTime.now().day;
 
-    int? selectedYear = currentIsModeRentang ? null : currentDate.year;
-    int? selectedMonth = currentIsModeRentang ? null : currentDate.month;
-    int? selectedDay = (currentIsModeRentang || currentShowFullMonth)
-        ? null
-        : currentDate.day;
+    int modePencarian = currentIsModeRentang ? 1 : 0;
+
+    int? selectedYear;
+    int? selectedMonth;
+    int? selectedDay;
+
+    // Tampilkan nilai null jika tidak ada filter aktif atau bukan default
+    if (!currentIsModeRentang) {
+      if (currentShowFullMonth || isDateModified) {
+        selectedYear = currentDate.year;
+        selectedMonth = currentDate.month;
+        selectedDay = currentShowFullMonth ? null : currentDate.day;
+      }
+    }
 
     DateTime? tempStart = ref.read(rentangAwalProvider);
     DateTime? tempEnd = ref.read(rentangAkhirProvider);
+
+    final initialMode = modePencarian;
+    final initialYear = selectedYear;
+    final initialMonth = selectedMonth;
+    final initialDay = selectedDay;
+    final initialStart = tempStart;
+    final initialEnd = tempEnd;
 
     const bulanMap = [
       '',
@@ -1270,13 +1068,69 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
       'Desember',
     ];
 
-    showDialog<void>(
+    showModalBottomSheet<void>(
       context: context,
-      builder: (dialogContext) {
+      isScrollControlled: true, // Memungkinkan BottomSheet memenuhi layar
+      useSafeArea: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) {
         return StatefulBuilder(
-          builder: (context, setStateDialog) {
+          builder: (contextState, setStateSheet) {
+            // Cek apakah ada perubahan di form
+            bool hasChanged() {
+              return tempCatatan != initialCatatan ||
+                  tempAkunId != initialAkunId ||
+                  tempLabelId != initialLabelId ||
+                  tempTipe != initialTipe ||
+                  minCtrl.text != initialMin ||
+                  maxCtrl.text != initialMax ||
+                  modePencarian != initialMode ||
+                  selectedYear != initialYear ||
+                  selectedMonth != initialMonth ||
+                  selectedDay != initialDay ||
+                  tempStart != initialStart ||
+                  tempEnd != initialEnd;
+            }
+
+            // Fungsi untuk konfirmasi Batal
+            Future<void> prosesBatal() async {
+              if (hasChanged()) {
+                final confirm = await showDialog<bool>(
+                  context: sheetContext,
+                  builder: (ctx) => AlertDialog(
+                    title: const Text('Batalkan Perubahan?'),
+                    content: const Text(
+                      'Anda memiliki perubahan filter yang belum diterapkan. Buang perubahan?',
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx, false),
+                        child: const Text('Lanjut Edit'),
+                      ),
+                      FilledButton(
+                        onPressed: () => Navigator.pop(ctx, true),
+                        child: const Text('Buang'),
+                      ),
+                    ],
+                  ),
+                );
+                if (confirm == true && sheetContext.mounted) {
+                  Navigator.pop(sheetContext);
+                }
+              } else {
+                Navigator.pop(sheetContext);
+              }
+            }
+
+            // Hitung opsi dropdown tahun dan bulan agar tidak error
             final availableYears =
                 listTransaksi.map((t) => t.waktu.year).toSet().toList()..sort();
+            if (!availableYears.contains(DateTime.now().year)) {
+              availableYears.add(DateTime.now().year);
+              availableYears.sort();
+            }
 
             final availableMonths =
                 selectedYear == null
@@ -1287,6 +1141,11 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
                             .toSet()
                             .toList()
                   ..sort();
+            if (selectedYear == DateTime.now().year &&
+                !availableMonths.contains(DateTime.now().month)) {
+              availableMonths.add(DateTime.now().month);
+              availableMonths.sort();
+            }
 
             final availableDays =
                 (selectedYear == null || selectedMonth == null)
@@ -1314,246 +1173,607 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
               selectedDay = null;
             }
 
-            return AlertDialog(
-              title: const Text('Pergi ke Tanggal'),
-              content: SingleChildScrollView(
+            // WillPopScope digunakan untuk mencegat (intercept) tombol back / geser kembali
+            // ignore: deprecated_member_use
+            return WillPopScope(
+              onWillPop: () async {
+                if (hasChanged()) {
+                  final confirm = await showDialog<bool>(
+                    context: sheetContext,
+                    builder: (ctx) => AlertDialog(
+                      title: const Text('Batalkan Perubahan?'),
+                      content: const Text(
+                        'Anda memiliki perubahan filter yang belum diterapkan. Buang perubahan?',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, false),
+                          child: const Text('Lanjut Edit'),
+                        ),
+                        FilledButton(
+                          onPressed: () => Navigator.pop(ctx, true),
+                          child: const Text('Buang'),
+                        ),
+                      ],
+                    ),
+                  );
+                  return confirm == true;
+                }
+                return true;
+              },
+              child: Padding(
+                padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(contextState).viewInsets.bottom,
+                ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    RadioGroup<int>(
-                      groupValue: modePencarian,
-                      onChanged: (val) =>
-                          setStateDialog(() => modePencarian = val!),
-                      child: Column(
+                    const Padding(
+                      padding: EdgeInsets.all(16.0),
+                      child: Text(
+                        'Filter Data',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    Flexible(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // ===================================
+                            // BAGIAN 1: FILTER KRITERIA TRANSAKSI
+                            // ===================================
+                            const Text(
+                              '1. Kriteria Transaksi',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.blue,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            DropdownButtonFormField<TipeTransaksi?>(
+                              initialValue: tempTipe,
+                              decoration: const InputDecoration(
+                                labelText: 'Jenis Transaksi',
+                                border: OutlineInputBorder(),
+                              ),
+                              items: const [
+                                DropdownMenuItem(
+                                  value: null,
+                                  child: Text('Semua'),
+                                ),
+                                DropdownMenuItem(
+                                  value: TipeTransaksi.pemasukan,
+                                  child: Text('Pemasukan'),
+                                ),
+                                DropdownMenuItem(
+                                  value: TipeTransaksi.pengeluaran,
+                                  child: Text('Pengeluaran'),
+                                ),
+                                DropdownMenuItem(
+                                  value: TipeTransaksi.transfer,
+                                  child: Text('Transfer Antarakun'),
+                                ),
+                              ],
+                              onChanged: (val) =>
+                                  setStateSheet(() => tempTipe = val),
+                            ),
+                            const SizedBox(height: 12),
+                            DropdownButtonFormField<String>(
+                              initialValue: tempAkunId,
+                              decoration: const InputDecoration(
+                                labelText: 'Pilih Akun',
+                                border: OutlineInputBorder(),
+                              ),
+                              items: [
+                                const DropdownMenuItem(
+                                  value: null,
+                                  child: Text('Semua'),
+                                ),
+                                ...akunList.map(
+                                  (a) => DropdownMenuItem(
+                                    value: a.id,
+                                    child: Text(a.nama),
+                                  ),
+                                ),
+                              ],
+                              onChanged: (val) =>
+                                  setStateSheet(() => tempAkunId = val),
+                            ),
+                            const SizedBox(height: 12),
+                            DropdownButtonFormField<String>(
+                              initialValue: tempLabelId,
+                              decoration: const InputDecoration(
+                                labelText: 'Pilih Label',
+                                border: OutlineInputBorder(),
+                              ),
+                              items: [
+                                const DropdownMenuItem(
+                                  value: null,
+                                  child: Text('Semua'),
+                                ),
+                                ...labelList.map(
+                                  (l) => DropdownMenuItem(
+                                    value: l.id,
+                                    child: Text(l.nama),
+                                  ),
+                                ),
+                              ],
+                              onChanged: (val) =>
+                                  setStateSheet(() => tempLabelId = val),
+                            ),
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: TextField(
+                                    controller: minCtrl,
+                                    keyboardType: TextInputType.number,
+                                    inputFormatters: [CurrencyFormatter()],
+                                    maxLength: 11,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Min (Rp)',
+                                      counterText: '',
+                                      border: OutlineInputBorder(),
+                                    ),
+                                    onChanged: (val) => setStateSheet(() {}),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: TextField(
+                                    controller: maxCtrl,
+                                    keyboardType: TextInputType.number,
+                                    inputFormatters: [CurrencyFormatter()],
+                                    maxLength: 11,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Max (Rp)',
+                                      counterText: '',
+                                      border: OutlineInputBorder(),
+                                    ),
+                                    onChanged: (val) => setStateSheet(() {}),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            TextField(
+                              controller: catatanCtrl,
+                              maxLength: 64,
+                              decoration: const InputDecoration(
+                                labelText: 'Catatan',
+                                prefixIcon: Icon(Icons.search),
+                                border: OutlineInputBorder(),
+                              ),
+                              onChanged: (val) {
+                                tempCatatan = val;
+                                setStateSheet(() {});
+                              },
+                            ),
+
+                            const Divider(height: 32),
+
+                            // ===================================
+                            // BAGIAN 2: FILTER TANGGAL
+                            // ===================================
+                            const Text(
+                              '2. Rentang Tanggal',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.blue,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            RadioGroup<int>(
+                              groupValue: modePencarian,
+                              onChanged: (val) =>
+                                  setStateSheet(() => modePencarian = val!),
+                              child: Column(
+                                children: [
+                                  Row(
+                                    children: [
+                                      Radio<int>(value: 0),
+                                      const Text('Tanggal Spesifik'),
+                                    ],
+                                  ),
+                                  Row(
+                                    children: [
+                                      Radio<int>(value: 1),
+                                      const Text('Rentang (Max 30 Hari)'),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            if (modePencarian == 0) ...[
+                              DropdownButtonFormField<int?>(
+                                initialValue: selectedYear,
+                                decoration: const InputDecoration(
+                                  border: OutlineInputBorder(),
+                                ),
+                                items: [
+                                  const DropdownMenuItem<int?>(
+                                    value: null,
+                                    child: Text('Pilih Tahun (Opsional)'),
+                                  ),
+                                  ...availableYears.map(
+                                    (y) => DropdownMenuItem<int?>(
+                                      value: y,
+                                      child: Text(y.toString()),
+                                    ),
+                                  ),
+                                ],
+                                onChanged: (val) => setStateSheet(() {
+                                  selectedYear = val;
+                                  selectedMonth = null;
+                                  selectedDay = null;
+                                }),
+                              ),
+                              const SizedBox(height: 12),
+                              DropdownButtonFormField<int?>(
+                                initialValue: selectedMonth,
+                                decoration: const InputDecoration(
+                                  border: OutlineInputBorder(),
+                                ),
+                                items: [
+                                  const DropdownMenuItem<int?>(
+                                    value: null,
+                                    child: Text('Pilih Bulan (Opsional)'),
+                                  ),
+                                  ...availableMonths.map(
+                                    (m) => DropdownMenuItem<int?>(
+                                      value: m,
+                                      child: Text(bulanMap[m]),
+                                    ),
+                                  ),
+                                ],
+                                onChanged: availableMonths.isEmpty
+                                    ? null
+                                    : (val) => setStateSheet(() {
+                                        selectedMonth = val;
+                                        selectedDay = null;
+                                      }),
+                              ),
+                              const SizedBox(height: 12),
+                              DropdownButtonFormField<int?>(
+                                initialValue: selectedDay,
+                                decoration: const InputDecoration(
+                                  border: OutlineInputBorder(),
+                                ),
+                                items: [
+                                  const DropdownMenuItem<int?>(
+                                    value: null,
+                                    child: Text('Pilih Tanggal (Opsional)'),
+                                  ),
+                                  ...availableDays.map(
+                                    (d) => DropdownMenuItem<int?>(
+                                      value: d,
+                                      child: Text(d.toString().padLeft(2, '0')),
+                                    ),
+                                  ),
+                                ],
+                                onChanged: availableDays.isEmpty
+                                    ? null
+                                    : (val) => setStateSheet(
+                                        () => selectedDay = val,
+                                      ),
+                              ),
+                            ] else ...[
+                              ListTile(
+                                contentPadding: EdgeInsets.zero,
+                                title: const Text(
+                                  'Tanggal Mulai',
+                                  style: TextStyle(fontSize: 14),
+                                ),
+                                subtitle: Text(
+                                  tempStart != null
+                                      ? '${tempStart!.day.toString().padLeft(2, '0')} ${bulanMap[tempStart!.month]} ${tempStart!.year}'
+                                      : 'Pilih tanggal',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                trailing: const Icon(Icons.calendar_today),
+                                onTap: () async {
+                                  final date = await showDatePicker(
+                                    context: context,
+                                    initialDate: tempStart ?? DateTime.now(),
+                                    firstDate: DateTime(2000),
+                                    lastDate: DateTime(2100),
+                                  );
+                                  if (date != null) {
+                                    setStateSheet(() => tempStart = date);
+                                  }
+                                },
+                              ),
+                              ListTile(
+                                contentPadding: EdgeInsets.zero,
+                                title: const Text(
+                                  'Tanggal Akhir',
+                                  style: TextStyle(fontSize: 14),
+                                ),
+                                subtitle: Text(
+                                  tempEnd != null
+                                      ? '${tempEnd!.day.toString().padLeft(2, '0')} ${bulanMap[tempEnd!.month]} ${tempEnd!.year}'
+                                      : 'Pilih tanggal',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                trailing: const Icon(Icons.calendar_today),
+                                onTap: () async {
+                                  final date = await showDatePicker(
+                                    context: context,
+                                    initialDate:
+                                        tempEnd ?? tempStart ?? DateTime.now(),
+                                    firstDate: DateTime(2000),
+                                    lastDate: DateTime(2100),
+                                  );
+                                  if (date != null) {
+                                    setStateSheet(() => tempEnd = date);
+                                  }
+                                },
+                              ),
+                            ],
+                            const SizedBox(height: 24),
+                          ],
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
                         children: [
-                          Row(
-                            children: [
-                              Radio<int>(value: 0),
-                              const Text('Bulan Spesifik'),
-                            ],
+                          TextButton(
+                            onPressed: prosesBatal,
+                            child: const Text('Batal'),
                           ),
-                          Row(
-                            children: [
-                              Radio<int>(value: 1),
-                              const Text('Tanggal Spesifik'),
-                            ],
-                          ),
-                          Row(
-                            children: [
-                              Radio<int>(value: 2),
-                              const Text('Rentang (Max 30 Hari)'),
-                            ],
+                          const SizedBox(width: 8),
+                          FilledButton(
+                            // Validasi disable button jika tidak ada field form yang berubah
+                            onPressed: hasChanged()
+                                ? () {
+                                    // Validasi Error Input
+                                    if (minCtrl.text.isNotEmpty &&
+                                        maxCtrl.text.isEmpty) {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                            const SnackBar(
+                                              content: Text(
+                                                'Wajib mengisi Max (Rp) jika Min (Rp) diisi',
+                                              ),
+                                            ),
+                                          );
+                                      return;
+                                    }
+                                    if (minCtrl.text.isEmpty &&
+                                        maxCtrl.text.isNotEmpty) {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                            const SnackBar(
+                                              content: Text(
+                                                'Wajib mengisi Min (Rp) jika Max (Rp) diisi',
+                                              ),
+                                            ),
+                                          );
+                                      return;
+                                    }
+
+                                    if (modePencarian == 0) {
+                                      if ((selectedYear != null &&
+                                              selectedMonth == null) ||
+                                          (selectedYear == null &&
+                                              selectedMonth != null)) {
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                              const SnackBar(
+                                                content: Text(
+                                                  'Lengkapi pilihan tahun dan bulan, atau kosongkan keduanya untuk bulan ini.',
+                                                ),
+                                              ),
+                                            );
+                                        return;
+                                      }
+                                    } else {
+                                      if (tempStart == null ||
+                                          tempEnd == null) {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          const SnackBar(
+                                            content: Text(
+                                              'Pilih tanggal awal dan akhir',
+                                            ),
+                                          ),
+                                        );
+                                        return;
+                                      }
+                                      if (tempEnd!.isBefore(tempStart!)) {
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                              const SnackBar(
+                                                content: Text(
+                                                  'Tanggal akhir tidak boleh lebih awal dari tanggal mulai',
+                                                ),
+                                              ),
+                                            );
+                                        return;
+                                      }
+                                      if (tempEnd!
+                                              .difference(tempStart!)
+                                              .inDays >
+                                          30) {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          const SnackBar(
+                                            content: Text(
+                                              'Rentang maksimal adalah 30 hari',
+                                            ),
+                                          ),
+                                        );
+                                        return;
+                                      }
+                                    }
+
+                                    Navigator.pop(sheetContext);
+
+                                    // Simpan ke Provider (Kriteria Transaksi)
+                                    final parsedMin = minCtrl.text.isNotEmpty
+                                        ? double.parse(
+                                            minCtrl.text.replaceAll('.', ''),
+                                          )
+                                        : null;
+                                    final parsedMax = maxCtrl.text.isNotEmpty
+                                        ? double.parse(
+                                            maxCtrl.text.replaceAll('.', ''),
+                                          )
+                                        : null;
+
+                                    ref
+                                        .read(filterCatatanProvider.notifier)
+                                        .state = tempCatatan
+                                        .trim();
+                                    ref
+                                            .read(filterAkunIdProvider.notifier)
+                                            .state =
+                                        tempAkunId;
+                                    ref
+                                            .read(
+                                              filterLabelIdProvider.notifier,
+                                            )
+                                            .state =
+                                        tempLabelId;
+                                    ref
+                                            .read(filterTipeProvider.notifier)
+                                            .state =
+                                        tempTipe;
+                                    ref
+                                            .read(
+                                              filterMinNominalProvider.notifier,
+                                            )
+                                            .state =
+                                        parsedMin;
+                                    ref
+                                            .read(
+                                              filterMaxNominalProvider.notifier,
+                                            )
+                                            .state =
+                                        parsedMax;
+
+                                    ref
+                                            .read(
+                                              isFilterActiveProvider.notifier,
+                                            )
+                                            .state =
+                                        tempCatatan.trim().isNotEmpty ||
+                                        tempAkunId != null ||
+                                        tempLabelId != null ||
+                                        parsedMin != null ||
+                                        parsedMax != null ||
+                                        tempTipe != null;
+
+                                    // Simpan ke Provider (Tanggal)
+                                    if (modePencarian == 0) {
+                                      if (selectedYear == null &&
+                                          selectedMonth == null) {
+                                        selectedYear = DateTime.now().year;
+                                        selectedMonth = DateTime.now().month;
+                                        selectedDay =
+                                            null; // Default ke satu bulan penuh
+                                      }
+
+                                      if (selectedDay == null) {
+                                        ref
+                                            .read(selectedDateProvider.notifier)
+                                            .state = DateTime(
+                                          selectedYear!,
+                                          selectedMonth!,
+                                          1,
+                                        );
+                                        ref
+                                                .read(
+                                                  showFullMonthProvider
+                                                      .notifier,
+                                                )
+                                                .state =
+                                            true;
+                                      } else {
+                                        ref
+                                            .read(selectedDateProvider.notifier)
+                                            .state = DateTime(
+                                          selectedYear!,
+                                          selectedMonth!,
+                                          selectedDay!,
+                                        );
+                                        ref
+                                                .read(
+                                                  showFullMonthProvider
+                                                      .notifier,
+                                                )
+                                                .state =
+                                            false;
+                                      }
+                                      ref
+                                              .read(
+                                                isModeRentangProvider.notifier,
+                                              )
+                                              .state =
+                                          false;
+                                      ref
+                                              .read(
+                                                rentangAwalProvider.notifier,
+                                              )
+                                              .state =
+                                          null;
+                                      ref
+                                              .read(
+                                                rentangAkhirProvider.notifier,
+                                              )
+                                              .state =
+                                          null;
+                                    } else {
+                                      ref
+                                              .read(
+                                                rentangAwalProvider.notifier,
+                                              )
+                                              .state =
+                                          tempStart;
+                                      ref
+                                              .read(
+                                                rentangAkhirProvider.notifier,
+                                              )
+                                              .state =
+                                          tempEnd;
+                                      ref
+                                              .read(
+                                                isModeRentangProvider.notifier,
+                                              )
+                                              .state =
+                                          true;
+                                      ref
+                                              .read(
+                                                showFullMonthProvider.notifier,
+                                              )
+                                              .state =
+                                          false;
+                                    }
+                                  }
+                                : null,
+                            child: const Text('Terapkan Filter'),
                           ),
                         ],
                       ),
                     ),
-                    const Divider(),
-
-                    if (modePencarian == 0 || modePencarian == 1) ...[
-                      DropdownButtonFormField<int>(
-                        initialValue: selectedYear,
-                        hint: const Text('Pilih Tahun'),
-                        items: availableYears
-                            .map(
-                              (y) => DropdownMenuItem(
-                                value: y,
-                                child: Text(y.toString()),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: (val) => setStateDialog(() {
-                          selectedYear = val;
-                          selectedMonth = null;
-                          selectedDay = null;
-                        }),
-                      ),
-                      const SizedBox(height: 12),
-                      DropdownButtonFormField<int>(
-                        initialValue: selectedMonth,
-                        hint: const Text('Pilih Bulan'),
-                        items: availableMonths
-                            .map(
-                              (m) => DropdownMenuItem(
-                                value: m,
-                                child: Text(bulanMap[m]),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: availableMonths.isEmpty
-                            ? null
-                            : (val) => setStateDialog(() {
-                                selectedMonth = val;
-                                selectedDay = null;
-                              }),
-                      ),
-                      if (modePencarian == 1) ...[
-                        const SizedBox(height: 12),
-                        DropdownButtonFormField<int>(
-                          initialValue: selectedDay,
-                          hint: const Text('Pilih Tanggal'),
-                          items: availableDays
-                              .map(
-                                (d) => DropdownMenuItem(
-                                  value: d,
-                                  child: Text(d.toString().padLeft(2, '0')),
-                                ),
-                              )
-                              .toList(),
-                          onChanged: availableDays.isEmpty
-                              ? null
-                              : (val) =>
-                                    setStateDialog(() => selectedDay = val),
-                        ),
-                      ],
-                    ] else ...[
-                      ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: const Text(
-                          'Tanggal Mulai',
-                          style: TextStyle(fontSize: 14),
-                        ),
-                        subtitle: Text(
-                          tempStart != null
-                              ? '${tempStart!.day.toString().padLeft(2, '0')} ${bulanMap[tempStart!.month]} ${tempStart!.year}'
-                              : 'Pilih tanggal',
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        trailing: const Icon(Icons.calendar_today),
-                        onTap: () async {
-                          final date = await showDatePicker(
-                            context: context,
-                            initialDate: tempStart ?? DateTime.now(),
-                            firstDate: DateTime(2000),
-                            lastDate: DateTime(2100),
-                          );
-                          if (date != null) {
-                            setStateDialog(() => tempStart = date);
-                          }
-                        },
-                      ),
-                      ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: const Text(
-                          'Tanggal Akhir',
-                          style: TextStyle(fontSize: 14),
-                        ),
-                        subtitle: Text(
-                          tempEnd != null
-                              ? '${tempEnd!.day.toString().padLeft(2, '0')} ${bulanMap[tempEnd!.month]} ${tempEnd!.year}'
-                              : 'Pilih tanggal',
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        trailing: const Icon(Icons.calendar_today),
-                        onTap: () async {
-                          final date = await showDatePicker(
-                            context: context,
-                            initialDate: tempEnd ?? tempStart ?? DateTime.now(),
-                            firstDate: DateTime(2000),
-                            lastDate: DateTime(2100),
-                          );
-                          if (date != null) {
-                            setStateDialog(() => tempEnd = date);
-                          }
-                        },
-                      ),
-                    ],
                   ],
                 ),
               ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(dialogContext),
-                  child: const Text('Batal'),
-                ),
-                FilledButton(
-                  onPressed: () {
-                    // 2. Simpan nilai ke Provider saat diterapkan
-                    if (modePencarian == 0) {
-                      if (selectedYear == null || selectedMonth == null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Lengkapi pilihan tahun dan bulan'),
-                          ),
-                        );
-                        return;
-                      }
-
-                      ref.read(selectedDateProvider.notifier).state = DateTime(
-                        selectedYear!,
-                        selectedMonth!,
-                        1, // Atur ke awal bulan
-                      );
-                      ref.read(isModeRentangProvider.notifier).state = false;
-                      ref.read(rentangAwalProvider.notifier).state = null;
-                      ref.read(rentangAkhirProvider.notifier).state = null;
-
-                      // Aktifkan expand bulan
-                      ref.read(showFullMonthProvider.notifier).state = true;
-                      Navigator.pop(dialogContext);
-                    } else if (modePencarian == 1) {
-                      if (selectedYear == null ||
-                          selectedMonth == null ||
-                          selectedDay == null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'Lengkapi pilihan tahun, bulan, dan tanggal',
-                            ),
-                          ),
-                        );
-                        return;
-                      }
-
-                      ref.read(selectedDateProvider.notifier).state = DateTime(
-                        selectedYear!,
-                        selectedMonth!,
-                        selectedDay!,
-                      );
-                      ref.read(isModeRentangProvider.notifier).state = false;
-                      ref.read(rentangAwalProvider.notifier).state = null;
-                      ref.read(rentangAkhirProvider.notifier).state = null;
-
-                      ref.read(showFullMonthProvider.notifier).state = false;
-                      Navigator.pop(dialogContext);
-                    } else {
-                      if (tempStart == null || tempEnd == null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Pilih tanggal awal dan akhir'),
-                          ),
-                        );
-                        return;
-                      }
-                      if (tempEnd!.isBefore(tempStart!)) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'Tanggal akhir tidak boleh lebih awal dari tanggal mulai',
-                            ),
-                          ),
-                        );
-                        return;
-                      }
-                      if (tempEnd!.difference(tempStart!).inDays > 30) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Rentang maksimal adalah 30 hari'),
-                          ),
-                        );
-                        return;
-                      }
-
-                      ref.read(rentangAwalProvider.notifier).state = tempStart;
-                      ref.read(rentangAkhirProvider.notifier).state = tempEnd;
-                      ref.read(isModeRentangProvider.notifier).state = true;
-
-                      ref.read(showFullMonthProvider.notifier).state = false;
-                      Navigator.pop(dialogContext);
-                    }
-                  },
-                  child: const Text('Terapkan'),
-                ),
-              ],
             );
           },
         );
