@@ -1219,310 +1219,339 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
                       ),
                     ),
                     Flexible(
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // ===================================
-                            // BAGIAN 1: FILTER KRITERIA TRANSAKSI
-                            // ===================================
-                            const Text(
-                              '1. Kriteria Transaksi',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.blue,
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            DropdownButtonFormField<TipeTransaksi?>(
-                              initialValue: tempTipe,
-                              decoration: const InputDecoration(
-                                labelText: 'Jenis Transaksi',
-                                border: OutlineInputBorder(),
-                              ),
-                              items: const [
-                                DropdownMenuItem(
-                                  value: null,
-                                  child: Text('Semua'),
-                                ),
-                                DropdownMenuItem(
-                                  value: TipeTransaksi.pemasukan,
-                                  child: Text('Pemasukan'),
-                                ),
-                                DropdownMenuItem(
-                                  value: TipeTransaksi.pengeluaran,
-                                  child: Text('Pengeluaran'),
-                                ),
-                                DropdownMenuItem(
-                                  value: TipeTransaksi.transfer,
-                                  child: Text('Transfer Antarakun'),
-                                ),
-                              ],
-                              onChanged: (val) =>
-                                  setStateSheet(() => tempTipe = val),
-                            ),
-                            const SizedBox(height: 12),
-                            DropdownButtonFormField<String>(
-                              initialValue: tempAkunId,
-                              decoration: const InputDecoration(
-                                labelText: 'Pilih Akun',
-                                border: OutlineInputBorder(),
-                              ),
-                              items: [
-                                const DropdownMenuItem(
-                                  value: null,
-                                  child: Text('Semua'),
-                                ),
-                                ...akunList.map(
-                                  (a) => DropdownMenuItem(
-                                    value: a.id,
-                                    child: Text(a.nama),
-                                  ),
-                                ),
-                              ],
-                              onChanged: (val) =>
-                                  setStateSheet(() => tempAkunId = val),
-                            ),
-                            const SizedBox(height: 12),
-                            DropdownButtonFormField<String>(
-                              initialValue: tempLabelId,
-                              decoration: const InputDecoration(
-                                labelText: 'Pilih Label',
-                                border: OutlineInputBorder(),
-                              ),
-                              items: [
-                                const DropdownMenuItem(
-                                  value: null,
-                                  child: Text('Semua'),
-                                ),
-                                ...labelList.map(
-                                  (l) => DropdownMenuItem(
-                                    value: l.id,
-                                    child: Text(l.nama),
-                                  ),
-                                ),
-                              ],
-                              onChanged: (val) =>
-                                  setStateSheet(() => tempLabelId = val),
-                            ),
-                            const SizedBox(height: 12),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: TextField(
-                                    controller: minCtrl,
-                                    keyboardType: TextInputType.number,
-                                    inputFormatters: [CurrencyFormatter()],
-                                    maxLength: 11,
-                                    decoration: const InputDecoration(
-                                      labelText: 'Min (Rp)',
-                                      counterText: '',
-                                      border: OutlineInputBorder(),
-                                    ),
-                                    onChanged: (val) => setStateSheet(() {}),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: TextField(
-                                    controller: maxCtrl,
-                                    keyboardType: TextInputType.number,
-                                    inputFormatters: [CurrencyFormatter()],
-                                    maxLength: 11,
-                                    decoration: const InputDecoration(
-                                      labelText: 'Max (Rp)',
-                                      counterText: '',
-                                      border: OutlineInputBorder(),
-                                    ),
-                                    onChanged: (val) => setStateSheet(() {}),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 12),
-                            TextField(
-                              controller: catatanCtrl,
-                              maxLength: 64,
-                              decoration: const InputDecoration(
-                                labelText: 'Catatan',
-                                prefixIcon: Icon(Icons.search),
-                                border: OutlineInputBorder(),
-                              ),
-                              onChanged: (val) {
-                                tempCatatan = val;
-                                setStateSheet(() {});
-                              },
-                            ),
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          final isDesktop = constraints.maxWidth > 600;
 
-                            const Divider(height: 32),
-
-                            // ===================================
-                            // BAGIAN 2: FILTER TANGGAL
-                            // ===================================
-                            const Text(
-                              '2. Rentang Tanggal',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.blue,
+                          // Bagian 1: Kriteria Transaksi
+                          final kriteriaTransaksiSection = Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                '1. Kriteria Transaksi',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.blue,
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 8),
-                            RadioGroup<int>(
-                              groupValue: modePencarian,
-                              onChanged: (val) =>
-                                  setStateSheet(() => modePencarian = val!),
-                              child: Column(
+                              const SizedBox(height: 12),
+                              DropdownButtonFormField<TipeTransaksi?>(
+                                initialValue: tempTipe,
+                                decoration: const InputDecoration(
+                                  labelText: 'Jenis Transaksi',
+                                  border: OutlineInputBorder(),
+                                ),
+                                items: const [
+                                  DropdownMenuItem(
+                                    value: null,
+                                    child: Text('Pilih jenis transaksi'),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: TipeTransaksi.pemasukan,
+                                    child: Text('Pemasukan'),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: TipeTransaksi.pengeluaran,
+                                    child: Text('Pengeluaran'),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: TipeTransaksi.transfer,
+                                    child: Text('Transfer Antarakun'),
+                                  ),
+                                ],
+                                onChanged: (val) =>
+                                    setStateSheet(() => tempTipe = val),
+                              ),
+                              const SizedBox(height: 12),
+                              DropdownButtonFormField<String?>(
+                                initialValue: tempAkunId,
+                                decoration: const InputDecoration(
+                                  labelText: 'Akun',
+                                  border: OutlineInputBorder(),
+                                ),
+                                items: [
+                                  const DropdownMenuItem(
+                                    value: null,
+                                    child: Text('Pilih akun'),
+                                  ),
+                                  ...akunList.map(
+                                    (a) => DropdownMenuItem(
+                                      value: a.id,
+                                      child: Text(a.nama),
+                                    ),
+                                  ),
+                                ],
+                                onChanged: (val) =>
+                                    setStateSheet(() => tempAkunId = val),
+                              ),
+                              const SizedBox(height: 12),
+                              DropdownButtonFormField<String?>(
+                                initialValue: tempLabelId,
+                                decoration: const InputDecoration(
+                                  labelText: 'Label',
+                                  border: OutlineInputBorder(),
+                                ),
+                                items: [
+                                  const DropdownMenuItem(
+                                    value: null,
+                                    child: Text('Pilih label'),
+                                  ),
+                                  ...labelList.map(
+                                    (l) => DropdownMenuItem(
+                                      value: l.id,
+                                      child: Text(l.nama),
+                                    ),
+                                  ),
+                                ],
+                                onChanged: (val) =>
+                                    setStateSheet(() => tempLabelId = val),
+                              ),
+                              const SizedBox(height: 12),
+                              Row(
                                 children: [
-                                  Row(
-                                    children: [
-                                      Radio<int>(value: 0),
-                                      const Text('Tanggal Spesifik'),
-                                    ],
-                                  ),
-                                  Row(
-                                    children: [
-                                      Radio<int>(value: 1),
-                                      const Text('Rentang (Max 30 Hari)'),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            if (modePencarian == 0) ...[
-                              DropdownButtonFormField<int?>(
-                                initialValue: selectedYear,
-                                decoration: const InputDecoration(
-                                  border: OutlineInputBorder(),
-                                ),
-                                items: [
-                                  const DropdownMenuItem<int?>(
-                                    value: null,
-                                    child: Text('Pilih Tahun (Opsional)'),
-                                  ),
-                                  ...availableYears.map(
-                                    (y) => DropdownMenuItem<int?>(
-                                      value: y,
-                                      child: Text(y.toString()),
-                                    ),
-                                  ),
-                                ],
-                                onChanged: (val) => setStateSheet(() {
-                                  selectedYear = val;
-                                  selectedMonth = null;
-                                  selectedDay = null;
-                                }),
-                              ),
-                              const SizedBox(height: 12),
-                              DropdownButtonFormField<int?>(
-                                initialValue: selectedMonth,
-                                decoration: const InputDecoration(
-                                  border: OutlineInputBorder(),
-                                ),
-                                items: [
-                                  const DropdownMenuItem<int?>(
-                                    value: null,
-                                    child: Text('Pilih Bulan (Opsional)'),
-                                  ),
-                                  ...availableMonths.map(
-                                    (m) => DropdownMenuItem<int?>(
-                                      value: m,
-                                      child: Text(bulanMap[m]),
-                                    ),
-                                  ),
-                                ],
-                                onChanged: availableMonths.isEmpty
-                                    ? null
-                                    : (val) => setStateSheet(() {
-                                        selectedMonth = val;
-                                        selectedDay = null;
-                                      }),
-                              ),
-                              const SizedBox(height: 12),
-                              DropdownButtonFormField<int?>(
-                                initialValue: selectedDay,
-                                decoration: const InputDecoration(
-                                  border: OutlineInputBorder(),
-                                ),
-                                items: [
-                                  const DropdownMenuItem<int?>(
-                                    value: null,
-                                    child: Text('Pilih Tanggal (Opsional)'),
-                                  ),
-                                  ...availableDays.map(
-                                    (d) => DropdownMenuItem<int?>(
-                                      value: d,
-                                      child: Text(d.toString().padLeft(2, '0')),
-                                    ),
-                                  ),
-                                ],
-                                onChanged: availableDays.isEmpty
-                                    ? null
-                                    : (val) => setStateSheet(
-                                        () => selectedDay = val,
+                                  Expanded(
+                                    child: TextField(
+                                      controller: minCtrl,
+                                      keyboardType: TextInputType.number,
+                                      inputFormatters: [CurrencyFormatter()],
+                                      maxLength: 11,
+                                      decoration: const InputDecoration(
+                                        labelText: 'Min (Rp)',
+                                        counterText: '',
+                                        border: OutlineInputBorder(),
                                       ),
-                              ),
-                            ] else ...[
-                              ListTile(
-                                contentPadding: EdgeInsets.zero,
-                                title: const Text(
-                                  'Tanggal Mulai',
-                                  style: TextStyle(fontSize: 14),
-                                ),
-                                subtitle: Text(
-                                  tempStart != null
-                                      ? '${tempStart!.day.toString().padLeft(2, '0')} ${bulanMap[tempStart!.month]} ${tempStart!.year}'
-                                      : 'Pilih tanggal',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
+                                      onChanged: (val) => setStateSheet(() {}),
+                                    ),
                                   ),
-                                ),
-                                trailing: const Icon(Icons.calendar_today),
-                                onTap: () async {
-                                  final date = await showDatePicker(
-                                    context: context,
-                                    initialDate: tempStart ?? DateTime.now(),
-                                    firstDate: DateTime(2000),
-                                    lastDate: DateTime(2100),
-                                  );
-                                  if (date != null) {
-                                    setStateSheet(() => tempStart = date);
-                                  }
-                                },
-                              ),
-                              ListTile(
-                                contentPadding: EdgeInsets.zero,
-                                title: const Text(
-                                  'Tanggal Akhir',
-                                  style: TextStyle(fontSize: 14),
-                                ),
-                                subtitle: Text(
-                                  tempEnd != null
-                                      ? '${tempEnd!.day.toString().padLeft(2, '0')} ${bulanMap[tempEnd!.month]} ${tempEnd!.year}'
-                                      : 'Pilih tanggal',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: TextField(
+                                      controller: maxCtrl,
+                                      keyboardType: TextInputType.number,
+                                      inputFormatters: [CurrencyFormatter()],
+                                      maxLength: 11,
+                                      decoration: const InputDecoration(
+                                        labelText: 'Max (Rp)',
+                                        counterText: '',
+                                        border: OutlineInputBorder(),
+                                      ),
+                                      onChanged: (val) => setStateSheet(() {}),
+                                    ),
                                   ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              TextField(
+                                controller: catatanCtrl,
+                                maxLength: 64,
+                                decoration: const InputDecoration(
+                                  labelText: 'Catatan',
+                                  prefixIcon: Icon(Icons.search),
+                                  border: OutlineInputBorder(),
                                 ),
-                                trailing: const Icon(Icons.calendar_today),
-                                onTap: () async {
-                                  final date = await showDatePicker(
-                                    context: context,
-                                    initialDate:
-                                        tempEnd ?? tempStart ?? DateTime.now(),
-                                    firstDate: DateTime(2000),
-                                    lastDate: DateTime(2100),
-                                  );
-                                  if (date != null) {
-                                    setStateSheet(() => tempEnd = date);
-                                  }
+                                onChanged: (val) {
+                                  tempCatatan = val;
+                                  setStateSheet(() {});
                                 },
                               ),
                             ],
-                            const SizedBox(height: 24),
-                          ],
-                        ),
+                          );
+
+                          // Bagian 2: Rentang Tanggal
+                          final rentangTanggalSection = Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                '2. Rentang Tanggal',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.blue,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              RadioGroup<int>(
+                                groupValue: modePencarian,
+                                onChanged: (val) =>
+                                    setStateSheet(() => modePencarian = val!),
+                                child: Column(
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Radio<int>(value: 0),
+                                        const Text('Tanggal Spesifik'),
+                                      ],
+                                    ),
+                                    Row(
+                                      children: [
+                                        Radio<int>(value: 1),
+                                        const Text('Rentang (Max 30 Hari)'),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              if (modePencarian == 0) ...[
+                                DropdownButtonFormField<int?>(
+                                  initialValue: selectedYear,
+                                  decoration: const InputDecoration(
+                                    border: OutlineInputBorder(),
+                                  ),
+                                  items: [
+                                    const DropdownMenuItem<int?>(
+                                      value: null,
+                                      child: Text('Pilih Tahun'),
+                                    ),
+                                    ...availableYears.map(
+                                      (y) => DropdownMenuItem<int?>(
+                                        value: y,
+                                        child: Text(y.toString()),
+                                      ),
+                                    ),
+                                  ],
+                                  onChanged: (val) => setStateSheet(() {
+                                    selectedYear = val;
+                                    selectedMonth = null;
+                                    selectedDay = null;
+                                  }),
+                                ),
+                                const SizedBox(height: 12),
+                                DropdownButtonFormField<int?>(
+                                  initialValue: selectedMonth,
+                                  decoration: const InputDecoration(
+                                    border: OutlineInputBorder(),
+                                  ),
+                                  items: [
+                                    const DropdownMenuItem<int?>(
+                                      value: null,
+                                      child: Text('Pilih Bulan'),
+                                    ),
+                                    ...availableMonths.map(
+                                      (m) => DropdownMenuItem<int?>(
+                                        value: m,
+                                        child: Text(bulanMap[m]),
+                                      ),
+                                    ),
+                                  ],
+                                  onChanged: availableMonths.isEmpty
+                                      ? null
+                                      : (val) => setStateSheet(() {
+                                          selectedMonth = val;
+                                          selectedDay = null;
+                                        }),
+                                ),
+                                const SizedBox(height: 12),
+                                DropdownButtonFormField<int?>(
+                                  initialValue: selectedDay,
+                                  decoration: const InputDecoration(
+                                    border: OutlineInputBorder(),
+                                  ),
+                                  items: [
+                                    const DropdownMenuItem<int?>(
+                                      value: null,
+                                      child: Text('Pilih Tanggal'),
+                                    ),
+                                    ...availableDays.map(
+                                      (d) => DropdownMenuItem<int?>(
+                                        value: d,
+                                        child: Text(
+                                          d.toString().padLeft(2, '0'),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                  onChanged: availableDays.isEmpty
+                                      ? null
+                                      : (val) => setStateSheet(
+                                          () => selectedDay = val,
+                                        ),
+                                ),
+                              ] else ...[
+                                ListTile(
+                                  contentPadding: EdgeInsets.zero,
+                                  title: const Text(
+                                    'Tanggal Mulai',
+                                    style: TextStyle(fontSize: 14),
+                                  ),
+                                  subtitle: Text(
+                                    tempStart != null
+                                        ? '${tempStart!.day.toString().padLeft(2, '0')} ${bulanMap[tempStart!.month]} ${tempStart!.year}'
+                                        : 'Pilih tanggal',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  trailing: const Icon(Icons.calendar_today),
+                                  onTap: () async {
+                                    final date = await showDatePicker(
+                                      context: context,
+                                      initialDate: tempStart ?? DateTime.now(),
+                                      firstDate: DateTime(2000),
+                                      lastDate: DateTime(2100),
+                                    );
+                                    if (date != null) {
+                                      setStateSheet(() => tempStart = date);
+                                    }
+                                  },
+                                ),
+                                ListTile(
+                                  contentPadding: EdgeInsets.zero,
+                                  title: const Text(
+                                    'Tanggal Akhir',
+                                    style: TextStyle(fontSize: 14),
+                                  ),
+                                  subtitle: Text(
+                                    tempEnd != null
+                                        ? '${tempEnd!.day.toString().padLeft(2, '0')} ${bulanMap[tempEnd!.month]} ${tempEnd!.year}'
+                                        : 'Pilih tanggal',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  trailing: const Icon(Icons.calendar_today),
+                                  onTap: () async {
+                                    final date = await showDatePicker(
+                                      context: context,
+                                      initialDate:
+                                          tempEnd ??
+                                          tempStart ??
+                                          DateTime.now(),
+                                      firstDate: DateTime(2000),
+                                      lastDate: DateTime(2100),
+                                    );
+                                    if (date != null) {
+                                      setStateSheet(() => tempEnd = date);
+                                    }
+                                  },
+                                ),
+                              ],
+                            ],
+                          );
+
+                          return SingleChildScrollView(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: isDesktop
+                                ? Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Expanded(child: kriteriaTransaksiSection),
+                                      const SizedBox(width: 24),
+                                      Expanded(child: rentangTanggalSection),
+                                    ],
+                                  )
+                                : Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      kriteriaTransaksiSection,
+                                      const Divider(height: 32),
+                                      rentangTanggalSection,
+                                      const SizedBox(height: 24),
+                                    ],
+                                  ),
+                          );
+                        },
                       ),
                     ),
                     Padding(
