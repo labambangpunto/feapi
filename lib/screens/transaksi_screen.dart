@@ -177,7 +177,17 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
 
               return [
                 // 1. Menu Filter Terpadu
-                if (isFilterActive || isDateModified || isModeRentang)
+                if (isFilterActive || isDateModified || isModeRentang) ...[
+                  const PopupMenuItem(
+                    value: 'filter_terpadu',
+                    child: Row(
+                      children: [
+                        Icon(Icons.edit_note_rounded, color: Colors.grey),
+                        SizedBox(width: 12),
+                        Text('Modifikasi Filter'),
+                      ],
+                    ),
+                  ),
                   const PopupMenuItem(
                     value: 'hapus_semua',
                     child: Row(
@@ -187,8 +197,8 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
                         Text('Hapus Semua Filter'),
                       ],
                     ),
-                  )
-                else
+                  ),
+                ] else
                   const PopupMenuItem(
                     value: 'filter_terpadu',
                     child: Row(
@@ -459,8 +469,11 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
                                       final t = entry.value[index];
 
                                       final double totalNominal =
-                                          (t.nominal * t.kuantitas) +
-                                          (t.biayaTambahan ?? 0);
+                                          t.tipe == TipeTransaksi.transfer
+                                          ? (t.nominal * t.kuantitas)
+                                          : (t.nominal * t.kuantitas) +
+                                                (t.biayaTambahan ?? 0);
+
                                       String namaSumber = getAkunName(
                                         t.akunSumberId,
                                       );
@@ -783,8 +796,10 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
     List<String> namaLabels,
     bool isTerkunci, // Parameter baru
   ) {
-    final double totalNominal =
-        (t.nominal * t.kuantitas) + (t.biayaTambahan ?? 0);
+    final double totalNominal = t.tipe == TipeTransaksi.transfer
+        ? (t.nominal * t.kuantitas)
+        : (t.nominal * t.kuantitas) + (t.biayaTambahan ?? 0);
+
     const bulanMap = [
       '',
       'Jan',
@@ -1033,9 +1048,9 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
     int? selectedMonth;
     int? selectedDay;
 
-    // Tampilkan nilai null jika tidak ada filter aktif atau bukan default
+    // Tampilkan nilai null secara default, KECUALI pengguna melompat ke tanggal spesifik
     if (!currentIsModeRentang) {
-      if (currentShowFullMonth || isDateModified) {
+      if (isDateModified) {
         selectedYear = currentDate.year;
         selectedMonth = currentDate.month;
         selectedDay = currentShowFullMonth ? null : currentDate.day;
