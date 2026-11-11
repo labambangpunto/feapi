@@ -9,6 +9,7 @@ import '../utils/currency_format.dart';
 import '../utils/currency_formatter.dart';
 import '../controllers/pembukuan_controller.dart';
 import 'form_utang_piutang.dart';
+import 'kelola_akun_screen.dart'; // Tambahkan baris ini
 
 final utangFilterTanggalProvider = StateProvider<DateTime?>((ref) => null);
 final utangIsFilterActiveProvider = StateProvider<bool>((ref) => false);
@@ -796,16 +797,39 @@ class _UtangScreenState extends ConsumerState<UtangScreen> {
                               ? 'Akun untuk Membayar'
                               : 'Akun untuk Menerima',
                         ),
-                        items: listAkun
-                            .map(
-                              (a) => DropdownMenuItem(
-                                value: a.id,
-                                child: Text(a.nama),
+                        items: [
+                          ...listAkun.map(
+                            (a) => DropdownMenuItem(
+                              value: a.id,
+                              child: Text(a.nama),
+                            ),
+                          ),
+                          const DropdownMenuItem(
+                            value: 'add_new',
+                            child: Text(
+                              '+ Tambahkan akun',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.blue,
                               ),
-                            )
-                            .toList(),
-                        onChanged: (val) =>
-                            setStateDialog(() => selectedAkunId = val),
+                            ),
+                          ),
+                        ],
+                        onChanged: (val) {
+                          if (val == 'add_new') {
+                            setStateDialog(() => selectedAkunId = null);
+
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const KelolaAkunScreen(),
+                              ),
+                            );
+                            return;
+                          }
+
+                          setStateDialog(() => selectedAkunId = val);
+                        },
                       ),
                       orElse: () => const CircularProgressIndicator(),
                     ),
