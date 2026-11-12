@@ -139,7 +139,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         }
 
         if (isIncluded) {
-          final nominal = (t.nominal * t.kuantitas) + (t.biayaTambahan ?? 0);
+          final nominal = t.tipe == TipeTransaksi.transfer
+              ? (t.nominal * t.kuantitas)
+              : (t.nominal * t.kuantitas) + (t.biayaTambahan ?? 0);
+
           if (t.tipe == TipeTransaksi.pemasukan) {
             totalPemasukan += nominal;
             mapPemasukan[xKey] = (mapPemasukan[xKey] ?? 0) + nominal;
@@ -734,7 +737,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     for (var t in transaksiList) {
       if (t.waktu.year == year && t.waktu.month == month) {
         final day = t.waktu.day;
-        final nominal = (t.nominal * t.kuantitas) + (t.biayaTambahan ?? 0);
+
+        // Logika pemisahan perhitungan transfer antarakun
+        final nominal = t.tipe == TipeTransaksi.transfer
+            ? (t.nominal * t.kuantitas)
+            : (t.nominal * t.kuantitas) + (t.biayaTambahan ?? 0);
 
         dailyStats.putIfAbsent(day, () => _DailyStat());
         if (t.tipe == TipeTransaksi.pemasukan) {
@@ -899,11 +906,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   String _formatSingkat(double value) {
-    if (value >= 1000000000) {
-      return '${(value / 1000000000).toStringAsFixed(1)}B';
+    String cleanDecimal(double val) {
+      String s = val.toStringAsFixed(2); // Maksimal 2 angka di belakang koma
+      if (s.contains('.')) {
+        s = s.replaceAll(RegExp(r'0*$'), ''); // Hapus nol berlebih di akhir
+        s = s.replaceAll(
+          RegExp(r'\.$'),
+          '',
+        ); // Hapus titik jika tidak ada sisa desimal
+      }
+      return s;
     }
-    if (value >= 1000000) return '${(value / 1000000).toStringAsFixed(1)}M';
-    if (value >= 1000) return '${(value / 1000).toStringAsFixed(0)}K';
+
+    if (value >= 1000000000) {
+      return '${cleanDecimal(value / 1000000000)}B';
+    }
+    if (value >= 1000000) {
+      return '${cleanDecimal(value / 1000000)}M';
+    }
+    if (value >= 1000) {
+      return '${cleanDecimal(value / 1000)}K';
+    }
     return value.toStringAsFixed(0);
   }
 
@@ -1163,7 +1186,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
 
     for (var t in filteredTransaksi) {
-      final nominal = (t.nominal * t.kuantitas) + (t.biayaTambahan ?? 0);
+      final nominal = t.tipe == TipeTransaksi.transfer
+          ? (t.nominal * t.kuantitas)
+          : (t.nominal * t.kuantitas) + (t.biayaTambahan ?? 0);
 
       if (t.tipe == TipeTransaksi.pengeluaran) {
         prosesStatAkun(t.akunSumberId, nominal, t.tipe, t.waktu);
@@ -1403,7 +1428,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
 
     for (var t in filteredTransaksi) {
-      final nominal = (t.nominal * t.kuantitas) + (t.biayaTambahan ?? 0);
+      final nominal = t.tipe == TipeTransaksi.transfer
+          ? (t.nominal * t.kuantitas)
+          : (t.nominal * t.kuantitas) + (t.biayaTambahan ?? 0);
       List<String> ids = (t.labelId != null && t.labelId!.isNotEmpty)
           ? t.labelId!.split(',')
           : ['tanpa_label'];
