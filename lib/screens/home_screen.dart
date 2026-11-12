@@ -150,8 +150,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             totalPengeluaran += nominal;
             mapPengeluaran[xKey] = (mapPengeluaran[xKey] ?? 0) + nominal;
           } else if (t.tipe == TipeTransaksi.transfer) {
-            totalTransfer += nominal; // Tambahkan baris ini
+            totalTransfer += nominal;
             mapTransfer[xKey] = (mapTransfer[xKey] ?? 0) + nominal;
+
+            // Tambahkan biaya tambahan transfer sebagai pengeluaran
+            if (t.biayaTambahan != null && t.biayaTambahan! > 0) {
+              totalPengeluaran += t.biayaTambahan!;
+              mapPengeluaran[xKey] =
+                  (mapPengeluaran[xKey] ?? 0) + t.biayaTambahan!;
+            }
           }
         }
       }
@@ -750,6 +757,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           dailyStats[day]!.pengeluaran += nominal;
         } else if (t.tipe == TipeTransaksi.transfer) {
           dailyStats[day]!.transfer += nominal;
+
+          // Tambahkan biaya tambahan ke pengeluaran harian
+          if (t.biayaTambahan != null && t.biayaTambahan! > 0) {
+            dailyStats[day]!.pengeluaran += t.biayaTambahan!;
+          }
         }
       }
     }
@@ -1189,7 +1201,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       final nominal = t.tipe == TipeTransaksi.transfer
           ? (t.nominal * t.kuantitas)
           : (t.nominal * t.kuantitas) + (t.biayaTambahan ?? 0);
-
       if (t.tipe == TipeTransaksi.pengeluaran) {
         prosesStatAkun(t.akunSumberId, nominal, t.tipe, t.waktu);
       } else if (t.tipe == TipeTransaksi.pemasukan) {
@@ -1209,6 +1220,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           t.waktu,
           isTransferSumber: false,
         );
+
+        // Bebankan biaya tambahan transfer sebagai pengeluaran pada akun sumber
+        if (t.biayaTambahan != null && t.biayaTambahan! > 0) {
+          prosesStatAkun(
+            t.akunSumberId,
+            t.biayaTambahan!,
+            TipeTransaksi.pengeluaran,
+            t.waktu,
+          );
+        }
       }
     }
 
@@ -1445,6 +1466,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           stat.pemasukan += nominal;
         } else if (t.tipe == TipeTransaksi.transfer) {
           stat.transfer += nominal;
+
+          // Masukkan biaya tambahan ke pengeluaran untuk label ini
+          if (t.biayaTambahan != null && t.biayaTambahan! > 0) {
+            stat.pengeluaran += t.biayaTambahan!;
+          }
         }
 
         if (stat.latestWaktu == null || t.waktu.isAfter(stat.latestWaktu!)) {
