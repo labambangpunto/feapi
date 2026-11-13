@@ -1333,7 +1333,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     ),
                     DataColumn(
                       label: Text(
-                        'Transfer',
+                        'Transfer Keluar',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    DataColumn(
+                      label: Text(
+                        'Transfer Masuk',
                         style: TextStyle(fontWeight: FontWeight.bold),
                       ),
                     ),
@@ -1346,25 +1352,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               DataCell(Text('-')),
                               DataCell(Text('-')),
                               DataCell(Text('-')),
+                              DataCell(Text('-')),
                             ],
                           ),
                         ]
                       : displayList.map((item) {
-                          String transferText = '-';
-                          if (item.transferSumber > 0 &&
-                              item.transferTujuan > 0) {
-                            transferText =
-                                '${item.transferSumber.toIdr()} (sumber)\n${item.transferTujuan.toIdr()} (tujuan)';
-                          } else if (item.transferSumber > 0) {
-                            transferText =
-                                '${item.transferSumber.toIdr()} (sumber)';
-                          } else if (item.transferTujuan > 0) {
-                            transferText =
-                                '${item.transferTujuan.toIdr()} (tujuan)';
-                          } else {
-                            transferText = '0';
-                          }
-
                           return DataRow(
                             cells: [
                               DataCell(
@@ -1389,7 +1381,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               ),
                               DataCell(
                                 Text(
-                                  transferText,
+                                  item.transferSumber > 0
+                                      ? item.transferSumber.toIdr()
+                                      : '-',
+                                  style: const TextStyle(color: Colors.blue),
+                                ),
+                              ),
+                              DataCell(
+                                Text(
+                                  item.transferTujuan > 0
+                                      ? item.transferTujuan.toIdr()
+                                      : '-',
                                   style: const TextStyle(color: Colors.blue),
                                 ),
                               ),
