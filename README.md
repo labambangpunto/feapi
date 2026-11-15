@@ -3,6 +3,12 @@
 Adalah sebuah aplikasi pencatat pengeluara, pemasukan, transfer antarakun, utang dan piutang.
 <br><br>
 
+<h2>Download</h2>
+
+### [Download Untuk Android](https://github.com/labambangpunto/feapi/releases/download/v1.6.0-beta/feapi-v1.6.0-beta.apk)
+
+<br><br>
+
 <h2>Terima Kasih</h2>
 
 untuk _Gemini_ sudah menjadi partner pengembangan kode aplikasi ini
