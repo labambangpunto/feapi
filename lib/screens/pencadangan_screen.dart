@@ -388,30 +388,33 @@ class _PencadanganScreenState extends ConsumerState<PencadanganScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Pencadangan Data')),
       body: Center(
-        // Tambahkan Center
         child: SingleChildScrollView(
-          // Tambahkan scroll horizontal
           scrollDirection: Axis.horizontal,
           child: SizedBox(
-            // Tambahkan batas lebar minimum
             width: MediaQuery.of(context).size.width < 320
                 ? 320
                 : MediaQuery.of(context).size.width,
             child: LayoutBuilder(
-              // LayoutBuilder yang sudah ada
               builder: (context, constraints) {
                 final isDesktop = constraints.maxWidth > 700;
 
                 if (isDesktop) {
-                  // Tampilan Grid 2 Kolom untuk Layar Lebar (Desktop/Linux)
-                  return SingleChildScrollView(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(child: cloudSection),
-                        Expanded(child: localSection),
-                      ],
+                  // Tampilan Grid 2 Kolom rata atas (topCenter) dengan batas lebar maksimal
+                  return Align(
+                    alignment: Alignment.topCenter,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 1200),
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(child: cloudSection),
+
+                            Expanded(child: localSection),
+                          ],
+                        ),
+                      ),
                     ),
                   );
                 } else {
