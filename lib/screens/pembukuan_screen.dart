@@ -16,10 +16,8 @@ class PembukuanScreen extends ConsumerStatefulWidget {
   ConsumerState<PembukuanScreen> createState() => _PembukuanScreenState();
 }
 
-class _PembukuanScreenState extends ConsumerState<PembukuanScreen>
-    with SingleTickerProviderStateMixin {
+class _PembukuanScreenState extends ConsumerState<PembukuanScreen> {
   int? _selectedYear;
-  late TabController _tabController;
 
   final List<String> _bulanList = [
     'Januari',
@@ -35,18 +33,6 @@ class _PembukuanScreenState extends ConsumerState<PembukuanScreen>
     'November',
     'Desember',
   ];
-
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -74,89 +60,141 @@ class _PembukuanScreenState extends ConsumerState<PembukuanScreen>
       activeYear = tahunList.first;
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Pembukuan Bulanan'),
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: const [
-            Tab(icon: Icon(Icons.receipt_long), text: 'Transaksi'),
-            Tab(icon: Icon(Icons.handshake), text: 'Utang & Piutang'),
+    Widget buildSection({
+      required String judul,
+      required IconData icon,
+      required String tipeDivisi,
+      required List<dynamic> dataList,
+      required bool isDesktop,
+    }) {
+      return Card(
+        margin: const EdgeInsets.all(8.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Row(
+                children: [
+                  Icon(icon, color: Colors.blue),
+                  const SizedBox(width: 8),
+                  Text(
+                    judul,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blue,
+                      fontSize: 16,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+            _buildDaftarPembukuan(
+              context: context,
+              ref: ref,
+              tipeDivisi: tipeDivisi,
+              pList: pembukuanState.value ?? [],
+              activeYear: activeYear,
+              now: now,
+              dataList: dataList,
+            ),
           ],
         ),
-      ),
-      body: Center(
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: SizedBox(
-            width: MediaQuery.of(context).size.width < 320
-                ? 320
-                : MediaQuery.of(context).size.width,
-            child: Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Pilih Tahun:',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
+      );
+    }
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Pembukuan Bulanan')),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final isDesktop = constraints.maxWidth > 700;
+
+          final transaksiSection = buildSection(
+            judul: 'Transaksi',
+            icon: Icons.receipt_long,
+            tipeDivisi: 'transaksi',
+            dataList: transaksiList,
+            isDesktop: isDesktop,
+          );
+
+          final utangSection = buildSection(
+            judul: 'Utang & Piutang',
+            icon: Icons.handshake,
+            tipeDivisi: 'utang_piutang',
+            dataList: utangList,
+            isDesktop: isDesktop,
+          );
+
+          return Align(
+            alignment: Alignment.topCenter,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: isDesktop ? 1000 : double.infinity,
+              ),
+              child: Column(
+                children: [
+                  // Header Pilih Tahun
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Pilih Tahun:',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      ),
-                      DropdownButton<int>(
-                        value: activeYear,
-                        items: tahunList.map((year) {
-                          return DropdownMenuItem(
-                            value: year,
-                            child: Text(year.toString()),
-                          );
-                        }).toList(),
-                        onChanged: (val) {
-                          if (val != null) {
-                            setState(() => _selectedYear = val);
-                          }
-                        },
-                      ),
-                    ],
+                        DropdownButton<int>(
+                          value: activeYear,
+                          items: tahunList.map((year) {
+                            return DropdownMenuItem(
+                              value: year,
+                              child: Text(year.toString()),
+                            );
+                          }).toList(),
+                          onChanged: (val) {
+                            if (val != null) {
+                              setState(() => _selectedYear = val);
+                            }
+                          },
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                Expanded(
-                  child: TabBarView(
-                    controller: _tabController,
-                    children: [
-                      // DIVISI 1: PEMBUKUAN TRANSAKSI
-                      _buildDaftarPembukuan(
-                        context: context,
-                        ref: ref,
-                        tipeDivisi: 'transaksi',
-                        pList: pembukuanState.value ?? [],
-                        activeYear: activeYear,
-                        now: now,
-                        dataList: transaksiList,
-                      ),
-                      // DIVISI 2: PEMBUKUAN UTANG-PIUTANG
-                      _buildDaftarPembukuan(
-                        context: context,
-                        ref: ref,
-                        tipeDivisi: 'utang_piutang',
-                        pList: pembukuanState.value ?? [],
-                        activeYear: activeYear,
-                        now: now,
-                        dataList: utangList,
-                      ),
-                    ],
+                  // Konten Responsif (2 Kolom di Laptop, 1 Kolom di Ponsel)
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(8.0),
+                      child: isDesktop
+                          ? Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(child: transaksiSection),
+                                const SizedBox(width: 16),
+                                Expanded(child: utangSection),
+                              ],
+                            )
+                          : Column(
+                              children: [
+                                transaksiSection,
+                                const SizedBox(height: 8),
+                                utangSection,
+                              ],
+                            ),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
-  }
+  } // <-- Jangan lupa kurung kurawal penutup method build ini
 
   Widget _buildDaftarPembukuan({
     required BuildContext context,
@@ -188,14 +226,21 @@ class _PembukuanScreenState extends ConsumerState<PembukuanScreen>
     }
 
     if (bulanDenganData.isEmpty) {
-      return Center(
-        child: Text(
-          'Tidak ada data ${tipeDivisi == "transaksi" ? "transaksi" : "utang/piutang"} di tahun ini.',
+      return Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Center(
+          child: Text(
+            'Tidak ada data ${tipeDivisi == "transaksi" ? "transaksi" : "utang/piutang"} di tahun ini.',
+            textAlign: TextAlign.center,
+          ),
         ),
       );
     }
 
     return ListView.builder(
+      shrinkWrap: true, // WAJIB ditambahkan
+      physics: const NeverScrollableScrollPhysics(), // WAJIB ditambahkan
+      padding: const EdgeInsets.symmetric(vertical: 8),
       itemCount: bulanDenganData.length,
       itemBuilder: (context, index) {
         final monthInt = bulanDenganData[index];
