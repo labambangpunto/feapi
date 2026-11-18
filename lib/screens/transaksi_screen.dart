@@ -12,7 +12,9 @@ import '../utils/currency_formatter.dart';
 import '../controllers/pembukuan_controller.dart';
 import 'form_transaksi.dart';
 
-final showFullMonthProvider = StateProvider<bool>((ref) => false);
+final showFullMonthProvider = StateProvider<bool>(
+  (ref) => true,
+); // Diubah dari false ke true
 //
 final selectedDateProvider = StateProvider<DateTime>((ref) => DateTime.now());
 final isModeRentangProvider = StateProvider<bool>((ref) => false);
@@ -156,7 +158,8 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
                   ref.read(isModeRentangProvider.notifier).state = false;
                   ref.read(rentangAwalProvider.notifier).state = null;
                   ref.read(rentangAkhirProvider.notifier).state = null;
-                  ref.read(showFullMonthProvider.notifier).state = false;
+                  ref.read(showFullMonthProvider.notifier).state =
+                      true; // Diubah dari false ke true
                   break;
                 case 'expand':
                   ref.read(showFullMonthProvider.notifier).state = true;
@@ -379,7 +382,9 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
           return Column(
             children: [
               Expanded(
-                child: filteredList.isEmpty && (isFilterActive || showFullMonth)
+                child:
+                    filteredList.isEmpty &&
+                        isFilterActive // Hapus '|| showFullMonth'
                     ? const Center(
                         child: Text('Tidak ada transaksi yang cocok'),
                       )
@@ -601,23 +606,27 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
                               ],
 
                               if (!isFilterActive &&
-                                  !showFullMonth &&
-                                  filteredList.isEmpty)
-                                const SliverToBoxAdapter(
+                                  filteredList
+                                      .isEmpty) // Hapus '&& !showFullMonth'
+                                SliverToBoxAdapter(
                                   child: Padding(
-                                    padding: EdgeInsets.all(24.0),
+                                    padding: const EdgeInsets.all(24.0),
                                     child: Column(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        Icon(
+                                        const Icon(
                                           Icons.receipt_long,
                                           size: 48,
                                           color: Colors.grey,
                                         ),
-                                        SizedBox(height: 12),
+                                        const SizedBox(height: 12),
                                         Text(
-                                          'Belum ada transaksi hari ini',
-                                          style: TextStyle(color: Colors.grey),
+                                          showFullMonth
+                                              ? 'Belum ada transaksi bulan ini'
+                                              : 'Belum ada transaksi hari ini',
+                                          style: const TextStyle(
+                                            color: Colors.grey,
+                                          ),
                                         ),
                                       ],
                                     ),
@@ -1082,6 +1091,56 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
       'November',
       'Desember',
     ];
+    void tampilPesanAtasSheet(String pesan) {
+      final overlay = Overlay.of(context, rootOverlay: true);
+      late OverlayEntry overlayEntry;
+
+      overlayEntry = OverlayEntry(
+        builder: (ctx) => Positioned(
+          bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+          left: 24,
+          right: 24,
+          child: Material(
+            color: Colors.transparent,
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 500),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Theme.of(ctx).colorScheme.inverseSurface,
+                    borderRadius: BorderRadius.circular(8),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Colors.black26,
+                        blurRadius: 8,
+                        offset: Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Text(
+                    pesan,
+                    style: TextStyle(
+                      color: Theme.of(ctx).colorScheme.onInverseSurface,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      overlay.insert(overlayEntry);
+      Future.delayed(const Duration(seconds: 3), () {
+        if (overlayEntry.mounted) {
+          overlayEntry.remove();
+        }
+      });
+    }
 
     showModalBottomSheet<void>(
       context: context,
@@ -1190,31 +1249,33 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
 
             // WillPopScope digunakan untuk mencegat (intercept) tombol back / geser kembali
             // ignore: deprecated_member_use
-            return WillPopScope(
-              onWillPop: () async {
-                if (hasChanged()) {
-                  final confirm = await showDialog<bool>(
-                    context: sheetContext,
-                    builder: (ctx) => AlertDialog(
-                      title: const Text('Batalkan Perubahan?'),
-                      content: const Text(
-                        'Anda memiliki perubahan filter yang belum diterapkan. Buang perubahan?',
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(ctx, false),
-                          child: const Text('Lanjut Edit'),
-                        ),
-                        FilledButton(
-                          onPressed: () => Navigator.pop(ctx, true),
-                          child: const Text('Buang'),
-                        ),
-                      ],
+
+            return PopScope<void>(
+              canPop: !hasChanged(),
+              onPopInvokedWithResult: (bool didPop, void result) async {
+                if (didPop) return;
+                final confirm = await showDialog<bool>(
+                  context: sheetContext,
+                  builder: (ctx) => AlertDialog(
+                    title: const Text('Batalkan Perubahan?'),
+                    content: const Text(
+                      'Anda memiliki perubahan filter yang belum diterapkan. Buang perubahan?',
                     ),
-                  );
-                  return confirm == true;
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx, false),
+                        child: const Text('Lanjut Edit'),
+                      ),
+                      FilledButton(
+                        onPressed: () => Navigator.pop(ctx, true),
+                        child: const Text('Buang'),
+                      ),
+                    ],
+                  ),
+                );
+                if (confirm == true && sheetContext.mounted) {
+                  Navigator.pop(sheetContext);
                 }
-                return true;
               },
               child: Padding(
                 padding: EdgeInsets.only(
@@ -1583,29 +1644,18 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
                             // Validasi disable button jika tidak ada field form yang berubah
                             onPressed: hasChanged()
                                 ? () {
-                                    // Validasi Error Input
                                     if (minCtrl.text.isNotEmpty &&
                                         maxCtrl.text.isEmpty) {
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                            const SnackBar(
-                                              content: Text(
-                                                'Wajib mengisi Max (Rp) jika Min (Rp) diisi',
-                                              ),
-                                            ),
-                                          );
+                                      tampilPesanAtasSheet(
+                                        'Wajib mengisi Max (Rp) jika Min (Rp) diisi',
+                                      );
                                       return;
                                     }
                                     if (minCtrl.text.isEmpty &&
                                         maxCtrl.text.isNotEmpty) {
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                            const SnackBar(
-                                              content: Text(
-                                                'Wajib mengisi Min (Rp) jika Max (Rp) diisi',
-                                              ),
-                                            ),
-                                          );
+                                      tampilPesanAtasSheet(
+                                        'Wajib mengisi Min (Rp) jika Max (Rp) diisi',
+                                      );
                                       return;
                                     }
 
@@ -1614,59 +1664,38 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
                                               selectedMonth == null) ||
                                           (selectedYear == null &&
                                               selectedMonth != null)) {
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(
-                                              const SnackBar(
-                                                content: Text(
-                                                  'Lengkapi pilihan tahun dan bulan, atau kosongkan keduanya untuk bulan ini.',
-                                                ),
-                                              ),
-                                            );
+                                        tampilPesanAtasSheet(
+                                          'Lengkapi pilihan tahun dan bulan, atau kosongkan keduanya untuk bulan ini.',
+                                        );
                                         return;
                                       }
                                     } else {
                                       if (tempStart == null ||
                                           tempEnd == null) {
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          const SnackBar(
-                                            content: Text(
-                                              'Pilih tanggal awal dan akhir',
-                                            ),
-                                          ),
+                                        tampilPesanAtasSheet(
+                                          'Pilih tanggal awal dan akhir',
                                         );
                                         return;
                                       }
                                       if (tempEnd!.isBefore(tempStart!)) {
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(
-                                              const SnackBar(
-                                                content: Text(
-                                                  'Tanggal akhir tidak boleh lebih awal dari tanggal mulai',
-                                                ),
-                                              ),
-                                            );
+                                        tampilPesanAtasSheet(
+                                          'Tanggal akhir tidak boleh lebih awal dari tanggal mulai',
+                                        );
                                         return;
                                       }
                                       if (tempEnd!
                                               .difference(tempStart!)
                                               .inDays >
                                           30) {
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          const SnackBar(
-                                            content: Text(
-                                              'Rentang maksimal adalah 30 hari',
-                                            ),
-                                          ),
+                                        tampilPesanAtasSheet(
+                                          'Rentang maksimal adalah 30 hari',
                                         );
                                         return;
                                       }
                                     }
 
                                     Navigator.pop(sheetContext);
+                                    // ... sisa kode penyimpanan ke provider tetap sama ...
 
                                     // Simpan ke Provider (Kriteria Transaksi)
                                     final parsedMin = minCtrl.text.isNotEmpty
@@ -1815,10 +1844,10 @@ class _TransaksiScreenState extends ConsumerState<TransaksiScreen> {
                         ],
                       ),
                     ),
-                  ],
-                ),
-              ),
-            );
+                  ], // <-- Menutup children: [ milik Column
+                ), // <-- Menutup Column
+              ), // <-- Menutup Padding
+            ); // <-- Menutup PopScope<void>
           },
         );
       },
